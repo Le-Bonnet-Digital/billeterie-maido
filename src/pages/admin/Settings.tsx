@@ -3,7 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Settings as SettingsIcon, Save, User, Mail, Shield, Database, Globe, Bell } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '../../lib/auth';
-import type { User } from '../../lib/auth';
+import type { User as AuthUser } from '../../lib/auth';
 
 interface SystemSettings {
   site_name: string;
@@ -15,7 +15,7 @@ interface SystemSettings {
 }
 
 export default function Settings() {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setUser] = useState<AuthUser | null>(null);
   const [settings, setSettings] = useState<SystemSettings>({
     site_name: 'BilletEvent',
     site_description: 'Plateforme de billetterie événementielle',
