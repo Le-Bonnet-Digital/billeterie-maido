@@ -87,21 +87,34 @@ export default function PassManagement() {
   };
 
   const handleDeletePass = async (passId: string) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ? Cette action supprimera aussi toutes les réservations associées.')) return;
 
     try {
+      console.log('Tentative de suppression du pass:', passId);
+      
       const { error } = await supabase
         .from('passes')
         .delete()
         .eq('id', passId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur Supabase lors de la suppression:', error);
+        throw error;
+      }
+      
+      console.log('Pass supprimé avec succès');
       
       toast.success('Pass supprimé avec succès');
       await loadData();
     } catch (err) {
       console.error('Erreur suppression pass:', err);
-      toast.error('Erreur lors de la suppression');
+      if (err.message?.includes('foreign key')) {
+        toast.error('Impossible de supprimer ce pass car des réservations y sont associées');
+      } else if (err.message?.includes('permission')) {
+        toast.error('Vous n\'avez pas les permissions pour supprimer ce pass');
+      } else {
+        toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
+      }
     }
   };
 
