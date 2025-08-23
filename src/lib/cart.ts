@@ -68,7 +68,7 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
       .eq('session_id', sessionId)
       .eq('pass_id', passId)
       .eq('time_slot_id', timeSlotId || null)
-      .single();
+      .maybeSingle();
     
     if (existingItem) {
       // Mettre à jour la quantité
