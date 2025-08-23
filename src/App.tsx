@@ -22,6 +22,7 @@ import TimeSlotManagement from './pages/admin/TimeSlotManagement';
 import ReservationManagement from './pages/admin/ReservationManagement';
 import Reports from './pages/admin/Reports';
 import Communication from './pages/admin/Communication';
+import Settings from './pages/admin/Settings';
 
 export default function App() {
   return (
@@ -47,7 +48,7 @@ export default function App() {
             <Route path="reservations" element={<ReservationManagement />} />
             <Route path="reports" element={<Reports />} />
             <Route path="communication" element={<Communication />} />
-            <Route path="settings" element={<div>Paramètres (à développer)</div>} />
+            <Route path="settings" element={<Settings />} />
           </Route>
         </Routes>
 
