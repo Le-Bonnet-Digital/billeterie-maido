@@ -92,17 +92,31 @@ export default function PassManagement() {
     try {
       console.log('Tentative de suppression du pass:', passId);
       
-      const { error } = await supabase
+      // Debug: vérifier les permissions avant suppression
+      const { data: debugInfo } = await supabase
+        .rpc('debug_pass_permissions', { pass_uuid: passId });
+      console.log('Debug permissions:', debugInfo);
+      
+      const { data, error, count } = await supabase
         .from('passes')
         .delete()
-        .eq('id', passId);
+        .eq('id', passId)
+        .select();
 
+      console.log('Réponse Supabase:', { data, error, count });
+      
       if (error) {
         console.error('Erreur Supabase lors de la suppression:', error);
         throw error;
       }
       
-      console.log('Pass supprimé avec succès');
+      if (!data || data.length === 0) {
+        console.warn('Aucune ligne supprimée - vérifiez les permissions RLS');
+        toast.error('Aucun pass supprimé - vérifiez vos permissions');
+        return;
+      }
+      
+      console.log('Pass supprimé avec succès:', data);
       
       toast.success('Pass supprimé avec succès');
       await loadData();
