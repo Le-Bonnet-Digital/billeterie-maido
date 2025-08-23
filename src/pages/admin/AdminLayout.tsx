@@ -1,4 +1,5 @@
 import React from 'react';
+import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
@@ -9,11 +10,56 @@ import {
   Mail, 
   Settings,
   ArrowLeft,
-  Clock
+  Clock,
+  LogOut
 } from 'lucide-react';
+import AdminLogin from '../../components/AdminLogin';
+import { getCurrentUser, signOut } from '../../lib/auth';
+import type { User } from '../../lib/auth';
 
 export default function AdminLayout() {
   const location = useLocation();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    try {
+      const currentUser = await getCurrentUser();
+      setUser(currentUser);
+    } catch (err) {
+      console.error('Erreur vérification auth:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleLogin = (loggedInUser: User) => {
+    setUser(loggedInUser);
+  };
+
+  const handleLogout = async () => {
+    await signOut();
+    setUser(null);
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Vérification des permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || user.role !== 'admin') {
+    return <AdminLogin onLogin={handleLogin} />;
+  }
 
   const navigation = [
     { name: 'Tableau de Bord', href: '/admin', icon: LayoutDashboard },
@@ -76,9 +122,16 @@ export default function AdminLayout() {
                 </h2>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-500">
-                    Connecté en tant qu'administrateur
-                  </span>
+                <span className="text-sm text-gray-600">
+                  {user.email}
                 </div>
+                <button
+                  onClick={handleLogout}
+                  className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-800 px-3 py-1 rounded-md hover:bg-gray-100 transition-colors"
+                >
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </button>
               </div>
             </div>
           </header>
