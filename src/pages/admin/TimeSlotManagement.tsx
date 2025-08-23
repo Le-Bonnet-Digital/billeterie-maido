@@ -11,6 +11,11 @@ interface TimeSlot {
   slot_time: string;
   capacity: number;
   remaining_capacity?: number;
+  activity_resource?: {
+    id: string;
+    total_capacity: number;
+    remaining_capacity?: number;
+  };
   pass: {
     id: string;
     name: string;
@@ -54,6 +59,11 @@ export default function TimeSlotManagement() {
           slot_time,
           capacity,
           pass_id,
+          activity_resource_id,
+          activity_resources!time_slots_activity_resource_id_fkey (
+            id,
+            total_capacity
+          ),
           passes!time_slots_pass_id_fkey (
             id,
             name,
@@ -71,8 +81,24 @@ export default function TimeSlotManagement() {
       // Calculer la capacité restante pour chaque créneau
       const slotsWithCapacity = await Promise.all(
         (slotsData || []).map(async (slot) => {
-          const { data: capacityData } = await supabase
+          // Get activity resource remaining capacity
+          let activityResourceCapacity = 0;
+          if (slot.activity_resources) {
+            const { data: activityCapacityData } = await supabase
+              .rpc('get_activity_remaining_capacity', { 
+                activity_resource_uuid: slot.activity_resources.id 
+              });
+            activityResourceCapacity = activityCapacityData || 0;
+          }
+          
+          // Get slot specific remaining capacity
+          const { data: slotCapacityData } = await supabase
             .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+          
+          const slotCapacity = slotCapacityData || 0;
+          
+          // The actual remaining capacity is the minimum of slot capacity and activity resource capacity
+          const remainingCapacity = Math.min(slotCapacity, activityResourceCapacity);
           
           return { 
             ...slot, 
@@ -80,7 +106,11 @@ export default function TimeSlotManagement() {
               ...slot.passes,
               event: slot.passes?.events || { id: '', name: 'Événement non défini' }
             }, 
-            remaining_capacity: capacityData || 0 
+            activity_resource: slot.activity_resources ? {
+              ...slot.activity_resources,
+              remaining_capacity: activityResourceCapacity
+            } : undefined,
+            remaining_capacity: remainingCapacity
           };
         })
       );
@@ -246,6 +276,11 @@ export default function TimeSlotManagement() {
                       </div>
                       <div>
                         {slot.remaining_capacity}/{slot.capacity} places disponibles
+                        {slot.activity_resource && (
+                          <span className="ml-2 text-xs text-blue-600">
+                            (Activité: {slot.activity_resource.remaining_capacity}/{slot.activity_resource.total_capacity})
+                          </span>
+                        )}
                       </div>
                       <div>Pass: {slot.pass.name} ({slot.pass.event.name})</div>
                     </div>

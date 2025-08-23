@@ -49,12 +49,41 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
     
     // Si créneau requis, vérifier la capacité
     if (timeSlotId) {
-      const { data: capacityData } = await supabase
-        .rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
+      // Check both slot capacity and activity resource capacity
+      const { data: slotData } = await supabase
+        .from('time_slots')
+        .select(`
+          capacity,
+          activity_resource_id,
+          activity_resources!time_slots_activity_resource_id_fkey (
+            id,
+            total_capacity
+          )
+        `)
+        .eq('id', timeSlotId)
+        .single();
+      
+      if (slotData) {
+        // Get slot remaining capacity
+        const { data: slotCapacityData } = await supabase
+          .rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
         
-      if (capacityData !== null && capacityData < quantity) {
-        toast.error('Plus de places disponibles pour ce créneau');
-        return false;
+        // Get activity resource remaining capacity
+        let activityCapacity = 999999;
+        if (slotData.activity_resources) {
+          const { data: activityCapacityData } = await supabase
+            .rpc('get_activity_remaining_capacity', { 
+              activity_resource_uuid: slotData.activity_resources.id 
+            });
+          activityCapacity = activityCapacityData || 0;
+        }
+        
+        const remainingCapacity = Math.min(slotCapacityData || 0, activityCapacity);
+        
+        if (remainingCapacity < quantity) {
+          toast.error('Plus de places disponibles pour ce créneau');
+          return false;
+        }
       }
     }
     

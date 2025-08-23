@@ -44,6 +44,7 @@ export default function EventCGV() {
     return content
       .replace(/### (.*?)$/gm, '<h3 class="text-xl font-bold text-gray-900 mb-4 mt-8">$1</h3>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
+      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
       .replace(/\n\n/g, '</p><p class="mb-4">')
       .replace(/^(?!<)(.+)$/gm, '<p class="mb-4">$1</p>');
   };

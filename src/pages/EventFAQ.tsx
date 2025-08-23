@@ -41,14 +41,14 @@ export default function EventFAQ() {
   };
 
   const formatFAQContent = (content: string) => {
-    // Conversion basique Markdown vers HTML pour les titres et paragraphes
     return content
       .replace(/### (.*?)$/gm, '<h3 class="text-xl font-bold text-gray-900 mb-4 mt-8">$1</h3>')
       .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-      .replace(/^Q : "(.*?)"$/gm, '<div class="bg-blue-50 p-4 rounded-lg mb-4"><h4 class="font-semibold text-blue-900 mb-2">Q : $1</h4>')
-      .replace(/^R : "(.*?)"$/gm, '<p class="text-blue-800">R : $1</p></div>')
+      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
+      .replace(/^Q\s*:\s*"?(.*?)"?$/gm, '<div class="bg-blue-50 p-4 rounded-lg mb-4"><h4 class="font-semibold text-blue-900 mb-2"><strong>Q :</strong> $1</h4>')
+      .replace(/^R\s*:\s*"?(.*?)"?$/gm, '<p class="text-blue-800"><strong>R :</strong> $1</p></div>')
       .replace(/\n\n/g, '</p><p class="mb-4">')
-      .replace(/^(?!<|Q |R )(.+)$/gm, '<p class="mb-4">$1</p>');
+      .replace(/^(?!<|Q\s*:|R\s*:)(.+)$/gm, '<p class="mb-4">$1</p>');
   };
 
   if (loading) {

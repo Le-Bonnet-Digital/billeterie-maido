@@ -9,6 +9,8 @@ interface Pass {
   price: number;
   description: string;
   initial_stock: number | null;
+  poney_max_bookings: number | null;
+  tir_arc_max_bookings: number | null;
   remaining_stock?: number;
   event: {
     id: string;
@@ -45,6 +47,8 @@ export default function PassManagement() {
           price,
           description,
           initial_stock,
+          poney_max_bookings,
+          tir_arc_max_bookings,
           events!inner (
             id,
             name
@@ -211,6 +215,13 @@ export default function PassManagement() {
                           }
                         </span>
                       </div>
+                      {(pass.poney_max_bookings || pass.tir_arc_max_bookings) && (
+                        <div className="text-xs">
+                          Limites activités:
+                          {pass.poney_max_bookings && ` Poney: ${pass.poney_max_bookings}`}
+                          {pass.tir_arc_max_bookings && ` Tir à l'Arc: ${pass.tir_arc_max_bookings}`}
+                        </div>
+                      )}
                       <div>Événement: {pass.event.name}</div>
                     </div>
                   </div>
@@ -270,7 +281,9 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     name: pass?.name || '',
     price: pass?.price || 0,
     description: pass?.description || '',
-    initial_stock: pass?.initial_stock || null
+    initial_stock: pass?.initial_stock || null,
+    poney_max_bookings: pass?.poney_max_bookings || null,
+    tir_arc_max_bookings: pass?.tir_arc_max_bookings || null
   });
   const [saving, setSaving] = useState(false);
 
@@ -294,7 +307,9 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
             name: formData.name,
             price: formData.price,
             description: formData.description,
-            initial_stock: formData.initial_stock
+            initial_stock: formData.initial_stock,
+            poney_max_bookings: formData.poney_max_bookings,
+            tir_arc_max_bookings: formData.tir_arc_max_bookings
           })
           .eq('id', pass.id);
 
@@ -309,7 +324,9 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
             name: formData.name,
             price: formData.price,
             description: formData.description,
-            initial_stock: formData.initial_stock
+            initial_stock: formData.initial_stock,
+            poney_max_bookings: formData.poney_max_bookings,
+            tir_arc_max_bookings: formData.tir_arc_max_bookings
           });
 
         if (error) throw error;
@@ -415,6 +432,41 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
               />
             </div>
 
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Limite Poney
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.poney_max_bookings || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    poney_max_bookings: e.target.value ? parseInt(e.target.value) : null 
+                  })}
+                  placeholder="Illimité"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Limite Tir à l'Arc
+                </label>
+                <input
+                  type="number"
+                  min="0"
+                  value={formData.tir_arc_max_bookings || ''}
+                  onChange={(e) => setFormData({ 
+                    ...formData, 
+                    tir_arc_max_bookings: e.target.value ? parseInt(e.target.value) : null 
+                  })}
+                  placeholder="Illimité"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+            </div>
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
