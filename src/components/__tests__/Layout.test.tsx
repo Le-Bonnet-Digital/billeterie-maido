@@ -12,7 +12,7 @@ describe('Layout Component', () => {
     render(<Layout />);
     
     expect(screen.getByText('BilletEvent')).toBeInTheDocument();
-    expect(screen.getByText('Nos Événements')).toBeInTheDocument();
+    expect(screen.getByText(/événements/i)).toBeInTheDocument();
     expect(screen.getByText('Retrouver mon Billet')).toBeInTheDocument();
   });
 

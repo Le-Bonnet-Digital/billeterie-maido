@@ -42,7 +42,7 @@ export default function Layout() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Nos Événements
+                Événements
               </Link>
               <Link 
                 to="/find-ticket" 
