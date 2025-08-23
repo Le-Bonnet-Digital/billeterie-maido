@@ -92,11 +92,6 @@ export default function PassManagement() {
     try {
       console.log('Tentative de suppression du pass:', passId);
       
-      // Debug: vérifier les permissions avant suppression
-      const { data: debugInfo } = await supabase
-        .rpc('debug_pass_permissions', { pass_uuid: passId });
-      console.log('Debug permissions:', debugInfo);
-      
       const { data, error, count } = await supabase
         .from('passes')
         .delete()
