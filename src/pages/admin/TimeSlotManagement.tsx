@@ -94,7 +94,7 @@ export default function TimeSlotManagement() {
       if (passesError) throw passesError;
       setPasses((passesData || []).map(pass => ({
         ...pass,
-        event: pass.events
+        event: pass.events || { id: '', name: 'Événement non défini' }
       })));
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
