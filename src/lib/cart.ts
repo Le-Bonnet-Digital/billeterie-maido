@@ -62,13 +62,19 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
     await supabase.rpc('cleanup_expired_cart_items');
     
     // Vérifier si l'article existe déjà dans le panier
-    const { data: existingItem } = await supabase
+    let query = supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('session_id', sessionId)
-      .eq('pass_id', passId)
-      .eq('time_slot_id', timeSlotId || null)
-      .maybeSingle();
+      .eq('pass_id', passId);
+    
+    if (timeSlotId) {
+      query = query.eq('time_slot_id', timeSlotId);
+    } else {
+      query = query.is('time_slot_id', null);
+    }
+    
+    const { data: existingItem } = await query.maybeSingle();
     
     if (existingItem) {
       // Mettre à jour la quantité
