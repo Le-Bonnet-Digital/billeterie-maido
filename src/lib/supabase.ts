@@ -88,7 +88,7 @@ export type Database = {
       time_slots: {
         Row: {
           id: string;
-          event_id: string;
+          pass_id: string;
           activity: 'poney' | 'tir_arc';
           slot_time: string;
           capacity: number;
@@ -96,7 +96,7 @@ export type Database = {
         };
         Insert: {
           id?: string;
-          event_id: string;
+          pass_id: string;
           activity: 'poney' | 'tir_arc';
           slot_time: string;
           capacity?: number;
@@ -104,7 +104,7 @@ export type Database = {
         };
         Update: {
           id?: string;
-          event_id?: string;
+          pass_id?: string;
           activity?: 'poney' | 'tir_arc';
           slot_time?: string;
           capacity?: number;
