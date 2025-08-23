@@ -34,7 +34,7 @@ describe('TimeSlotManagement', () => {
     
     await waitFor(() => {
       // Should not show loading spinner after data loads
-      expect(screen.queryByText /chargement/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
   });
 });
