@@ -7,12 +7,18 @@ export default function FindTicket() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [found, setFound] = useState(false);
+  const [captchaVerified, setCaptchaVerified] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
     if (!email) {
       toast.error('Veuillez saisir votre adresse e-mail');
+      return;
+    }
+
+    if (!captchaVerified) {
+      toast.error('Veuillez vérifier le CAPTCHA');
       return;
     }
 
@@ -41,6 +47,14 @@ export default function FindTicket() {
       toast.error('Une erreur est survenue lors de la recherche');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleCaptchaClick = () => {
+    // Simuler la vérification du CAPTCHA
+    setCaptchaVerified(!captchaVerified);
+    if (!captchaVerified) {
+      toast.success('CAPTCHA vérifié');
     }
   };
 
@@ -86,10 +100,24 @@ export default function FindTicket() {
               <div className="flex items-center gap-3">
                 <Shield className="h-5 w-5 text-gray-500" />
                 <div className="flex-1">
-                  <div className="flex items-center gap-2">
-                    <div className="w-6 h-6 border-2 border-gray-300 rounded-sm"></div>
+                  <button
+                    type="button"
+                    onClick={handleCaptchaClick}
+                    className="flex items-center gap-2 hover:bg-gray-100 p-1 rounded transition-colors"
+                  >
+                    <div className={`w-6 h-6 border-2 rounded-sm flex items-center justify-center transition-colors ${
+                      captchaVerified 
+                        ? 'border-green-500 bg-green-500' 
+                        : 'border-gray-300 hover:border-gray-400'
+                    }`}>
+                      {captchaVerified && (
+                        <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      )}
+                    </div>
                     <span className="text-sm text-gray-700">Je ne suis pas un robot</span>
-                  </div>
+                  </button>
                 </div>
                 <div className="text-xs text-gray-500">reCAPTCHA</div>
               </div>
@@ -97,8 +125,8 @@ export default function FindTicket() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
+              disabled={loading || !captchaVerified}
+              className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 disabled:cursor-not-allowed text-white px-6 py-3 rounded-md font-medium transition-colors flex items-center justify-center gap-2"
             >
               {loading ? (
                 <>
