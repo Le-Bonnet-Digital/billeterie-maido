@@ -87,11 +87,22 @@ export default function PassManagement() {
   };
 
   const handleDeletePass = async (passId: string) => {
-    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ? Cette action supprimera aussi toutes les réservations associées.')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ? Cette action est irréversible.')) return;
 
     try {
       console.log('Tentative de suppression du pass:', passId);
       
+      // Essayer d'abord de supprimer les réservations liées
+      const { error: reservationsError } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('pass_id', passId);
+      
+      if (reservationsError) {
+        console.warn('Erreur suppression réservations:', reservationsError);
+      }
+      
+      // Puis supprimer le pass
       const { data, error, count } = await supabase
         .from('passes')
         .delete()
@@ -106,8 +117,8 @@ export default function PassManagement() {
       }
       
       if (!data || data.length === 0) {
-        console.warn('Aucune ligne supprimée - vérifiez les permissions RLS');
-        toast.error('Aucun pass supprimé - vérifiez vos permissions');
+        console.warn('Aucune ligne supprimée - le pass n\'existe peut-être pas');
+        toast.error('Pass introuvable ou déjà supprimé');
         return;
       }
       
@@ -117,13 +128,7 @@ export default function PassManagement() {
       await loadData();
     } catch (err) {
       console.error('Erreur suppression pass:', err);
-      if (err.message?.includes('foreign key')) {
-        toast.error('Impossible de supprimer ce pass car des réservations y sont associées');
-      } else if (err.message?.includes('permission')) {
-        toast.error('Vous n\'avez pas les permissions pour supprimer ce pass');
-      } else {
-        toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
-      }
+      toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
     }
   };
 
