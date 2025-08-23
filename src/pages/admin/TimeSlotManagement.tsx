@@ -83,21 +83,38 @@ export default function TimeSlotManagement() {
   };
 
   const handleDeleteSlot = async (slotId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce créneau ?')) return;
+    if (!confirm('Êtes-vous sûr de vouloir supprimer ce créneau ? Toutes les réservations associées seront également supprimées.')) return;
 
     try {
+      console.log('Tentative de suppression du créneau:', slotId);
+      
+      // D'abord supprimer toutes les réservations liées à ce créneau
+      const { error: reservationsError } = await supabase
+        .from('reservations')
+        .delete()
+        .eq('time_slot_id', slotId);
+      
+      if (reservationsError) {
+        console.warn('Erreur suppression réservations:', reservationsError);
+        // On continue même s'il y a une erreur car il se peut qu'il n'y ait pas de réservations
+      }
+      
+      // Puis supprimer le créneau
       const { error } = await supabase
         .from('time_slots')
         .delete()
         .eq('id', slotId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Erreur Supabase lors de la suppression du créneau:', error);
+        throw error;
+      }
       
       toast.success('Créneau supprimé avec succès');
       loadData();
     } catch (err) {
       console.error('Erreur suppression créneau:', err);
-      toast.error('Erreur lors de la suppression');
+      toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
     }
   };
 
