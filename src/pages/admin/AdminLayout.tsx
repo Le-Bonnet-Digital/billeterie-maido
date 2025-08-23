@@ -122,8 +122,10 @@ export default function AdminLayout() {
                 </h2>
                 <div className="flex items-center gap-4">
                   <span className="text-sm text-gray-500">
+                </span>
                 <span className="text-sm text-gray-600">
                   {user.email}
+                </span>
                 </div>
                 <button
                   onClick={handleLogout}
