@@ -114,3 +114,11 @@ Object.defineProperty(window, 'localStorage', { value: localStorageMock });
 Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
   value: vi.fn(),
 });
+
+// Mock ResizeObserver for components relying on it (e.g., Recharts)
+class ResizeObserver {
+  observe() {}
+  unobserve() {}
+  disconnect() {}
+}
+(window as any).ResizeObserver = ResizeObserver;

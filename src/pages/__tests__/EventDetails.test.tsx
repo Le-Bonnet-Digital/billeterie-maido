@@ -2,25 +2,43 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '../../test/utils';
 import EventDetails from '../EventDetails';
 
+// Mock router params
+vi.mock('react-router-dom', async () => {
+  const actual = await vi.importActual('react-router-dom');
+  return { ...actual, useParams: () => ({ eventId: 'test-event-id' }) };
+});
+
 // Mock the supabase calls
 vi.mock('../../lib/supabase', () => ({
   supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          single: vi.fn(() => Promise.resolve({
-            data: {
-              id: 'test-event-id',
-              name: 'Test Event',
-              event_date: '2024-12-25',
-              key_info_content: 'Test information'
-            },
-            error: null
-          })),
-          order: vi.fn(() => Promise.resolve({ data: [], error: null }))
+    from: vi.fn((table: string) => {
+      if (table === 'events') {
+        return {
+          select: vi.fn(() => ({
+            eq: vi.fn(() => ({
+              eq: vi.fn(() => ({
+                single: vi.fn(() => Promise.resolve({
+                  data: {
+                    id: 'test-event-id',
+                    name: 'Test Event',
+                    event_date: '2024-12-25',
+                    key_info_content: 'Test information'
+                  },
+                  error: null
+                }))
+              }))
+            }))
+          }))
+        };
+      }
+      return {
+        select: vi.fn(() => ({
+          eq: vi.fn(() => ({
+            order: vi.fn(() => Promise.resolve({ data: [], error: null }))
+          }))
         }))
-      }))
-    })),
+      };
+    }),
     rpc: vi.fn(() => Promise.resolve({ data: 10, error: null }))
   },
   isSupabaseConfigured: vi.fn(() => true)
