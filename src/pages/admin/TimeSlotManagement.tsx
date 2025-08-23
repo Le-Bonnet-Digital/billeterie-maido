@@ -375,7 +375,7 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
                 <option value="">Sélectionner un pass</option>
                 {passes.map((pass) => (
                   <option key={pass.id} value={pass.id}>
-                    {pass.name} ({pass.event.name})
+                    {pass.name} ({pass.event?.name || 'Événement non défini'})
                   </option>
                 ))}
               </select>
