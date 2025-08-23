@@ -2,13 +2,9 @@ import '@testing-library/jest-dom';
 import { vi } from 'vitest';
 import React from 'react';
 
-// Mock window.URL for file download tests
-Object.defineProperty(window, 'URL', {
-  value: {
-    createObjectURL: vi.fn(() => 'mock-url'),
-    revokeObjectURL: vi.fn(),
-  },
-});
+// Mock only specific URL methods for file download tests
+vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
+vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
 
 // Mock BroadcastChannel for Supabase auth
 Object.defineProperty(window, 'BroadcastChannel', {
@@ -78,8 +74,6 @@ vi.mock('react-router-dom', async () => {
     useParams: () => ({ eventId: 'test-event-id' }),
     useLocation: () => ({ pathname: '/' }),
     Link: ({ children, to, ...props }: any) => React.createElement('a', { href: to, ...props }, children),
-    BrowserRouter: ({ children }: any) => React.createElement('div', null, children),
-    MemoryRouter: ({ children }: any) => React.createElement('div', null, children),
     Outlet: () => React.createElement('div', null, 'Outlet'),
   };
 });
