@@ -75,6 +75,7 @@ export default function Cart() {
           .insert({
             client_email: customerData.email,
             pass_id: item.pass.id,
+            event_activity_id: item.eventActivity?.id || null,
             time_slot_id: item.timeSlot?.id || null,
             payment_status: 'paid'
           })
@@ -82,6 +83,9 @@ export default function Cart() {
             id,
             reservation_number,
             passes!inner (name, price),
+            event_activities (
+              activities (name)
+            ),
             time_slots (activity, slot_time),
             events!inner (name)
           `)
@@ -205,13 +209,23 @@ export default function Cart() {
                       
                       {item.timeSlot && (
                         <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded-md px-3 py-1 inline-flex">
-                          <span className="font-medium">
-                            {item.timeSlot.activity === 'poney' ? 'Poney' : 'Tir à l\'Arc'}
-                          </span>
+                          {item.eventActivity && (
+                            <>
+                              <span className="text-lg">{item.eventActivity.activities.icon}</span>
+                              <span className="font-medium">{item.eventActivity.activities.name}</span>
+                            </>
+                          )}
                           <span>•</span>
                           <span>
                             {format(new Date(item.timeSlot.slot_time), 'HH:mm')}
                           </span>
+                        </div>
+                      )}
+                      
+                      {item.eventActivity && !item.timeSlot && (
+                        <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-md px-3 py-1 inline-flex">
+                          <span className="text-lg">{item.eventActivity.activities.icon}</span>
+                          <span className="font-medium">{item.eventActivity.activities.name}</span>
                         </div>
                       )}
                     </div>

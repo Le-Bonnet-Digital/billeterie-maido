@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { addToCart } from '../lib/cart';
-import { Calendar, Users, Euro, Info, Clock, Target } from 'lucide-react';
+import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 
@@ -22,22 +22,42 @@ interface Pass {
   remaining_stock?: number;
 }
 
+interface Activity {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+interface EventActivity {
+  id: string;
+  activity_id: string;
+  stock_limit: number | null;
+  requires_time_slot: boolean;
+  remaining_stock?: number;
+  activity: Activity;
+}
+
 interface TimeSlot {
   id: string;
-  activity: 'poney' | 'tir_arc';
+  event_activity_id: string;
   slot_time: string;
   capacity: number;
   remaining_capacity?: number;
+  event_activity: EventActivity;
 }
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
   const [passes, setPasses] = useState<Pass[]>([]);
+  const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(true);
+  const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
-  const [showTimeSlotModal, setShowTimeSlotModal] = useState(false);
+  const [selectedQuantity, setSelectedQuantity] = useState(1);
+  const [selectedActivities, setSelectedActivities] = useState<{[key: string]: string}>({});
 
   useEffect(() => {
     if (eventId) {
@@ -90,9 +110,32 @@ export default function EventDetails() {
       
       setPasses(passesWithStock);
 
-      // Charger les créneaux
-      // Les créneaux seront chargés dynamiquement pour chaque pass
-      setTimeSlots([]);
+      // Charger les activités disponibles pour cet événement
+      const { data: eventActivitiesData, error: activitiesError } = await supabase
+        .from('event_activities')
+        .select(`
+          *,
+          activities (*)
+        `)
+        .eq('event_id', eventId);
+
+      if (activitiesError) throw activitiesError;
+      
+      // Calculer le stock restant pour chaque activité
+      const activitiesWithStock = await Promise.all(
+        (eventActivitiesData || []).map(async (eventActivity) => {
+          const { data: stockData } = await supabase
+            .rpc('get_event_activity_remaining_stock', { event_activity_uuid: eventActivity.id });
+          
+          return { 
+            ...eventActivity, 
+            activity: eventActivity.activities,
+            remaining_stock: stockData || 0 
+          };
+        })
+      );
+      
+      setEventActivities(activitiesWithStock);
     } catch (err) {
       console.error('Erreur chargement événement:', err);
     } finally {
@@ -100,66 +143,77 @@ export default function EventDetails() {
     }
   };
 
-  const loadTimeSlotsForPass = async (passId: string): Promise<TimeSlot[]> => {
+  const loadTimeSlotsForActivity = async (eventActivityId: string): Promise<TimeSlot[]> => {
     try {
       const { data: slotsData, error: slotsError } = await supabase
         .from('time_slots')
-        .select('id, activity, slot_time, capacity')
-        .eq('pass_id', passId)
+        .select(`
+          id,
+          slot_time,
+          capacity,
+          event_activity_id,
+          event_activities (
+            *,
+            activities (*)
+          )
+        `)
+        .eq('event_activity_id', eventActivityId)
         .order('slot_time');
 
       if (slotsError) throw slotsError;
       
-      // Calculer les places restantes pour chaque créneau
-      const slotsWithCapacity = await Promise.all(
-        (slotsData || []).map(async (slot) => {
-          const { data: capacityData } = await supabase
-            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
-          
-          return { ...slot, remaining_capacity: capacityData || 0 };
-        })
-      );
-      
-      return slotsWithCapacity;
+      return (slotsData || []).map(slot => ({
+        ...slot,
+        event_activity: { ...slot.event_activities, activity: slot.event_activities.activities }
+      }));
     } catch (err) {
-      console.error('Erreur chargement créneaux pour le pass:', err);
+      console.error('Erreur chargement créneaux pour l\'activité:', err);
       return [];
     }
   };
 
   const handleAddToCart = (pass: Pass) => {
-    // Charger les créneaux pour ce pass
-    loadTimeSlotsForPass(pass.id).then(slots => {
-      if (slots.length > 0) {
-        // Ce pass a des créneaux, afficher le modal de sélection
-        setTimeSlots(slots);
-        setSelectedPass(pass);
-        setShowTimeSlotModal(true);
-      } else {
-        // Pas de créneaux, ajouter directement au panier
-        addToCart(pass.id);
-        loadEventData(); // Recharger pour mettre à jour les stocks
-      }
-    });
+    setSelectedPass(pass);
+    setSelectedQuantity(1);
+    setSelectedActivities({});
+    setShowPurchaseModal(true);
   };
 
-  const handleTimeSlotSelection = async (timeSlotId: string) => {
-    if (selectedPass) {
-      const success = await addToCart(selectedPass.id, timeSlotId);
-      if (success) {
-        setShowTimeSlotModal(false);
-        setSelectedPass(null);
-        loadEventData(); // Recharger pour mettre à jour les stocks
+  const handlePurchase = async () => {
+    if (!selectedPass) return;
+    
+    // Vérifier que toutes les activités requises sont sélectionnées
+    for (let i = 0; i < selectedQuantity; i++) {
+      if (!selectedActivities[i]) {
+        toast.error('Veuillez sélectionner une activité pour chaque pass');
+        return;
       }
     }
+    
+    // Ajouter chaque pass individuellement au panier
+    for (let i = 0; i < selectedQuantity; i++) {
+      const eventActivityId = selectedActivities[i];
+      const success = await addToCart(selectedPass.id, eventActivityId);
+      if (!success) {
+        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
+        return;
+      }
+    }
+    
+    setShowPurchaseModal(false);
+    setSelectedPass(null);
+    loadEventData(); // Recharger pour mettre à jour les stocks
   };
 
-  const getActivityLabel = (activity: string) => {
-    return activity === 'poney' ? 'Poney' : 'Tir à l\'Arc';
-  };
-
-  const getActivityIcon = (activity: string) => {
-    return activity === 'poney' ? <Users className="h-4 w-4" /> : <Target className="h-4 w-4" />;
+  const handleActivitySelection = async (index: number, eventActivityId: string) => {
+    setSelectedActivities({ ...selectedActivities, [index]: eventActivityId });
+    
+    // Charger les créneaux pour cette activité si nécessaire
+    const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
+    if (eventActivity?.requires_time_slot) {
+      const slots = await loadTimeSlotsForActivity(eventActivityId);
+      setTimeSlots(slots);
+    }
   };
 
   if (loading) {
@@ -246,99 +300,150 @@ export default function EventDetails() {
         </div>
       </div>
 
-      {/* Modal de sélection de créneau */}
-      {showTimeSlotModal && selectedPass && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
-            <div className="p-6 border-b border-gray-200">
-              <h3 className="text-lg font-semibold text-gray-900">
-                Sélectionnez un créneau pour : {selectedPass.name}
-              </h3>
-              <p className="text-gray-600 mt-1">
-                Choisissez l'horaire qui vous convient pour votre activité.
-              </p>
-            </div>
-            
-            <div className="p-6 overflow-y-auto max-h-[60vh]">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Créneaux Poney */}
-                {timeSlots.filter(slot => slot.activity === 'poney').length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 font-semibold text-gray-900 mb-4">
-                      <Users className="h-5 w-5 text-green-600" />
-                      Créneaux Poney
-                    </h4>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {timeSlots
-                        .filter(slot => slot.activity === 'poney')
-                        .map((slot) => (
-                          <button
-                            key={slot.id}
-                            onClick={() => handleTimeSlotSelection(slot.id)}
-                            disabled={slot.remaining_capacity === 0}
-                            className="w-full p-3 text-left border border-gray-200 rounded-md hover:border-green-300 hover:bg-green-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">
-                                {format(new Date(slot.slot_time), 'HH:mm')}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {slot.remaining_capacity} place(s)
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                )}
-                
-                {/* Créneaux Tir à l'Arc */}
-                {timeSlots.filter(slot => slot.activity === 'tir_arc').length > 0 && (
-                  <div>
-                    <h4 className="flex items-center gap-2 font-semibold text-gray-900 mb-4">
-                      <Target className="h-5 w-5 text-orange-600" />
-                      Créneaux Tir à l'Arc
-                    </h4>
-                    <div className="space-y-2 max-h-64 overflow-y-auto">
-                      {timeSlots
-                        .filter(slot => slot.activity === 'tir_arc')
-                        .map((slot) => (
-                          <button
-                            key={slot.id}
-                            onClick={() => handleTimeSlotSelection(slot.id)}
-                            disabled={slot.remaining_capacity === 0}
-                            className="w-full p-3 text-left border border-gray-200 rounded-md hover:border-orange-300 hover:bg-orange-50 disabled:bg-gray-100 disabled:cursor-not-allowed transition-colors"
-                          >
-                            <div className="flex justify-between items-center">
-                              <span className="font-medium">
-                                {format(new Date(slot.slot_time), 'HH:mm')}
-                              </span>
-                              <span className="text-sm text-gray-500">
-                                {slot.remaining_capacity} place(s)
-                              </span>
-                            </div>
-                          </button>
-                        ))}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-            
-            <div className="p-6 border-t border-gray-200">
+      {/* Modal d'achat */}
+      {showPurchaseModal && selectedPass && (
+        <PurchaseModal
+          pass={selectedPass}
+          eventActivities={eventActivities}
+          quantity={selectedQuantity}
+          onQuantityChange={setSelectedQuantity}
+          selectedActivities={selectedActivities}
+          onActivitySelection={handleActivitySelection}
+          onPurchase={handlePurchase}
+          onClose={() => {
+            setShowPurchaseModal(false);
+            setSelectedPass(null);
+          }}
+        />
+      )}
+    </div>
+  );
+}
+
+interface PurchaseModalProps {
+  pass: Pass;
+  eventActivities: EventActivity[];
+  quantity: number;
+  onQuantityChange: (quantity: number) => void;
+  selectedActivities: {[key: string]: string};
+  onActivitySelection: (index: number, eventActivityId: string) => void;
+  onPurchase: () => void;
+  onClose: () => void;
+}
+
+function PurchaseModal({ 
+  pass, 
+  eventActivities, 
+  quantity, 
+  onQuantityChange, 
+  selectedActivities, 
+  onActivitySelection, 
+  onPurchase, 
+  onClose 
+}: PurchaseModalProps) {
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Configurer votre achat : {pass.name}
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[60vh]">
+          {/* Sélection de quantité */}
+          <div className="mb-6">
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantité
+            </label>
+            <div className="flex items-center gap-3">
               <button
-                onClick={() => {
-                  setShowTimeSlotModal(false);
-                  setSelectedPass(null);
-                }}
-                className="w-full bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md font-medium transition-colors"
+                onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
+                className="p-2 border border-gray-300 rounded-md hover:bg-gray-50"
               >
-                Annuler
+                <Minus className="h-4 w-4" />
+              </button>
+              <span className="text-lg font-semibold px-4">{quantity}</span>
+              <button
+                onClick={() => onQuantityChange(quantity + 1)}
+                className="p-2 border border-gray-300 rounded-md hover:bg-gray-50"
+              >
+                <Plus className="h-4 w-4" />
               </button>
             </div>
           </div>
+          
+          {/* Sélection d'activités pour chaque pass */}
+          <div className="space-y-4">
+            {Array.from({ length: quantity }, (_, index) => (
+              <div key={index} className="border border-gray-200 rounded-lg p-4">
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Pass #{index + 1} - Choisissez une activité
+                </h4>
+                
+                <div className="grid grid-cols-1 gap-3">
+                  {eventActivities.map((eventActivity) => (
+                    <button
+                      key={eventActivity.id}
+                      onClick={() => onActivitySelection(index, eventActivity.id)}
+                      className={`p-3 text-left border rounded-md transition-colors ${
+                        selectedActivities[index] === eventActivity.id
+                          ? 'border-blue-500 bg-blue-50'
+                          : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{eventActivity.activity.icon}</span>
+                          <div>
+                            <div className="font-medium">{eventActivity.activity.name}</div>
+                            <div className="text-sm text-gray-600">{eventActivity.activity.description}</div>
+                          </div>
+                        </div>
+                        <div className="text-sm text-gray-500">
+                          {eventActivity.stock_limit === null 
+                            ? 'Illimité' 
+                            : `${eventActivity.remaining_stock} restant(s)`
+                          }
+                        </div>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            ))}
+          </div>
         </div>
-      )}
+        
+        <div className="p-6 border-t border-gray-200">
+          <div className="flex items-center justify-between mb-4">
+            <div className="text-lg font-semibold">
+              Total: {(pass.price * quantity).toFixed(2)}€
+            </div>
+          </div>
+          
+          <div className="flex gap-3">
+            <button
+              onClick={onClose}
+              className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md font-medium transition-colors"
+            >
+              Annuler
+            </button>
+            <button
+              onClick={onPurchase}
+              disabled={Object.keys(selectedActivities).length < quantity}
+              className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
+            >
+              Ajouter au Panier
+            </button>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

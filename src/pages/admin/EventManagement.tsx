@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -18,11 +18,28 @@ interface Event {
   created_at: string;
 }
 
+interface Activity {
+  id: string;
+  name: string;
+  description: string;
+  icon: string;
+}
+
+interface EventActivity {
+  id: string;
+  activity_id: string;
+  stock_limit: number | null;
+  requires_time_slot: boolean;
+  activity: Activity;
+}
+
 export default function EventManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
+  const [showActivitiesModal, setShowActivitiesModal] = useState(false);
+  const [selectedEventForActivities, setSelectedEventForActivities] = useState<Event | null>(null);
 
   useEffect(() => {
     loadEvents();
@@ -171,6 +188,17 @@ export default function EventManagement() {
                       {event.status === 'published' ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                     </button>
                     
+                    <button
+                      onClick={() => {
+                        setSelectedEventForActivities(event);
+                        setShowActivitiesModal(true);
+                      }}
+                      className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
+                      title="Gérer les activités"
+                    >
+                      <Activity className="h-4 w-4" />
+                    </button>
+                    
                     <button 
                       onClick={() => setEditingEvent(event)}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
@@ -204,6 +232,17 @@ export default function EventManagement() {
             setShowCreateModal(false);
             setEditingEvent(null);
             loadEvents();
+          }}
+        />
+      )}
+      
+      {/* Modal de gestion des activités */}
+      {showActivitiesModal && selectedEventForActivities && (
+        <EventActivitiesModal
+          event={selectedEventForActivities}
+          onClose={() => {
+            setShowActivitiesModal(false);
+            setSelectedEventForActivities(null);
           }}
         />
       )}
@@ -405,6 +444,205 @@ function EventFormModal({ event, onClose, onSave }: EventFormModalProps) {
               </button>
             </div>
           </form>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+interface EventActivitiesModalProps {
+  event: Event;
+  onClose: () => void;
+}
+
+function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
+  const [activities, setActivities] = useState<Activity[]>([]);
+  const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    loadData();
+  }, []);
+
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Charger toutes les activités disponibles
+      const { data: activitiesData, error: activitiesError } = await supabase
+        .from('activities')
+        .select('*')
+        .order('name');
+
+      if (activitiesError) throw activitiesError;
+      setActivities(activitiesData || []);
+
+      // Charger les activités configurées pour cet événement
+      const { data: eventActivitiesData, error: eventActivitiesError } = await supabase
+        .from('event_activities')
+        .select(`
+          *,
+          activities (*)
+        `)
+        .eq('event_id', event.id);
+
+      if (eventActivitiesError) throw eventActivitiesError;
+      setEventActivities((eventActivitiesData || []).map(ea => ({
+        ...ea,
+        activity: ea.activities
+      })));
+    } catch (err) {
+      console.error('Erreur chargement activités:', err);
+      toast.error('Erreur lors du chargement des activités');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleToggleActivity = async (activity: Activity) => {
+    const existingEventActivity = eventActivities.find(ea => ea.activity_id === activity.id);
+    
+    if (existingEventActivity) {
+      // Supprimer l'activité
+      const { error } = await supabase
+        .from('event_activities')
+        .delete()
+        .eq('id', existingEventActivity.id);
+        
+      if (error) {
+        toast.error('Erreur lors de la suppression');
+        return;
+      }
+      
+      toast.success('Activité supprimée');
+    } else {
+      // Ajouter l'activité
+      const { error } = await supabase
+        .from('event_activities')
+        .insert({
+          event_id: event.id,
+          activity_id: activity.id,
+          stock_limit: null,
+          requires_time_slot: false
+        });
+        
+      if (error) {
+        toast.error('Erreur lors de l\'ajout');
+        return;
+      }
+      
+      toast.success('Activité ajoutée');
+    }
+    
+    loadData();
+  };
+
+  const handleUpdateEventActivity = async (eventActivityId: string, updates: Partial<EventActivity>) => {
+    const { error } = await supabase
+      .from('event_activities')
+      .update(updates)
+      .eq('id', eventActivityId);
+      
+    if (error) {
+      toast.error('Erreur lors de la mise à jour');
+      return;
+    }
+    
+    toast.success('Activité mise à jour');
+    loadData();
+  };
+
+  if (loading) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div className="bg-white rounded-lg p-8">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+        <div className="p-6 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h2 className="text-xl font-semibold text-gray-900">
+              Activités pour : {event.name}
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6" />
+            </button>
+          </div>
+        </div>
+        
+        <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
+          <div className="space-y-4">
+            {activities.map((activity) => {
+              const eventActivity = eventActivities.find(ea => ea.activity_id === activity.id);
+              const isEnabled = !!eventActivity;
+              
+              return (
+                <div key={activity.id} className="border border-gray-200 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-4">
+                    <div className="flex items-center gap-3">
+                      <span className="text-2xl">{activity.icon}</span>
+                      <div>
+                        <h3 className="font-semibold text-gray-900">{activity.name}</h3>
+                        <p className="text-sm text-gray-600">{activity.description}</p>
+                      </div>
+                    </div>
+                    
+                    <button
+                      onClick={() => handleToggleActivity(activity)}
+                      className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                        isEnabled
+                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                          : 'bg-green-100 text-green-700 hover:bg-green-200'
+                      }`}
+                    >
+                      {isEnabled ? 'Supprimer' : 'Ajouter'}
+                    </button>
+                  </div>
+                  
+                  {isEnabled && eventActivity && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Stock limite
+                        </label>
+                        <input
+                          type="number"
+                          min="0"
+                          value={eventActivity.stock_limit || ''}
+                          onChange={(e) => handleUpdateEventActivity(eventActivity.id, {
+                            stock_limit: e.target.value ? parseInt(e.target.value) : null
+                          })}
+                          placeholder="Illimité"
+                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      
+                      <div className="flex items-center">
+                        <input
+                          type="checkbox"
+                          id={`requires-slot-${activity.id}`}
+                          checked={eventActivity.requires_time_slot}
+                          onChange={(e) => handleUpdateEventActivity(eventActivity.id, {
+                            requires_time_slot: e.target.checked
+                          })}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <label htmlFor={`requires-slot-${activity.id}`} className="ml-2 text-sm text-gray-700">
+                          Créneau horaire obligatoire
+                        </label>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>

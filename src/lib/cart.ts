@@ -10,9 +10,16 @@ export interface CartItem {
     price: number;
     description: string;
   };
+  eventActivity?: {
+    id: string;
+    activities: {
+      id: string;
+      name: string;
+      icon: string;
+    };
+  };
   timeSlot?: {
     id: string;
-    activity: string;
     slot_time: string;
   };
   quantity: number;
@@ -29,7 +36,7 @@ export function getSessionId(): string {
 }
 
 // Ajouter un article au panier
-export async function addToCart(passId: string, timeSlotId?: string, quantity = 1): Promise<boolean> {
+export async function addToCart(passId: string, eventActivityId?: string, timeSlotId?: string, quantity = 1): Promise<boolean> {
   if (!isSupabaseConfigured()) {
     toast.error('Configuration requise. Veuillez connecter Supabase.');
     return false;
@@ -47,43 +54,25 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
       return false;
     }
     
+    // Si activité sélectionnée, vérifier le stock de l'activité
+    if (eventActivityId) {
+      const { data: activityStockData } = await supabase
+        .rpc('get_event_activity_remaining_stock', { event_activity_uuid: eventActivityId });
+        
+      if (activityStockData !== null && activityStockData < quantity) {
+        toast.error('Stock insuffisant pour cette activité');
+        return false;
+      }
+    }
+    
     // Si créneau requis, vérifier la capacité
     if (timeSlotId) {
-      // Check both slot capacity and activity resource capacity
-      const { data: slotData } = await supabase
-        .from('time_slots')
-        .select(`
-          capacity,
-          activity_resource_id,
-          activity_resources!time_slots_activity_resource_id_fkey (
-            id,
-            total_capacity
-          )
-        `)
-        .eq('id', timeSlotId)
-        .single();
+      const { data: slotCapacityData } = await supabase
+        .rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
       
-      if (slotData) {
-        // Get slot remaining capacity
-        const { data: slotCapacityData } = await supabase
-          .rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
-        
-        // Get activity resource remaining capacity
-        let activityCapacity = 999999;
-        if (slotData.activity_resources) {
-          const { data: activityCapacityData } = await supabase
-            .rpc('get_activity_remaining_capacity', { 
-              activity_resource_uuid: slotData.activity_resources.id 
-            });
-          activityCapacity = activityCapacityData || 0;
-        }
-        
-        const remainingCapacity = Math.min(slotCapacityData || 0, activityCapacity);
-        
-        if (remainingCapacity < quantity) {
-          toast.error('Plus de places disponibles pour ce créneau');
-          return false;
-        }
+      if (slotCapacityData !== null && slotCapacityData < quantity) {
+        toast.error('Plus de places disponibles pour ce créneau');
+        return false;
       }
     }
     
@@ -95,7 +84,8 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
       .from('cart_items')
       .select('id, quantity')
       .eq('session_id', sessionId)
-      .eq('pass_id', passId);
+      .eq('pass_id', passId)
+      .eq('event_activity_id', eventActivityId || null);
     
     if (timeSlotId) {
       query = query.eq('time_slot_id', timeSlotId);
@@ -127,6 +117,7 @@ export async function addToCart(passId: string, timeSlotId?: string, quantity = 
         .insert({
           session_id: sessionId,
           pass_id: passId,
+          event_activity_id: eventActivityId,
           time_slot_id: timeSlotId,
           quantity: quantity
         });
@@ -164,15 +155,23 @@ export async function getCartItems(): Promise<CartItem[]> {
       .select(`
         id,
         quantity,
+        event_activity_id,
         passes:pass_id (
           id,
           name,
           price,
           description
         ),
+        event_activities:event_activity_id (
+          id,
+          activities (
+            id,
+            name,
+            icon
+          )
+        ),
         time_slots:time_slot_id (
           id,
-          activity,
           slot_time
         )
       `)
@@ -187,6 +186,7 @@ export async function getCartItems(): Promise<CartItem[]> {
     return (data || []).map(item => ({
       id: item.id,
       pass: item.passes as any,
+      eventActivity: item.event_activities as any,
       timeSlot: item.time_slots as any,
       quantity: item.quantity
     }));
