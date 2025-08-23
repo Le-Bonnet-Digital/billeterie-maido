@@ -12,9 +12,9 @@ describe('AdminLayout', () => {
 
   it('should render navigation menu', () => {
     render(<AdminLayout />);
-    
+
     expect(screen.getByText(/tableau de bord/i)).toBeInTheDocument();
-    expect(screen.getByText(/événements/i)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /événements/i })).toBeInTheDocument();
     expect(screen.getByText(/pass/i)).toBeInTheDocument();
     expect(screen.getByText(/créneaux/i)).toBeInTheDocument();
     expect(screen.getByText(/réservations/i)).toBeInTheDocument();

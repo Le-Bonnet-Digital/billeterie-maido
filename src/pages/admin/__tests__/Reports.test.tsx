@@ -52,9 +52,9 @@ describe('Reports', () => {
 
   it('should render KPI cards', async () => {
     render(<Reports />);
-    
+
     await waitFor(() => {
-      expect(screen.getByText(/chiffre d'affaires/i)).toBeInTheDocument();
+      expect(screen.getAllByText(/chiffre d'affaires/i).length).toBeGreaterThan(0);
       expect(screen.getByText(/réservations/i)).toBeInTheDocument();
       expect(screen.getByText(/prix moyen/i)).toBeInTheDocument();
     }, { timeout: 5000 });
