@@ -52,7 +52,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
     return null;
   } catch (err) {
     console.error('Erreur connexion:', err);
-    toast.error('Erreur lors de la connexion');
+    toast.error(err.message || 'Erreur lors de la connexion');
     return null;
   }
 };
