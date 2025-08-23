@@ -11,20 +11,28 @@ interface TimeSlot {
   slot_time: string;
   capacity: number;
   remaining_capacity?: number;
+  pass: {
+    id: string;
+    name: string;
+    event: {
+      id: string;
+      name: string;
+    };
+  };
+}
+
+interface Pass {
+  id: string;
+  name: string;
   event: {
     id: string;
     name: string;
   };
 }
 
-interface Event {
-  id: string;
-  name: string;
-}
-
 export default function TimeSlotManagement() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [events, setEvents] = useState<Event[]>([]);
+  const [passes, setPasses] = useState<Pass[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
@@ -37,7 +45,7 @@ export default function TimeSlotManagement() {
     try {
       setLoading(true);
       
-      // Charger les créneaux avec leurs événements
+      // Charger les créneaux avec leurs pass et événements
       const { data: slotsData, error: slotsError } = await supabase
         .from('time_slots')
         .select(`
@@ -45,9 +53,13 @@ export default function TimeSlotManagement() {
           activity,
           slot_time,
           capacity,
-          events!inner (
+          passes!inner (
             id,
-            name
+            name,
+            events!inner (
+              id,
+              name
+            )
           )
         `)
         .order('slot_time');
@@ -60,20 +72,30 @@ export default function TimeSlotManagement() {
           const { data: capacityData } = await supabase
             .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
           
-          return { ...slot, event: slot.events, remaining_capacity: capacityData || 0 };
+          return { ...slot, pass: slot.passes, remaining_capacity: capacityData || 0 };
         })
       );
       
       setTimeSlots(slotsWithCapacity);
 
-      // Charger tous les événements pour le formulaire
-      const { data: eventsData, error: eventsError } = await supabase
-        .from('events')
-        .select('id, name')
+      // Charger tous les pass pour le formulaire
+      const { data: passesData, error: passesError } = await supabase
+        .from('passes')
+        .select(`
+          id,
+          name,
+          events!inner (
+            id,
+            name
+          )
+        `)
         .order('name');
 
-      if (eventsError) throw eventsError;
-      setEvents(eventsData || []);
+      if (passesError) throw passesError;
+      setPasses((passesData || []).map(pass => ({
+        ...pass,
+        event: pass.events
+      })));
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
       toast.error('Erreur lors du chargement des créneaux');
@@ -215,7 +237,7 @@ export default function TimeSlotManagement() {
                       <div>
                         {slot.remaining_capacity}/{slot.capacity} places disponibles
                       </div>
-                      <div>Événement: {slot.event.name}</div>
+                      <div>Pass: {slot.pass.name} ({slot.pass.event.name})</div>
                     </div>
                   </div>
                   
@@ -245,7 +267,7 @@ export default function TimeSlotManagement() {
       {(showCreateModal || editingSlot) && (
         <TimeSlotFormModal
           timeSlot={editingSlot}
-          events={events}
+          passes={passes}
           onClose={() => {
             setShowCreateModal(false);
             setEditingSlot(null);
@@ -263,14 +285,14 @@ export default function TimeSlotManagement() {
 
 interface TimeSlotFormModalProps {
   timeSlot?: TimeSlot | null;
-  events: Event[];
+  passes: Pass[];
   onClose: () => void;
   onSave: () => void;
 }
 
-function TimeSlotFormModal({ timeSlot, events, onClose, onSave }: TimeSlotFormModalProps) {
+function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormModalProps) {
   const [formData, setFormData] = useState({
-    event_id: timeSlot?.event.id || '',
+    pass_id: timeSlot?.pass.id || '',
     activity: timeSlot?.activity || 'poney' as 'poney' | 'tir_arc',
     slot_time: timeSlot ? format(new Date(timeSlot.slot_time), "yyyy-MM-dd'T'HH:mm") : '',
     capacity: timeSlot?.capacity || 15
@@ -280,7 +302,7 @@ function TimeSlotFormModal({ timeSlot, events, onClose, onSave }: TimeSlotFormMo
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.event_id || !formData.slot_time || formData.capacity <= 0) {
+    if (!formData.pass_id || !formData.slot_time || formData.capacity <= 0) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -293,7 +315,7 @@ function TimeSlotFormModal({ timeSlot, events, onClose, onSave }: TimeSlotFormMo
         const { error } = await supabase
           .from('time_slots')
           .update({
-            event_id: formData.event_id,
+            pass_id: formData.pass_id,
             activity: formData.activity,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
@@ -307,7 +329,7 @@ function TimeSlotFormModal({ timeSlot, events, onClose, onSave }: TimeSlotFormMo
         const { error } = await supabase
           .from('time_slots')
           .insert({
-            event_id: formData.event_id,
+            pass_id: formData.pass_id,
             activity: formData.activity,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
@@ -342,18 +364,18 @@ function TimeSlotFormModal({ timeSlot, events, onClose, onSave }: TimeSlotFormMo
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Événement *
+                Pass *
               </label>
               <select
-                value={formData.event_id}
-                onChange={(e) => setFormData({ ...formData, event_id: e.target.value })}
+                value={formData.pass_id}
+                onChange={(e) => setFormData({ ...formData, pass_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               >
-                <option value="">Sélectionner un événement</option>
-                {events.map((event) => (
-                  <option key={event.id} value={event.id}>
-                    {event.name}
+                <option value="">Sélectionner un pass</option>
+                {passes.map((pass) => (
+                  <option key={pass.id} value={pass.id}>
+                    {pass.name} ({pass.event.name})
                   </option>
                 ))}
               </select>

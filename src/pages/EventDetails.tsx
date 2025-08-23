@@ -91,10 +91,21 @@ export default function EventDetails() {
       setPasses(passesWithStock);
 
       // Charger les créneaux
+      // Les créneaux seront chargés dynamiquement pour chaque pass
+      setTimeSlots([]);
+    } catch (err) {
+      console.error('Erreur chargement événement:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadTimeSlotsForPass = async (passId: string): Promise<TimeSlot[]> => {
+    try {
       const { data: slotsData, error: slotsError } = await supabase
         .from('time_slots')
         .select('id, activity, slot_time, capacity')
-        .eq('event_id', eventId)
+        .eq('pass_id', passId)
         .order('slot_time');
 
       if (slotsError) throw slotsError;
@@ -109,28 +120,27 @@ export default function EventDetails() {
         })
       );
       
-      setTimeSlots(slotsWithCapacity);
+      return slotsWithCapacity;
     } catch (err) {
-      console.error('Erreur chargement événement:', err);
-    } finally {
-      setLoading(false);
+      console.error('Erreur chargement créneaux pour le pass:', err);
+      return [];
     }
   };
 
   const handleAddToCart = (pass: Pass) => {
-    // Vérifier si le pass nécessite un créneau
-    const needsTimeSlot = pass.name.toLowerCase().includes('marmaille') || 
-                         pass.name.toLowerCase().includes('tangue') || 
-                         pass.name.toLowerCase().includes('papangue');
-    
-    if (needsTimeSlot) {
-      setSelectedPass(pass);
-      setShowTimeSlotModal(true);
-    } else {
-      // Ajouter directement au panier
-      addToCart(pass.id);
-      loadEventData(); // Recharger pour mettre à jour les stocks
-    }
+    // Charger les créneaux pour ce pass
+    loadTimeSlotsForPass(pass.id).then(slots => {
+      if (slots.length > 0) {
+        // Ce pass a des créneaux, afficher le modal de sélection
+        setTimeSlots(slots);
+        setSelectedPass(pass);
+        setShowTimeSlotModal(true);
+      } else {
+        // Pas de créneaux, ajouter directement au panier
+        addToCart(pass.id);
+        loadEventData(); // Recharger pour mettre à jour les stocks
+      }
+    });
   };
 
   const handleTimeSlotSelection = async (timeSlotId: string) => {
