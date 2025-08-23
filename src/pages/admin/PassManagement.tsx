@@ -87,7 +87,7 @@ export default function PassManagement() {
   };
 
   const handleDeletePass = async (passId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer ce pass ?')) return;
+    if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ?')) return;
 
     try {
       const { error } = await supabase
@@ -98,7 +98,7 @@ export default function PassManagement() {
       if (error) throw error;
       
       toast.success('Pass supprimé avec succès');
-      loadData();
+      await loadData();
     } catch (err) {
       console.error('Erreur suppression pass:', err);
       toast.error('Erreur lors de la suppression');
