@@ -53,10 +53,12 @@ export default function TimeSlotManagement() {
           activity,
           slot_time,
           capacity,
-          passes!inner (
+          pass_id,
+          passes!time_slots_pass_id_fkey (
             id,
             name,
-            events!inner (
+            event_id,
+            events!passes_event_id_fkey (
               id,
               name
             )
@@ -72,7 +74,14 @@ export default function TimeSlotManagement() {
           const { data: capacityData } = await supabase
             .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
           
-          return { ...slot, pass: slot.passes, remaining_capacity: capacityData || 0 };
+          return { 
+            ...slot, 
+            pass: {
+              ...slot.passes,
+              event: slot.passes?.events || { id: '', name: 'Événement non défini' }
+            }, 
+            remaining_capacity: capacityData || 0 
+          };
         })
       );
       
@@ -84,7 +93,8 @@ export default function TimeSlotManagement() {
         .select(`
           id,
           name,
-          events!inner (
+          event_id,
+          events!passes_event_id_fkey (
             id,
             name
           )
