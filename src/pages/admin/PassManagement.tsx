@@ -9,12 +9,21 @@ interface Pass {
   price: number;
   description: string;
   initial_stock: number | null;
-  poney_max_bookings: number | null;
-  tir_arc_max_bookings: number | null;
   remaining_stock?: number;
+  event_activities?: EventActivity[];
   event: {
     id: string;
     name: string;
+  };
+}
+
+interface EventActivity {
+  id: string;
+  activity_id: string;
+  activity: {
+    id: string;
+    name: string;
+    icon: string;
   };
 }
 
@@ -47,8 +56,19 @@ export default function PassManagement() {
           price,
           description,
           initial_stock,
-          poney_max_bookings,
-          tir_arc_max_bookings,
+          pass_activities (
+            id,
+            event_activity_id,
+            event_activities (
+              id,
+              activity_id,
+              activities (
+                id,
+                name,
+                icon
+              )
+            )
+          ),
           events!inner (
             id,
             name
@@ -62,13 +82,31 @@ export default function PassManagement() {
       const passesWithStock = await Promise.all(
         (passesData || []).map(async (pass) => {
           if (pass.initial_stock === null) {
-            return { ...pass, event: pass.events, remaining_stock: 999999 };
+            return { 
+              ...pass, 
+              event: pass.events, 
+              remaining_stock: 999999,
+              event_activities: (pass.pass_activities || []).map((pa: any) => ({
+                id: pa.event_activities.id,
+                activity_id: pa.event_activities.activity_id,
+                activity: pa.event_activities.activities
+              }))
+            };
           }
           
           const { data: stockData } = await supabase
             .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
           
-          return { ...pass, event: pass.events, remaining_stock: stockData || 0 };
+          return { 
+            ...pass, 
+            event: pass.events, 
+            remaining_stock: stockData || 0,
+            event_activities: (pass.pass_activities || []).map((pa: any) => ({
+              id: pa.event_activities.id,
+              activity_id: pa.event_activities.activity_id,
+              activity: pa.event_activities.activities
+            }))
+          };
         })
       );
       
@@ -215,11 +253,16 @@ export default function PassManagement() {
                           }
                         </span>
                       </div>
-                      {(pass.poney_max_bookings || pass.tir_arc_max_bookings) && (
-                        <div className="text-xs">
-                          Limites activités:
-                          {pass.poney_max_bookings && ` Poney: ${pass.poney_max_bookings}`}
-                          {pass.tir_arc_max_bookings && ` Tir à l'Arc: ${pass.tir_arc_max_bookings}`}
+                      {pass.event_activities && pass.event_activities.length > 0 && (
+                        <div className="flex items-center gap-2">
+                          <span className="text-xs text-gray-500">Activités:</span>
+                          {pass.event_activities.map((ea, index) => (
+                            <span key={ea.id} className="flex items-center gap-1 text-xs">
+                              <span>{ea.activity.icon}</span>
+                              <span>{ea.activity.name}</span>
+                              {index < pass.event_activities!.length - 1 && <span>,</span>}
+                            </span>
+                          ))}
                         </div>
                       )}
                       <div>Événement: {pass.event.name}</div>
@@ -276,16 +319,54 @@ interface PassFormModalProps {
 }
 
 function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
+  const [availableActivities, setAvailableActivities] = useState<EventActivity[]>([]);
+  const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
   const [formData, setFormData] = useState({
     event_id: pass?.event.id || '',
     name: pass?.name || '',
     price: pass?.price || 0,
     description: pass?.description || '',
-    initial_stock: pass?.initial_stock || null,
-    poney_max_bookings: pass?.poney_max_bookings || null,
-    tir_arc_max_bookings: pass?.tir_arc_max_bookings || null
+    initial_stock: pass?.initial_stock || null
   });
   const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    if (formData.event_id) {
+      loadEventActivities();
+    }
+  }, [formData.event_id]);
+
+  useEffect(() => {
+    if (pass?.event_activities) {
+      setSelectedActivities(pass.event_activities.map(ea => ea.id));
+    }
+  }, [pass]);
+
+  const loadEventActivities = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('event_activities')
+        .select(`
+          id,
+          activity_id,
+          activities (
+            id,
+            name,
+            icon
+          )
+        `)
+        .eq('event_id', formData.event_id);
+
+      if (error) throw error;
+      setAvailableActivities((data || []).map(ea => ({
+        id: ea.id,
+        activity_id: ea.activity_id,
+        activity: ea.activities
+      })));
+    } catch (err) {
+      console.error('Erreur chargement activités:', err);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -298,6 +379,8 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     try {
       setSaving(true);
       
+      let passId = pass?.id;
+      
       if (pass) {
         // Mise à jour
         const { error } = await supabase
@@ -307,9 +390,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
             name: formData.name,
             price: formData.price,
             description: formData.description,
-            initial_stock: formData.initial_stock,
-            poney_max_bookings: formData.poney_max_bookings,
-            tir_arc_max_bookings: formData.tir_arc_max_bookings
+            initial_stock: formData.initial_stock
           })
           .eq('id', pass.id);
 
@@ -317,22 +398,47 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
         toast.success('Pass mis à jour avec succès');
       } else {
         // Création
-        const { error } = await supabase
+        const { data: newPass, error } = await supabase
           .from('passes')
           .insert({
             event_id: formData.event_id,
             name: formData.name,
             price: formData.price,
             description: formData.description,
-            initial_stock: formData.initial_stock,
-            poney_max_bookings: formData.poney_max_bookings,
-            tir_arc_max_bookings: formData.tir_arc_max_bookings
-          });
+            initial_stock: formData.initial_stock
+          })
+          .select()
+          .single();
 
         if (error) throw error;
+        passId = newPass.id;
+      }
+
+      // Gérer les activités du pass
+      if (passId) {
+        // Supprimer les anciennes associations
+        await supabase
+          .from('pass_activities')
+          .delete()
+          .eq('pass_id', passId);
+
+        // Ajouter les nouvelles associations
+        if (selectedActivities.length > 0) {
+          const { error: activitiesError } = await supabase
+            .from('pass_activities')
+            .insert(
+              selectedActivities.map(eventActivityId => ({
+                pass_id: passId,
+                event_activity_id: eventActivityId
+              }))
+            );
+
+          if (activitiesError) throw activitiesError;
+        }
         toast.success('Pass créé avec succès');
       }
       
+      toast.success(pass ? 'Pass mis à jour avec succès' : 'Pass créé avec succès');
       onSave();
     } catch (err) {
       console.error('Erreur sauvegarde pass:', err);
@@ -415,6 +521,39 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
               />
             </div>
 
+            {availableActivities.length > 0 && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Activités disponibles
+                </label>
+                <div className="space-y-2 max-h-32 overflow-y-auto border border-gray-200 rounded-md p-3">
+                  {availableActivities.map((eventActivity) => (
+                    <label key={eventActivity.id} className="flex items-center gap-3 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={selectedActivities.includes(eventActivity.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedActivities([...selectedActivities, eventActivity.id]);
+                          } else {
+                            setSelectedActivities(selectedActivities.filter(id => id !== eventActivity.id));
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <span className="text-lg">{eventActivity.activity.icon}</span>
+                      <span className="text-sm font-medium text-gray-700">
+                        {eventActivity.activity.name}
+                      </span>
+                    </label>
+                  ))}
+                </div>
+                <p className="text-xs text-gray-500 mt-1">
+                  Sélectionnez les activités disponibles pour ce pass
+                </p>
+              </div>
+            )}
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Stock Initial
@@ -432,41 +571,6 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
               />
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Limite Poney
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.poney_max_bookings || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    poney_max_bookings: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                  placeholder="Illimité"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Limite Tir à l'Arc
-                </label>
-                <input
-                  type="number"
-                  min="0"
-                  value={formData.tir_arc_max_bookings || ''}
-                  onChange={(e) => setFormData({ 
-                    ...formData, 
-                    tir_arc_max_bookings: e.target.value ? parseInt(e.target.value) : null 
-                  })}
-                  placeholder="Illimité"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-            </div>
             <div className="flex gap-3 pt-4">
               <button
                 type="button"
