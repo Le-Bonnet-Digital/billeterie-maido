@@ -10,6 +10,7 @@ interface Pass {
   description: string;
   initial_stock: number | null;
   remaining_stock?: number;
+ calculated_max_stock?: number;
   event_activities?: EventActivity[];
   event: {
     id: string;
@@ -81,11 +82,31 @@ export default function PassManagement() {
       // Calculer le stock restant pour chaque pass
       const passesWithStock = await Promise.all(
         (passesData || []).map(async (pass) => {
+         // Calculer le stock maximum basé sur les activités liées
+         let calculatedMaxStock = 999999;
+         
+         if (pass.pass_activities && pass.pass_activities.length > 0) {
+           // Pour chaque activité du pass, récupérer le stock restant
+           const activityStocks = await Promise.all(
+             pass.pass_activities.map(async (pa: any) => {
+               const { data: stockData } = await supabase
+                 .rpc('get_event_activity_remaining_stock', { 
+                   event_activity_uuid: pa.event_activities.id 
+                 });
+               return stockData || 0;
+             })
+           );
+           
+           // Le stock maximum du pass est limité par l'activité avec le moins de stock
+           calculatedMaxStock = Math.min(...activityStocks);
+         }
+         
           if (pass.initial_stock === null) {
             return { 
               ...pass, 
               event: pass.events, 
-              remaining_stock: 999999,
+             remaining_stock: Math.min(999999, calculatedMaxStock),
+             calculated_max_stock: calculatedMaxStock,
               event_activities: (pass.pass_activities || []).map((pa: any) => ({
                 id: pa.event_activities.id,
                 activity_id: pa.event_activities.activity_id,
@@ -97,10 +118,13 @@ export default function PassManagement() {
           const { data: stockData } = await supabase
             .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
           
+         const actualStock = Math.min(stockData || 0, calculatedMaxStock);
+         
           return { 
             ...pass, 
             event: pass.events, 
-            remaining_stock: stockData || 0,
+           remaining_stock: actualStock,
+           calculated_max_stock: calculatedMaxStock,
             event_activities: (pass.pass_activities || []).map((pa: any) => ({
               id: pa.event_activities.id,
               activity_id: pa.event_activities.activity_id,
@@ -248,9 +272,14 @@ export default function PassManagement() {
                         <Package className="h-4 w-4" />
                         <span>
                           {pass.initial_stock === null 
-                            ? 'Stock illimité'
+                           ? `Stock: ${pass.calculated_max_stock === 999999 ? 'illimité' : pass.calculated_max_stock}`
                             : `${pass.remaining_stock}/${pass.initial_stock} restant(s)`
                           }
+                         {pass.calculated_max_stock !== 999999 && pass.calculated_max_stock !== undefined && (
+                           <span className="ml-1 text-xs text-orange-600">
+                             (limité par activités: {pass.calculated_max_stock})
+                           </span>
+                         )}
                         </span>
                       </div>
                       {pass.event_activities && pass.event_activities.length > 0 && (
