@@ -33,6 +33,11 @@ interface EventActivity {
   activity: Activity;
 }
 
+interface ActivityFormData {
+  stock_limit: string;
+  requires_time_slot: boolean;
+}
+
 export default function EventManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -458,11 +463,26 @@ interface EventActivitiesModalProps {
 function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
+  const [activityForms, setActivityForms] = useState<{[key: string]: ActivityFormData}>({});
+  const [showActivityForm, setShowActivityForm] = useState(false);
+  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    // Initialiser les formulaires pour les activités existantes
+    const forms: {[key: string]: ActivityFormData} = {};
+    eventActivities.forEach(ea => {
+      forms[ea.activity_id] = {
+        stock_limit: ea.stock_limit?.toString() || '',
+        requires_time_slot: ea.requires_time_slot
+      };
+    });
+    setActivityForms(forms);
+  }, [eventActivities]);
 
   const loadData = async () => {
     try {
@@ -537,11 +557,21 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     loadData();
   };
 
-  const handleUpdateEventActivity = async (eventActivityId: string, updates: Partial<EventActivity>) => {
+  const handleUpdateEventActivity = async (activityId: string) => {
+    const eventActivity = eventActivities.find(ea => ea.activity_id === activityId);
+    const formData = activityForms[activityId];
+    
+    if (!eventActivity || !formData) return;
+    
+    const updates = {
+      stock_limit: formData.stock_limit ? parseInt(formData.stock_limit) : null,
+      requires_time_slot: formData.requires_time_slot
+    };
+    
     const { error } = await supabase
       .from('event_activities')
       .update(updates)
-      .eq('id', eventActivityId);
+      .eq('id', eventActivity.id);
       
     if (error) {
       toast.error('Erreur lors de la mise à jour');
@@ -550,6 +580,72 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     
     toast.success('Activité mise à jour');
     loadData();
+  };
+
+  const handleFormChange = (activityId: string, field: keyof ActivityFormData, value: string | boolean) => {
+    setActivityForms(prev => ({
+      ...prev,
+      [activityId]: {
+        ...prev[activityId],
+        [field]: value
+      }
+    }));
+  };
+
+  const handleCreateActivity = async (activityData: { name: string; description: string; icon: string }) => {
+    try {
+      const { error } = await supabase
+        .from('activities')
+        .insert(activityData);
+        
+      if (error) throw error;
+      
+      toast.success('Activité créée avec succès');
+      setShowActivityForm(false);
+      setEditingActivity(null);
+      loadData();
+    } catch (err) {
+      console.error('Erreur création activité:', err);
+      toast.error('Erreur lors de la création');
+    }
+  };
+
+  const handleUpdateActivity = async (activityId: string, activityData: { name: string; description: string; icon: string }) => {
+    try {
+      const { error } = await supabase
+        .from('activities')
+        .update(activityData)
+        .eq('id', activityId);
+        
+      if (error) throw error;
+      
+      toast.success('Activité mise à jour avec succès');
+      setShowActivityForm(false);
+      setEditingActivity(null);
+      loadData();
+    } catch (err) {
+      console.error('Erreur mise à jour activité:', err);
+      toast.error('Erreur lors de la mise à jour');
+    }
+  };
+
+  const handleDeleteActivity = async (activityId: string) => {
+    if (!confirm('Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible.')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('activities')
+        .delete()
+        .eq('id', activityId);
+        
+      if (error) throw error;
+      
+      toast.success('Activité supprimée avec succès');
+      loadData();
+    } catch (err) {
+      console.error('Erreur suppression activité:', err);
+      toast.error('Erreur lors de la suppression');
+    }
   };
 
   if (loading) {
@@ -570,9 +666,17 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
             <h2 className="text-xl font-semibold text-gray-900">
               Activités pour : {event.name}
             </h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-6 w-6" />
-            </button>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => setShowActivityForm(true)}
+                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
+              >
+                Nouvelle Activité
+              </button>
+              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
           </div>
         </div>
         
@@ -581,6 +685,7 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
             {activities.map((activity) => {
               const eventActivity = eventActivities.find(ea => ea.activity_id === activity.id);
               const isEnabled = !!eventActivity;
+              const formData = activityForms[activity.id] || { stock_limit: '', requires_time_slot: false };
               
               return (
                 <div key={activity.id} className="border border-gray-200 rounded-lg p-4">
@@ -593,16 +698,32 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                       </div>
                     </div>
                     
-                    <button
-                      onClick={() => handleToggleActivity(activity)}
-                      className={`px-4 py-2 rounded-md font-medium transition-colors ${
-                        isEnabled
-                          ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                          : 'bg-green-100 text-green-700 hover:bg-green-200'
-                      }`}
-                    >
-                      {isEnabled ? 'Supprimer' : 'Ajouter'}
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setEditingActivity(activity)}
+                        className="text-blue-600 hover:text-blue-700 p-1"
+                        title="Modifier"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteActivity(activity.id)}
+                        className="text-red-600 hover:text-red-700 p-1"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => handleToggleActivity(activity)}
+                        className={`px-4 py-2 rounded-md font-medium transition-colors ${
+                          isEnabled
+                            ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                            : 'bg-green-100 text-green-700 hover:bg-green-200'
+                        }`}
+                      >
+                        {isEnabled ? 'Retirer' : 'Ajouter'}
+                      </button>
+                    </div>
                   </div>
                   
                   {isEnabled && eventActivity && (
@@ -614,10 +735,9 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                         <input
                           type="number"
                           min="0"
-                          value={eventActivity.stock_limit || ''}
-                          onChange={(e) => handleUpdateEventActivity(eventActivity.id, {
-                            stock_limit: e.target.value ? parseInt(e.target.value) : null
-                          })}
+                          value={formData.stock_limit}
+                          onChange={(e) => handleFormChange(activity.id, 'stock_limit', e.target.value)}
+                          onBlur={() => handleUpdateEventActivity(activity.id)}
                           placeholder="Illimité"
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
@@ -627,10 +747,11 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                         <input
                           type="checkbox"
                           id={`requires-slot-${activity.id}`}
-                          checked={eventActivity.requires_time_slot}
-                          onChange={(e) => handleUpdateEventActivity(eventActivity.id, {
-                            requires_time_slot: e.target.checked
-                          })}
+                          checked={formData.requires_time_slot}
+                          onChange={(e) => {
+                            handleFormChange(activity.id, 'requires_time_slot', e.target.checked);
+                            handleUpdateEventActivity(activity.id);
+                          }}
                           className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                         <label htmlFor={`requires-slot-${activity.id}`} className="ml-2 text-sm text-gray-700">
@@ -643,6 +764,136 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
               );
             })}
           </div>
+        </div>
+        
+        {/* Modal de création/édition d'activité */}
+        {(showActivityForm || editingActivity) && (
+          <ActivityFormModal
+            activity={editingActivity}
+            onClose={() => {
+              setShowActivityForm(false);
+              setEditingActivity(null);
+            }}
+            onSave={(activityData) => {
+              if (editingActivity) {
+                handleUpdateActivity(editingActivity.id, activityData);
+              } else {
+                handleCreateActivity(activityData);
+              }
+            }}
+          />
+        )}
+      </div>
+    </div>
+  );
+}
+
+interface ActivityFormModalProps {
+  activity?: Activity | null;
+  onClose: () => void;
+  onSave: (activityData: { name: string; description: string; icon: string }) => void;
+}
+
+function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps) {
+  const [formData, setFormData] = useState({
+    name: activity?.name || '',
+    description: activity?.description || '',
+    icon: activity?.icon || '🎯'
+  });
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!formData.name.trim()) {
+      toast.error('Le nom est obligatoire');
+      return;
+    }
+    onSave(formData);
+  };
+
+  const commonIcons = ['🐴', '🏹', '🎯', '🎪', '🎨', '🎵', '🏃', '🚴', '🏊', '⚽', '🏀', '🎾'];
+
+  return (
+    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[60]">
+      <div className="bg-white rounded-lg max-w-md w-full">
+        <div className="p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">
+              {activity ? 'Modifier l\'Activité' : 'Nouvelle Activité'}
+            </h3>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="h-5 w-5" />
+            </button>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Nom *
+              </label>
+              <input
+                type="text"
+                value={formData.name}
+                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Description
+              </label>
+              <textarea
+                value={formData.description}
+                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                rows={3}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Icône
+              </label>
+              <div className="grid grid-cols-6 gap-2 mb-3">
+                {commonIcons.map((icon) => (
+                  <button
+                    key={icon}
+                    type="button"
+                    onClick={() => setFormData({ ...formData, icon })}
+                    className={`p-2 text-xl border rounded-md hover:bg-gray-50 ${
+                      formData.icon === icon ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                    }`}
+                  >
+                    {icon}
+                  </button>
+                ))}
+              </div>
+              <input
+                type="text"
+                value={formData.icon}
+                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                placeholder="Ou saisissez un emoji"
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md font-medium transition-colors"
+              >
+                Annuler
+              </button>
+              <button
+                type="submit"
+                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+              >
+                {activity ? 'Modifier' : 'Créer'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

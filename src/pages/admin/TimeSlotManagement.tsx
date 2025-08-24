@@ -55,14 +55,19 @@ export default function TimeSlotManagement() {
         .from('time_slots')
         .select(`
           id,
-          activity,
           slot_time,
           capacity,
           pass_id,
-          activity_resource_id,
-          activity_resources!time_slots_activity_resource_id_fkey (
+          event_activity_id,
+          event_activities!time_slots_event_activity_id_fkey (
             id,
-            total_capacity
+            stock_limit,
+            requires_time_slot,
+            activities (
+              id,
+              name,
+              icon
+            )
           ),
           passes!time_slots_pass_id_fkey (
             id,
@@ -81,14 +86,14 @@ export default function TimeSlotManagement() {
       // Calculer la capacité restante pour chaque créneau
       const slotsWithCapacity = await Promise.all(
         (slotsData || []).map(async (slot) => {
-          // Get activity resource remaining capacity
-          let activityResourceCapacity = 0;
-          if (slot.activity_resources) {
+          // Get event activity remaining capacity
+          let eventActivityCapacity = 999999;
+          if (slot.event_activities && slot.event_activities.stock_limit) {
             const { data: activityCapacityData } = await supabase
-              .rpc('get_activity_remaining_capacity', { 
-                activity_resource_uuid: slot.activity_resources.id 
+              .rpc('get_event_activity_remaining_stock', { 
+                event_activity_uuid: slot.event_activities.id 
               });
-            activityResourceCapacity = activityCapacityData || 0;
+            eventActivityCapacity = activityCapacityData || 0;
           }
           
           // Get slot specific remaining capacity
@@ -97,8 +102,8 @@ export default function TimeSlotManagement() {
           
           const slotCapacity = slotCapacityData || 0;
           
-          // The actual remaining capacity is the minimum of slot capacity and activity resource capacity
-          const remainingCapacity = Math.min(slotCapacity, activityResourceCapacity);
+          // The actual remaining capacity is the minimum of slot capacity and event activity capacity
+          const remainingCapacity = Math.min(slotCapacity, eventActivityCapacity);
           
           return { 
             ...slot, 
@@ -106,9 +111,10 @@ export default function TimeSlotManagement() {
               ...slot.passes,
               event: slot.passes?.events || { id: '', name: 'Événement non défini' }
             }, 
-            activity_resource: slot.activity_resources ? {
-              ...slot.activity_resources,
-              remaining_capacity: activityResourceCapacity
+            event_activity: slot.event_activities ? {
+              ...slot.event_activities,
+              remaining_capacity: eventActivityCapacity,
+              activity: slot.event_activities.activities
             } : undefined,
             remaining_capacity: remainingCapacity
           };
@@ -117,13 +123,24 @@ export default function TimeSlotManagement() {
       
       setTimeSlots(slotsWithCapacity);
 
-      // Charger tous les pass pour le formulaire
+      // Charger tous les pass avec leurs activités pour le formulaire
       const { data: passesData, error: passesError } = await supabase
         .from('passes')
         .select(`
           id,
           name,
           event_id,
+          pass_activities (
+            event_activity_id,
+            event_activities (
+              id,
+              activities (
+                id,
+                name,
+                icon
+              )
+            )
+          ),
           events!passes_event_id_fkey (
             id,
             name
@@ -134,7 +151,11 @@ export default function TimeSlotManagement() {
       if (passesError) throw passesError;
       setPasses((passesData || []).map(pass => ({
         ...pass,
-        event: pass.events || { id: '', name: 'Événement non défini' }
+        event: pass.events || { id: '', name: 'Événement non défini' },
+        event_activities: (pass.pass_activities || []).map((pa: any) => ({
+          id: pa.event_activities.id,
+          activity: pa.event_activities.activities
+        }))
       })));
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
@@ -261,9 +282,9 @@ export default function TimeSlotManagement() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getActivityColor(slot.activity)}`}>
-                        {getActivityIcon(slot.activity)}
-                        {getActivityLabel(slot.activity)}
+                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getActivityColor(slot.event_activity?.activity?.name || 'unknown')}`}>
+                        <span className="text-lg">{slot.event_activity?.activity?.icon || '❓'}</span>
+                        {slot.event_activity?.activity?.name || 'Activité inconnue'}
                       </div>
                       <span className="text-lg font-semibold text-gray-900">
                         {format(new Date(slot.slot_time), 'HH:mm')}
@@ -276,9 +297,9 @@ export default function TimeSlotManagement() {
                       </div>
                       <div>
                         {slot.remaining_capacity}/{slot.capacity} places disponibles
-                        {slot.activity_resource && (
+                        {slot.event_activity && slot.event_activity.stock_limit && (
                           <span className="ml-2 text-xs text-blue-600">
-                            (Activité: {slot.activity_resource.remaining_capacity}/{slot.activity_resource.total_capacity})
+                            (Activité: {slot.event_activity.remaining_capacity}/{slot.event_activity.stock_limit})
                           </span>
                         )}
                       </div>
@@ -336,18 +357,36 @@ interface TimeSlotFormModalProps {
 }
 
 function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormModalProps) {
+  const [availableActivities, setAvailableActivities] = useState<any[]>([]);
   const [formData, setFormData] = useState({
     pass_id: timeSlot?.pass.id || '',
-    activity: timeSlot?.activity || 'poney' as 'poney' | 'tir_arc',
+    event_activity_id: timeSlot?.event_activity?.id || '',
     slot_time: timeSlot ? format(new Date(timeSlot.slot_time), "yyyy-MM-dd'T'HH:mm") : '',
     capacity: timeSlot?.capacity || 15
   });
   const [saving, setSaving] = useState(false);
 
+  useEffect(() => {
+    if (formData.pass_id) {
+      loadPassActivities();
+    }
+  }, [formData.pass_id]);
+
+  const loadPassActivities = async () => {
+    try {
+      const selectedPass = passes.find(p => p.id === formData.pass_id);
+      if (selectedPass?.event_activities) {
+        setAvailableActivities(selectedPass.event_activities);
+      }
+    } catch (err) {
+      console.error('Erreur chargement activités du pass:', err);
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.pass_id || !formData.slot_time || formData.capacity <= 0) {
+    if (!formData.pass_id || !formData.event_activity_id || !formData.slot_time || formData.capacity <= 0) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -361,7 +400,7 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
           .from('time_slots')
           .update({
             pass_id: formData.pass_id,
-            activity: formData.activity,
+            event_activity_id: formData.event_activity_id,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
           })
@@ -375,7 +414,7 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
           .from('time_slots')
           .insert({
             pass_id: formData.pass_id,
-            activity: formData.activity,
+            event_activity_id: formData.event_activity_id,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
           });
@@ -431,14 +470,24 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
                 Activité *
               </label>
               <select
-                value={formData.activity}
-                onChange={(e) => setFormData({ ...formData, activity: e.target.value as 'poney' | 'tir_arc' })}
+                value={formData.event_activity_id}
+                onChange={(e) => setFormData({ ...formData, event_activity_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
+                disabled={!formData.pass_id}
               >
-                <option value="poney">Poney</option>
-                <option value="tir_arc">Tir à l'Arc</option>
+                <option value="">Sélectionner une activité</option>
+                {availableActivities.map((activity) => (
+                  <option key={activity.id} value={activity.id}>
+                    {activity.activity.icon} {activity.activity.name}
+                  </option>
+                ))}
               </select>
+              {!formData.pass_id && (
+                <p className="text-xs text-gray-500 mt-1">
+                  Sélectionnez d'abord un pass pour voir les activités disponibles
+                </p>
+              )}
             </div>
 
             <div>
