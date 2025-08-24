@@ -45,7 +45,6 @@ export default function EventManagement() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [selectedEventForActivities, setSelectedEventForActivities] = useState<Event | null>(null);
-
   useEffect(() => {
     loadEvents();
   }, []);
@@ -464,8 +463,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
   const [activityForms, setActivityForms] = useState<{[key: string]: ActivityFormData}>({});
-  const [showActivityForm, setShowActivityForm] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<Activity | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -592,62 +589,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     }));
   };
 
-  const handleCreateActivity = async (activityData: { name: string; description: string; icon: string }) => {
-    try {
-      const { error } = await supabase
-        .from('activities')
-        .insert(activityData);
-        
-      if (error) throw error;
-      
-      toast.success('Activité créée avec succès');
-      setShowActivityForm(false);
-      setEditingActivity(null);
-      loadData();
-    } catch (err) {
-      console.error('Erreur création activité:', err);
-      toast.error('Erreur lors de la création');
-    }
-  };
-
-  const handleUpdateActivity = async (activityId: string, activityData: { name: string; description: string; icon: string }) => {
-    try {
-      const { error } = await supabase
-        .from('activities')
-        .update(activityData)
-        .eq('id', activityId);
-        
-      if (error) throw error;
-      
-      toast.success('Activité mise à jour avec succès');
-      setShowActivityForm(false);
-      setEditingActivity(null);
-      loadData();
-    } catch (err) {
-      console.error('Erreur mise à jour activité:', err);
-      toast.error('Erreur lors de la mise à jour');
-    }
-  };
-
-  const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible.')) return;
-    
-    try {
-      const { error } = await supabase
-        .from('activities')
-        .delete()
-        .eq('id', activityId);
-        
-      if (error) throw error;
-      
-      toast.success('Activité supprimée avec succès');
-      loadData();
-    } catch (err) {
-      console.error('Erreur suppression activité:', err);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
   if (loading) {
     return (
       <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -667,12 +608,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
               Activités pour : {event.name}
             </h2>
             <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowActivityForm(true)}
-                className="bg-green-600 hover:bg-green-700 text-white px-3 py-1 rounded text-sm font-medium transition-colors"
-              >
-                Nouvelle Activité
-              </button>
               <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
                 <X className="h-6 w-6" />
               </button>
@@ -699,20 +634,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                     </div>
                     
                     <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => setEditingActivity(activity)}
-                        className="text-blue-600 hover:text-blue-700 p-1"
-                        title="Modifier"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDeleteActivity(activity.id)}
-                        className="text-red-600 hover:text-red-700 p-1"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
                       <button
                         onClick={() => handleToggleActivity(activity)}
                         className={`px-4 py-2 rounded-md font-medium transition-colors ${
@@ -766,135 +687,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
           </div>
         </div>
         
-        {/* Modal de création/édition d'activité */}
-        {(showActivityForm || editingActivity) && (
-          <ActivityFormModal
-            activity={editingActivity}
-            onClose={() => {
-              setShowActivityForm(false);
-              setEditingActivity(null);
-            }}
-            onSave={(activityData) => {
-              if (editingActivity) {
-                handleUpdateActivity(editingActivity.id, activityData);
-              } else {
-                handleCreateActivity(activityData);
-              }
-            }}
-          />
-        )}
-      </div>
-    </div>
-  );
-}
-
-interface ActivityFormModalProps {
-  activity?: Activity | null;
-  onClose: () => void;
-  onSave: (activityData: { name: string; description: string; icon: string }) => void;
-}
-
-function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps) {
-  const [formData, setFormData] = useState({
-    name: activity?.name || '',
-    description: activity?.description || '',
-    icon: activity?.icon || '🎯'
-  });
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!formData.name.trim()) {
-      toast.error('Le nom est obligatoire');
-      return;
-    }
-    onSave(formData);
-  };
-
-  const commonIcons = ['🐴', '🏹', '🎯', '🎪', '🎨', '🎵', '🏃', '🚴', '🏊', '⚽', '🏀', '🎾'];
-
-  return (
-    <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center p-4 z-[60]">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {activity ? 'Modifier l\'Activité' : 'Nouvelle Activité'}
-            </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
-
-          <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nom *
-              </label>
-              <input
-                type="text"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
-                value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Icône
-              </label>
-              <div className="grid grid-cols-6 gap-2 mb-3">
-                {commonIcons.map((icon) => (
-                  <button
-                    key={icon}
-                    type="button"
-                    onClick={() => setFormData({ ...formData, icon })}
-                    className={`p-2 text-xl border rounded-md hover:bg-gray-50 ${
-                      formData.icon === icon ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
-                    }`}
-                  >
-                    {icon}
-                  </button>
-                ))}
-              </div>
-              <input
-                type="text"
-                value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
-                placeholder="Ou saisissez un emoji"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex gap-3 pt-4">
-              <button
-                type="button"
-                onClick={onClose}
-                className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-900 px-4 py-2 rounded-md font-medium transition-colors"
-              >
-                Annuler
-              </button>
-              <button
-                type="submit"
-                className="flex-1 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
-              >
-                {activity ? 'Modifier' : 'Créer'}
-              </button>
-            </div>
-          </form>
-        </div>
       </div>
     </div>
   );

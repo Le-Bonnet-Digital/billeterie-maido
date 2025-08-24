@@ -19,6 +19,7 @@ import AdminDashboard from './pages/admin/Dashboard';
 import EventManagement from './pages/admin/EventManagement';
 import PassManagement from './pages/admin/PassManagement';
 import TimeSlotManagement from './pages/admin/TimeSlotManagement';
+import ActivityManagement from './pages/admin/ActivityManagement';
 import ReservationManagement from './pages/admin/ReservationManagement';
 import Reports from './pages/admin/Reports';
 import Communication from './pages/admin/Communication';
@@ -43,6 +44,7 @@ export default function App() {
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
             <Route path="events" element={<EventManagement />} />
+            <Route path="activities" element={<ActivityManagement />} />
             <Route path="passes" element={<PassManagement />} />
             <Route path="time-slots" element={<TimeSlotManagement />} />
             <Route path="reservations" element={<ReservationManagement />} />

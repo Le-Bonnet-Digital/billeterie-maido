@@ -64,6 +64,7 @@ export default function AdminLayout() {
   const navigation = [
     { name: 'Tableau de Bord', href: '/admin', icon: LayoutDashboard },
     { name: 'Événements', href: '/admin/events', icon: Calendar },
+    { name: 'Activités', href: '/admin/activities', icon: Activity },
     { name: 'Pass', href: '/admin/passes', icon: Ticket },
     { name: 'Créneaux', href: '/admin/time-slots', icon: Clock },
     { name: 'Réservations', href: '/admin/reservations', icon: Users },

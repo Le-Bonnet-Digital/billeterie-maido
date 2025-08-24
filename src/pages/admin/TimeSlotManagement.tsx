@@ -7,14 +7,18 @@ import { toast } from 'react-hot-toast';
 
 interface TimeSlot {
   id: string;
-  activity: 'poney' | 'tir_arc';
   slot_time: string;
   capacity: number;
   remaining_capacity?: number;
-  activity_resource?: {
+  event_activity: {
     id: string;
-    total_capacity: number;
-    remaining_capacity?: number;
+    stock_limit: number | null;
+    requires_time_slot: boolean;
+    activity: {
+      id: string;
+      name: string;
+      icon: string;
+    };
   };
   pass: {
     id: string;
@@ -169,8 +173,6 @@ export default function TimeSlotManagement() {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce créneau ? Toutes les réservations associées seront également supprimées.')) return;
 
     try {
-      console.log('Tentative de suppression du créneau:', slotId);
-      
       // D'abord supprimer toutes les réservations liées à ce créneau
       const { error: reservationsError } = await supabase
         .from('reservations')
@@ -179,7 +181,6 @@ export default function TimeSlotManagement() {
       
       if (reservationsError) {
         console.warn('Erreur suppression réservations:', reservationsError);
-        // On continue même s'il y a une erreur car il se peut qu'il n'y ait pas de réservations
       }
       
       // Puis supprimer le créneau
@@ -189,7 +190,6 @@ export default function TimeSlotManagement() {
         .eq('id', slotId);
 
       if (error) {
-        console.error('Erreur Supabase lors de la suppression du créneau:', error);
         throw error;
       }
       
@@ -197,20 +197,8 @@ export default function TimeSlotManagement() {
       loadData();
     } catch (err) {
       console.error('Erreur suppression créneau:', err);
-      toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
+      toast.error('Erreur lors de la suppression');
     }
-  };
-
-  const getActivityIcon = (activity: string) => {
-    return activity === 'poney' ? <Users className="h-4 w-4" /> : <Target className="h-4 w-4" />;
-  };
-
-  const getActivityLabel = (activity: string) => {
-    return activity === 'poney' ? 'Poney' : 'Tir à l\'Arc';
-  };
-
-  const getActivityColor = (activity: string) => {
-    return activity === 'poney' ? 'text-green-600 bg-green-50' : 'text-orange-600 bg-orange-50';
   };
 
   if (loading) {
@@ -245,13 +233,13 @@ export default function TimeSlotManagement() {
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-green-600">
-            {timeSlots.filter(s => s.activity === 'poney').length}
+            {timeSlots.filter(s => s.event_activity?.activity?.name === 'Poney').length}
           </div>
           <div className="text-sm text-gray-600">Créneaux Poney</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-orange-600">
-            {timeSlots.filter(s => s.activity === 'tir_arc').length}
+            {timeSlots.filter(s => s.event_activity?.activity?.name === 'Tir à l\'Arc').length}
           </div>
           <div className="text-sm text-gray-600">Créneaux Tir à l'Arc</div>
         </div>
@@ -282,7 +270,7 @@ export default function TimeSlotManagement() {
                 <div className="flex items-center justify-between">
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
-                      <div className={`flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium ${getActivityColor(slot.event_activity?.activity?.name || 'unknown')}`}>
+                      <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-600">
                         <span className="text-lg">{slot.event_activity?.activity?.icon || '❓'}</span>
                         {slot.event_activity?.activity?.name || 'Activité inconnue'}
                       </div>

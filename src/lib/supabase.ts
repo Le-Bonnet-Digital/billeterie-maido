@@ -89,7 +89,6 @@ export type Database = {
         Row: {
           id: string;
           pass_id: string;
-          activity: 'poney' | 'tir_arc';
           slot_time: string;
           capacity: number;
           created_at: string;
@@ -97,7 +96,6 @@ export type Database = {
         Insert: {
           id?: string;
           pass_id: string;
-          activity: 'poney' | 'tir_arc';
           slot_time: string;
           capacity?: number;
           created_at?: string;
@@ -105,7 +103,6 @@ export type Database = {
         Update: {
           id?: string;
           pass_id?: string;
-          activity?: 'poney' | 'tir_arc';
           slot_time?: string;
           capacity?: number;
         };
