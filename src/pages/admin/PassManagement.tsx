@@ -385,12 +385,21 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const updateCalculatedStock = () => {
     if (selectedActivities.length === 0) {
       setCalculatedMaxStock(999999);
+     // Réinitialiser le stock initial quand aucune activité n'est sélectionnée
+     setFormData(prev => ({ ...prev, initial_stock: null }));
       return;
     }
 
     const stocks = selectedActivities.map(activityId => activityStocks[activityId] || 999999);
     const minStock = Math.min(...stocks);
     setCalculatedMaxStock(minStock);
+   
+   // Mettre à jour automatiquement le stock initial avec le minimum calculé
+   if (minStock !== 999999) {
+     setFormData(prev => ({ ...prev, initial_stock: minStock }));
+   } else {
+     setFormData(prev => ({ ...prev, initial_stock: null }));
+   }
   };
 
   useEffect(() => {
@@ -607,6 +616,10 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
                           } else {
                             setSelectedActivities(selectedActivities.filter(id => id !== eventActivity.id));
                           }
+                         // Forcer la mise à jour du stock calculé après changement
+                         setTimeout(() => {
+                           updateCalculatedStock();
+                         }, 0);
                         }}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
