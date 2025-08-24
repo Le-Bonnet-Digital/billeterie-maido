@@ -54,6 +54,7 @@ export default function EventManagement() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [selectedEventForActivities, setSelectedEventForActivities] = useState<Event | null>(null);
+  
   useEffect(() => {
     loadEvents();
   }, []);
@@ -570,15 +571,15 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     loadData();
   };
 
-  const handleUpdateEventActivity = async (activityId: string) => {
+  const handleUpdateEventActivity = async (activityId: string, stockLimit?: string, requiresTimeSlot?: boolean) => {
     const eventActivity = eventActivities.find(ea => ea.activity_id === activityId);
     const formData = activityForms[activityId];
     
     if (!eventActivity || !formData) return;
     
     const updates = {
-      stock_limit: formData.stock_limit ? parseInt(formData.stock_limit) : null,
-      requires_time_slot: formData.requires_time_slot
+      stock_limit: (stockLimit !== undefined ? stockLimit : formData.stock_limit) ? parseInt(stockLimit !== undefined ? stockLimit : formData.stock_limit) : null,
+      requires_time_slot: requiresTimeSlot !== undefined ? requiresTimeSlot : formData.requires_time_slot
     };
     
     const { error } = await supabase
@@ -744,7 +745,3 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     </div>
   );
 }
-
-  const handleUpdateEventActivity = async (activityId: string, stockLimit?: string, requiresTimeSlot?: boolean) => {
-  eventActivity: EventActivity;
-  onUpdate: () => void;
