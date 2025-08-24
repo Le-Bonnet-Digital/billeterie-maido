@@ -326,7 +326,9 @@ interface PurchaseModalProps {
   quantity: number;
   onQuantityChange: (quantity: number) => void;
   selectedActivities: {[key: string]: string};
+  selectedTimeSlots: {[key: string]: string};
   onActivitySelection: (index: number, eventActivityId: string) => void;
+  onTimeSlotSelection: (index: number, timeSlotId: string) => void;
   onPurchase: () => void;
   onClose: () => void;
 }
@@ -337,10 +339,46 @@ function PurchaseModal({
   quantity, 
   onQuantityChange, 
   selectedActivities, 
+  selectedTimeSlots,
   onActivitySelection, 
+  onTimeSlotSelection,
   onPurchase, 
   onClose 
 }: PurchaseModalProps) {
+  const [availableTimeSlots, setAvailableTimeSlots] = useState<{[key: string]: TimeSlot[]}>({});
+  
+  const loadTimeSlotsForActivity = async (eventActivityId: string) => {
+    try {
+      const { data: slotsData, error } = await supabase
+        .from('time_slots')
+        .select('id, slot_time, capacity')
+        .eq('event_activity_id', eventActivityId)
+        .gte('slot_time', new Date().toISOString())
+        .order('slot_time');
+      if (error) throw error;
+      
+      // Calculer la capacité restante pour chaque créneau
+      const slotsWithCapacity = await Promise.all(
+        (slotsData || []).map(async (slot) => {
+          const { data: capacityData } = await supabase
+            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+          
+          return {
+            ...slot,
+            remaining_capacity: capacityData || 0
+          };
+        })
+      );
+      
+      setAvailableTimeSlots(prev => ({
+        ...prev,
+        [eventActivityId]: slotsWithCapacity
+      }));
+    } catch (err) {
+      console.error('Erreur chargement créneaux:', err);
+    }
+  };
+  
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
