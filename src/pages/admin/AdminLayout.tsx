@@ -68,6 +68,7 @@ export default function AdminLayout() {
     { name: 'Activités', href: '/admin/activities', icon: Activity },
     { name: 'Pass', href: '/admin/passes', icon: Ticket },
     { name: 'Créneaux', href: '/admin/time-slots', icon: Clock },
+    { name: 'Gestion des Flux', href: '/admin/flow', icon: Users },
     { name: 'Réservations', href: '/admin/reservations', icon: Users },
     { name: 'Reporting', href: '/admin/reports', icon: BarChart3 },
     { name: 'Communication', href: '/admin/communication', icon: Mail },

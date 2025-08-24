@@ -739,6 +739,9 @@ interface TimeSlotsSectionProps {
 function TimeSlotsSection({ eventActivity, onUpdate }: TimeSlotsSectionProps) {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showBulkCreateForm, setShowBulkCreateForm] = useState(false);
+  const [viewMode, setViewMode] = useState<'list' | 'calendar'>('calendar');
+  const [selectedDate, setSelectedDate] = useState(new Date());
   const [newSlot, setNewSlot] = useState({
     slot_time: '',
     capacity: 15
@@ -832,6 +835,36 @@ function TimeSlotsSection({ eventActivity, onUpdate }: TimeSlotsSectionProps) {
     }
   };
 
+  const getWeekDays = (date: Date) => {
+    const week = [];
+    const startOfWeek = new Date(date);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Lundi = début de semaine
+    startOfWeek.setDate(diff);
+    
+    for (let i = 0; i < 7; i++) {
+      const day = new Date(startOfWeek);
+      day.setDate(startOfWeek.getDate() + i);
+      week.push(day);
+    }
+    return week;
+  };
+
+  const getTimeSlotsForDate = (date: Date) => {
+    const dateStr = format(date, 'yyyy-MM-dd');
+    return timeSlots.filter(slot => 
+      format(new Date(slot.slot_time), 'yyyy-MM-dd') === dateStr
+    ).sort((a, b) => new Date(a.slot_time).getTime() - new Date(b.slot_time).getTime());
+  };
+
+  const getCapacityColor = (remaining: number, total: number) => {
+    const percentage = (remaining / total) * 100;
+    if (percentage === 0) return 'bg-red-500 text-white';
+    if (percentage <= 25) return 'bg-orange-500 text-white';
+    if (percentage <= 50) return 'bg-yellow-500 text-white';
+    return 'bg-green-500 text-white';
+  };
+
   return (
     <div className="mt-4 pt-4 border-t border-gray-200">
       <div className="flex items-center justify-between mb-4">
@@ -846,6 +879,35 @@ function TimeSlotsSection({ eventActivity, onUpdate }: TimeSlotsSectionProps) {
           <Plus className="h-3 w-3" />
           Ajouter
         </button>
+        <button
+          onClick={() => setShowBulkCreateForm(!showBulkCreateForm)}
+          className="px-3 py-1 bg-purple-100 text-purple-700 hover:bg-purple-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          Création en masse
+        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => setViewMode('calendar')}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              viewMode === 'calendar'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Calendrier
+          </button>
+          <button
+            onClick={() => setViewMode('list')}
+            className={`px-3 py-1 rounded text-sm font-medium transition-colors ${
+              viewMode === 'list'
+                ? 'bg-purple-100 text-purple-700'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Liste
+          </button>
+        </div>
       </div>
 
       {/* Formulaire de création */}
@@ -897,44 +959,132 @@ function TimeSlotsSection({ eventActivity, onUpdate }: TimeSlotsSectionProps) {
         </form>
       )}
 
-      {/* Liste des créneaux */}
-      <div className="space-y-2">
-        {timeSlots.length === 0 ? (
-          <p className="text-sm text-gray-500 italic">Aucun créneau défini</p>
-        ) : (
-          timeSlots.map((slot) => (
-            <div key={slot.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
-              <div className="flex items-center gap-3">
-                <div className="text-sm">
-                  <div className="font-medium text-gray-900">
-                    {format(new Date(slot.slot_time), 'EEEE d MMMM yyyy', { locale: fr })}
-                  </div>
-                  <div className="text-gray-600">
-                    {format(new Date(slot.slot_time), 'HH:mm')}
-                  </div>
-                </div>
-                <div className="text-sm">
-                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                    slot.remaining_capacity === 0 
-                      ? 'bg-red-100 text-red-800'
-                      : slot.remaining_capacity <= 3
-                      ? 'bg-orange-100 text-orange-800'
-                      : 'bg-green-100 text-green-800'
-                  }`}>
-                    {slot.remaining_capacity}/{slot.capacity} places
-                  </span>
-                </div>
+      {/* Vue calendrier ou liste */}
+      {viewMode === 'calendar' ? (
+        <div className="space-y-4">
+          {/* Navigation semaine */}
+          <div className="flex items-center justify-between">
+            <button
+              onClick={() => {
+                const newDate = new Date(selectedDate);
+                newDate.setDate(newDate.getDate() - 7);
+                setSelectedDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              ←
+            </button>
+            <h5 className="font-medium text-gray-900">
+              Semaine du {format(getWeekDays(selectedDate)[0], 'd MMMM yyyy', { locale: fr })}
+            </h5>
+            <button
+              onClick={() => {
+                const newDate = new Date(selectedDate);
+                newDate.setDate(newDate.getDate() + 7);
+                setSelectedDate(newDate);
+              }}
+              className="p-2 hover:bg-gray-100 rounded-md transition-colors"
+            >
+              →
+            </button>
+          </div>
+          
+          {/* Grille calendrier */}
+          <div className="grid grid-cols-7 gap-2">
+            {/* En-têtes des jours */}
+            {['Lun', 'Mar', 'Mer', 'Jeu', 'Ven', 'Sam', 'Dim'].map((day) => (
+              <div key={day} className="text-center text-sm font-medium text-gray-700 p-2">
+                {day}
               </div>
-              <button
-                onClick={() => handleDeleteSlot(slot.id)}
-                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
-              >
-                <Trash2 className="h-4 w-4" />
-              </button>
-            </div>
-          ))
-        )}
-      </div>
+            ))}
+            
+            {/* Jours de la semaine */}
+            {getWeekDays(selectedDate).map((date) => {
+              const daySlots = getTimeSlotsForDate(date);
+              const isToday = format(date, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+              
+              return (
+                <div
+                  key={date.toISOString()}
+                  className={`min-h-[120px] border border-gray-200 rounded-lg p-2 ${
+                    isToday ? 'bg-blue-50 border-blue-300' : 'bg-white'
+                  }`}
+                >
+                  <div className={`text-sm font-medium mb-2 ${
+                    isToday ? 'text-blue-700' : 'text-gray-700'
+                  }`}>
+                    {format(date, 'd')}
+                  </div>
+                  
+                  <div className="space-y-1">
+                    {daySlots.map((slot) => (
+                      <div
+                        key={slot.id}
+                        className={`text-xs p-1 rounded cursor-pointer group relative ${
+                          getCapacityColor(slot.remaining_capacity || 0, slot.capacity)
+                        }`}
+                        title={`${format(new Date(slot.slot_time), 'HH:mm')} - ${slot.remaining_capacity}/${slot.capacity} places`}
+                      >
+                        <div className="flex items-center justify-between">
+                          <span>{format(new Date(slot.slot_time), 'HH:mm')}</span>
+                          <button
+                            onClick={() => handleDeleteSlot(slot.id)}
+                            className="opacity-0 group-hover:opacity-100 hover:bg-red-600 rounded p-0.5 transition-all"
+                          >
+                            <X className="h-3 w-3" />
+                          </button>
+                        </div>
+                        <div className="text-xs opacity-90">
+                          {slot.remaining_capacity}/{slot.capacity}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      ) : (
+        /* Vue liste */
+        <div className="space-y-2">
+          {timeSlots.length === 0 ? (
+            <p className="text-sm text-gray-500 italic">Aucun créneau défini</p>
+          ) : (
+            timeSlots.map((slot) => (
+              <div key={slot.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
+                <div className="flex items-center gap-3">
+                  <div className="text-sm">
+                    <div className="font-medium text-gray-900">
+                      {format(new Date(slot.slot_time), 'EEEE d MMMM yyyy', { locale: fr })}
+                    </div>
+                    <div className="text-gray-600">
+                      {format(new Date(slot.slot_time), 'HH:mm')}
+                    </div>
+                  </div>
+                  <div className="text-sm">
+                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                      slot.remaining_capacity === 0 
+                        ? 'bg-red-100 text-red-800'
+                        : (slot.remaining_capacity || 0) <= 3
+                        ? 'bg-orange-100 text-orange-800'
+                        : 'bg-green-100 text-green-800'
+                    }`}>
+                      {slot.remaining_capacity}/{slot.capacity} places
+                    </span>
+                  </div>
+                </div>
+                <button
+                  onClick={() => handleDeleteSlot(slot.id)}
+                  className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                >
+                  <Trash2 className="h-4 w-4" />
+                </button>
+              </div>
+            ))
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -24,6 +24,7 @@ import ReservationManagement from './pages/admin/ReservationManagement';
 import Reports from './pages/admin/Reports';
 import Communication from './pages/admin/Communication';
 import Settings from './pages/admin/Settings';
+import FlowManagement from './pages/admin/FlowManagement';
 
 export default function App() {
   return (
@@ -47,6 +48,7 @@ export default function App() {
             <Route path="activities" element={<ActivityManagement />} />
             <Route path="passes" element={<PassManagement />} />
             <Route path="time-slots" element={<TimeSlotManagement />} />
+            <Route path="flow" element={<FlowManagement />} />
             <Route path="reservations" element={<ReservationManagement />} />
             <Route path="reports" element={<Reports />} />
             <Route path="communication" element={<Communication />} />

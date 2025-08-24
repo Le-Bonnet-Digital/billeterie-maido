@@ -326,9 +326,9 @@ interface PurchaseModalProps {
   quantity: number;
   onQuantityChange: (quantity: number) => void;
   selectedActivities: {[key: string]: string};
-  selectedTimeSlots: {[key: string]: string};
+  selectedTimeSlots?: {[key: string]: string};
   onActivitySelection: (index: number, eventActivityId: string) => void;
-  onTimeSlotSelection: (index: number, timeSlotId: string) => void;
+  onTimeSlotSelection?: (index: number, timeSlotId: string) => void;
   onPurchase: () => void;
   onClose: () => void;
 }
@@ -339,13 +339,14 @@ function PurchaseModal({
   quantity, 
   onQuantityChange, 
   selectedActivities, 
-  selectedTimeSlots,
+  selectedTimeSlots = {},
   onActivitySelection, 
-  onTimeSlotSelection,
+  onTimeSlotSelection = () => {},
   onPurchase, 
   onClose 
 }: PurchaseModalProps) {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<{[key: string]: TimeSlot[]}>({});
+  const [selectedActivityTimeSlots, setSelectedActivityTimeSlots] = useState<{[key: string]: string}>({});
   
   const loadTimeSlotsForActivity = async (eventActivityId: string) => {
     try {
@@ -379,6 +380,60 @@ function PurchaseModal({
     }
   };
   
+  const handleActivitySelectionWithSlots = async (index: number, eventActivityId: string) => {
+    onActivitySelection(index, eventActivityId);
+    
+    // Charger les créneaux pour cette activité
+    const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
+    if (eventActivity?.requires_time_slot) {
+      await loadTimeSlotsForActivity(eventActivityId);
+    }
+  };
+
+  const handleTimeSlotSelection = (index: number, eventActivityId: string, timeSlotId: string) => {
+    setSelectedActivityTimeSlots(prev => ({
+      ...prev,
+      [`${index}-${eventActivityId}`]: timeSlotId
+    }));
+  };
+
+  const getCapacityColor = (remaining: number, total: number) => {
+    const percentage = (remaining / total) * 100;
+    if (percentage === 0) return 'border-red-300 bg-red-50 text-red-700 cursor-not-allowed';
+    if (percentage <= 25) return 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100';
+    if (percentage <= 50) return 'border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
+    return 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100';
+  };
+
+  const canPurchase = () => {
+    // Vérifier que toutes les activités sont sélectionnées
+    for (let i = 0; i < quantity; i++) {
+      if (!selectedActivities[i]) return false;
+      
+      // Vérifier que les créneaux sont sélectionnés si nécessaire
+      const eventActivity = eventActivities.find(ea => ea.id === selectedActivities[i]);
+      if (eventActivity?.requires_time_slot && !selectedActivityTimeSlots[`${i}-${selectedActivities[i]}`]) {
+        return false;
+      }
+    }
+    return true;
+  };
+
+  const handlePurchaseWithSlots = async () => {
+    // Ajouter chaque pass individuellement au panier avec son créneau
+    for (let i = 0; i < quantity; i++) {
+      const eventActivityId = selectedActivities[i];
+      const timeSlotId = selectedActivityTimeSlots[`${i}-${eventActivityId}`];
+      
+      const success = await addToCart(pass.id, eventActivityId, timeSlotId);
+      if (!success) {
+        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
+        return;
+      }
+    }
+    
+    onPurchase();
+  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
@@ -388,7 +443,7 @@ function PurchaseModal({
               Configurer votre achat : {pass.name}
             </h3>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-6 w-6" />
+              ✕
             </button>
           </div>
         </div>
