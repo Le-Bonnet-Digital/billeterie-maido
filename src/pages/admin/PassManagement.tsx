@@ -358,6 +358,8 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const [calculatedMaxStock, setCalculatedMaxStock] = useState<number>(999999);
   const [formData, setFormData] = useState({
     event_id: pass?.event.id || '',
+    name: pass?.name || '',
+    price: pass?.price || 0,
     description: pass?.description || '',
     initial_stock: pass?.initial_stock || null
   });
@@ -395,6 +397,9 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
    } else {
      setFormData(prev => ({ ...prev, initial_stock: null }));
    }
+    if (formData.event_id) {
+      loadEventActivities();
+    }
   };
 
   useEffect(() => {
@@ -403,6 +408,11 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     }
   }, [pass]);
 
+  useEffect(() => {
+    if (formData.event_id) {
+      loadEventActivities();
+    }
+  }, [formData.event_id]);
   const loadEventActivities = async () => {
     try {
       const { data, error } = await supabase
