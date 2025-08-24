@@ -61,7 +61,6 @@ export default function TimeSlotManagement() {
           id,
           slot_time,
           capacity,
-          pass_id,
           event_activity_id,
           event_activities!time_slots_event_activity_id_fkey (
             id,
@@ -76,7 +75,6 @@ export default function TimeSlotManagement() {
           passes!time_slots_pass_id_fkey (
             id,
             name,
-            event_id,
             events!passes_event_id_fkey (
               id,
               name
