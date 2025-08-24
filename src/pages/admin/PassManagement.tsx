@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { supabase } from '../../lib/supabase';
+import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Euro, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 
@@ -47,6 +47,14 @@ export default function PassManagement() {
   const loadData = async () => {
     try {
       setLoading(true);
+      
+      // Check if Supabase is properly configured
+      if (!isSupabaseConfigured()) {
+        console.error('Supabase is not configured');
+        toast.error('Configuration Supabase manquante. Veuillez configurer la base de données.');
+        setLoading(false);
+        return;
+      }
       
       // Charger les pass avec leurs événements
       const { data: passesData, error: passesError } = await supabase
