@@ -490,6 +490,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
 
         if (error) throw error;
         passId = newPass.id;
+        toast.success('Pass créé avec succès');
       }
 
       // Gérer les activités du pass
@@ -513,10 +514,8 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
 
           if (activitiesError) throw activitiesError;
         }
-        toast.success('Pass créé avec succès');
       }
       
-      toast.success(pass ? 'Pass mis à jour avec succès' : 'Pass créé avec succès');
       onSave();
     } catch (err) {
       console.error('Erreur sauvegarde pass:', err);
