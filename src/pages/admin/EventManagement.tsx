@@ -4,6 +4,7 @@ import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity, Clock, Users } 
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import TimeSlotsManagementModal from '../../components/TimeSlotsManagementModal';
 
 interface Event {
   id: string;
