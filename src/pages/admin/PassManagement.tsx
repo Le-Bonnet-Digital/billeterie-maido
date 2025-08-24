@@ -366,53 +366,48 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    updateCalculatedStock();
   }, [selectedActivities, activityStocks]);
-
-  useEffect(() => {
-    // Mettre à jour le stock initial selon la logique demandée
-    if (calculatedMaxStock === 999999) {
-      // Aucune activité avec stock limité sélectionnée -> stock illimité (null)
-      setFormData(prev => ({ ...prev, initial_stock: null }));
-    } else {
-      // Au moins une activité avec stock limité sélectionnée -> prendre le minimum
-      setFormData(prev => ({ ...prev, initial_stock: calculatedMaxStock }));
-    }
-  }, [calculatedMaxStock]);
 
   const updateCalculatedStock = () => {
     if (selectedActivities.length === 0) {
       setCalculatedMaxStock(999999);
-     // Réinitialiser le stock initial quand aucune activité n'est sélectionnée
-     setFormData(prev => ({ ...prev, initial_stock: null }));
+      // Réinitialiser le stock initial quand aucune activité n'est sélectionnée
+      setFormData(prev => ({ ...prev, initial_stock: null }));
       return;
     }
 
     const stocks = selectedActivities.map(activityId => activityStocks[activityId] || 999999);
     const minStock = Math.min(...stocks);
     setCalculatedMaxStock(minStock);
-   
-   // Mettre à jour automatiquement le stock initial avec le minimum calculé
-   if (minStock !== 999999) {
-     setFormData(prev => ({ ...prev, initial_stock: minStock }));
-   } else {
-     setFormData(prev => ({ ...prev, initial_stock: null }));
-   }
-    if (formData.event_id) {
-      loadEventActivities();
+    
+    // Mettre à jour automatiquement le stock initial avec le minimum calculé
+    if (minStock !== 999999) {
+      setFormData(prev => ({ ...prev, initial_stock: minStock }));
+    } else {
+      setFormData(prev => ({ ...prev, initial_stock: null }));
     }
   };
-
-  useEffect(() => {
-    if (pass?.event_activities) {
-      setSelectedActivities(pass.event_activities.map(ea => ea.id));
-    }
-  }, [pass]);
 
   useEffect(() => {
     if (formData.event_id) {
       loadEventActivities();
     }
   }, [formData.event_id]);
+
+  useEffect(() => {
+    // Initialiser les activités sélectionnées après le chargement du pass
+    if (pass?.event_activities && availableActivities.length > 0) {
+      const passActivityIds = pass.event_activities.map(ea => ea.id);
+      setSelectedActivities(passActivityIds);
+      
+      // Calculer le stock initial après avoir défini les activités sélectionnées
+      setTimeout(() => {
+        updateCalculatedStock();
+      }, 0);
+    }
+  }, [pass, availableActivities]);
+
   const loadEventActivities = async () => {
     try {
       const { data, error } = await supabase
@@ -621,10 +616,6 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
                           } else {
                             setSelectedActivities(selectedActivities.filter(id => id !== eventActivity.id));
                           }
-                         // Forcer la mise à jour du stock calculé après changement
-                         setTimeout(() => {
-                           updateCalculatedStock();
-                         }, 0);
                         }}
                         className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                       />
