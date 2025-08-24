@@ -358,26 +358,21 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const [calculatedMaxStock, setCalculatedMaxStock] = useState<number>(999999);
   const [formData, setFormData] = useState({
     event_id: pass?.event.id || '',
-    name: pass?.name || '',
-    price: pass?.price || 0,
     description: pass?.description || '',
     initial_stock: pass?.initial_stock || null
   });
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    if (formData.event_id) {
-      loadEventActivities();
-    }
-  }, [formData.event_id]);
-
-  useEffect(() => {
-    updateCalculatedStock();
   }, [selectedActivities, activityStocks]);
 
   useEffect(() => {
-    // Mettre à jour le stock initial quand le stock calculé change
-    if (calculatedMaxStock !== 999999 && (formData.initial_stock === null || formData.initial_stock > calculatedMaxStock)) {
+    // Mettre à jour le stock initial selon la logique demandée
+    if (calculatedMaxStock === 999999) {
+      // Aucune activité avec stock limité sélectionnée -> stock illimité (null)
+      setFormData(prev => ({ ...prev, initial_stock: null }));
+    } else {
+      // Au moins une activité avec stock limité sélectionnée -> prendre le minimum
       setFormData(prev => ({ ...prev, initial_stock: calculatedMaxStock }));
     }
   }, [calculatedMaxStock]);
