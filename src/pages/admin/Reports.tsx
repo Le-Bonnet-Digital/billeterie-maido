@@ -55,7 +55,9 @@ export default function Reports() {
             price
           ),
           time_slots (
-            activity
+            event_activities (
+              activities (name)
+            )
           )
         `)
         .eq('payment_status', 'paid')
@@ -105,11 +107,14 @@ export default function Reports() {
       const activityStatsMap = new Map();
       reservationsData.forEach(r => {
         if (r.time_slots) {
-          const activity = r.time_slots.activity === 'poney' ? 'Poney' : 'Tir à l\'Arc';
-          if (!activityStatsMap.has(activity)) {
-            activityStatsMap.set(activity, { activity, count: 0 });
+          const activityName = r.time_slots.event_activities?.activities?.name;
+          if (activityName) {
+            const activity = activityName;
+            if (!activityStatsMap.has(activity)) {
+              activityStatsMap.set(activity, { activity, count: 0 });
+            }
+            activityStatsMap.get(activity).count++;
           }
-          activityStatsMap.get(activity).count++;
         }
       });
       const activityStats = Array.from(activityStatsMap.values());

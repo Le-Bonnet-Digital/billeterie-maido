@@ -86,7 +86,7 @@ export default function Cart() {
             event_activities (
               activities (name)
             ),
-            time_slots (activity, slot_time),
+            time_slots (slot_time),
             events!inner (name)
           `)
           .single();
@@ -114,7 +114,8 @@ export default function Cart() {
           eventName: eventName,
           passName: firstReservation.passes.name,
           price: firstReservation.passes.price,
-          timeSlot: firstReservation.time_slots
+          timeSlot: firstReservation.time_slots,
+          activityName: firstReservation.event_activities?.activities?.name
         });
         setShowConfirmation(true);
       }

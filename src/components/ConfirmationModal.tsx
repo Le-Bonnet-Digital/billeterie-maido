@@ -10,9 +10,9 @@ interface ConfirmationModalProps {
   passName: string;
   price: number;
   timeSlot?: {
-    activity: string;
     slot_time: string;
   };
+  activityName?: string;
 }
 
 export default function ConfirmationModal({
@@ -23,7 +23,8 @@ export default function ConfirmationModal({
   eventName,
   passName,
   price,
-  timeSlot
+  timeSlot,
+  activityName
 }: ConfirmationModalProps) {
   if (!isOpen) return null;
 
@@ -38,7 +39,7 @@ Pass: ${passName}
 Prix: ${price}€
 Réservation: ${reservationNumber}
 Email: ${email}
-${timeSlot ? `Activité: ${timeSlot.activity === 'poney' ? 'Poney' : 'Tir à l\'Arc'}` : ''}
+${activityName ? `Activité: ${activityName}` : ''}
 ${timeSlot ? `Horaire: ${new Date(timeSlot.slot_time).toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' })}` : ''}
 
 Présentez ce billet à l'entrée de l'événement.
@@ -96,14 +97,16 @@ Présentez ce billet à l'entrée de l'événement.
                 <span className="text-gray-600">Prix:</span>
                 <span className="font-medium">{price}€</span>
               </div>
-              {timeSlot && (
+              {activityName && (
                 <>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Activité:</span>
-                    <span className="font-medium">
-                      {timeSlot.activity === 'poney' ? 'Poney' : 'Tir à l\'Arc'}
-                    </span>
+                    <span className="font-medium">{activityName}</span>
                   </div>
+                </>
+              )}
+              {timeSlot && (
+                <>
                   <div className="flex justify-between">
                     <span className="text-gray-600">Horaire:</span>
                     <span className="font-medium">
