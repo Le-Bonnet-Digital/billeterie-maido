@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity, Clock, Users } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity, Clock, Users, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -31,6 +31,7 @@ interface EventActivity {
   stock_limit: number | null;
   requires_time_slot: boolean;
   activity: Activity;
+  time_slots?: TimeSlot[];
 }
 
 interface TimeSlot {
@@ -38,8 +39,9 @@ interface TimeSlot {
   slot_time: string;
   capacity: number;
   remaining_capacity?: number;
-  reservations_count?: number;
+  event_activity_id: string;
 }
+
 interface ActivityFormData {
   stock_limit: string;
   requires_time_slot: boolean;
@@ -470,6 +472,7 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
   const [activityForms, setActivityForms] = useState<{[key: string]: ActivityFormData}>({});
+  const [showTimeSlotsFor, setShowTimeSlotsFor] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -506,14 +509,20 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
         .from('event_activities')
         .select(`
           *,
-          activities (*)
+          activities (*),
+          time_slots (
+            id,
+            slot_time,
+            capacity
+          )
         `)
         .eq('event_id', event.id);
 
       if (eventActivitiesError) throw eventActivitiesError;
       setEventActivities((eventActivitiesData || []).map(ea => ({
         ...ea,
-        activity: ea.activities
+        activity: ea.activities,
+        time_slots: ea.time_slots || []
       })));
     } catch (err) {
       console.error('Erreur chargement activités:', err);
@@ -651,6 +660,16 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                       >
                         {isEnabled ? 'Retirer' : 'Ajouter'}
                       </button>
+                      
+                      {isEnabled && eventActivity && eventActivity.requires_time_slot && (
+                        <button
+                          onClick={() => setShowTimeSlotsFor(showTimeSlotsFor === eventActivity.id ? null : eventActivity.id)}
+                          className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors flex items-center gap-2"
+                        >
+                          <Clock className="h-4 w-4" />
+                          Créneaux ({eventActivity.time_slots?.length || 0})
+                        </button>
+                      )}
                     </div>
                   </div>
                   
@@ -693,12 +712,228 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Gestion des créneaux */}
+                  {isEnabled && eventActivity && showTimeSlotsFor === eventActivity.id && (
+                    <TimeSlotsSection 
+                      eventActivity={eventActivity}
+                      onUpdate={loadData}
+                    />
+                  )}
                 </div>
               );
             })}
           </div>
         </div>
         
+      </div>
+    </div>
+  );
+}
+
+interface TimeSlotsSectionProps {
+  eventActivity: EventActivity;
+  onUpdate: () => void;
+}
+
+function TimeSlotsSection({ eventActivity, onUpdate }: TimeSlotsSectionProps) {
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [newSlot, setNewSlot] = useState({
+    slot_time: '',
+    capacity: 15
+  });
+  const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    loadTimeSlots();
+  }, [eventActivity.id]);
+
+  const loadTimeSlots = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('*')
+        .eq('event_activity_id', eventActivity.id)
+        .order('slot_time');
+
+      if (error) throw error;
+      
+      // Calculer la capacité restante pour chaque créneau
+      const slotsWithCapacity = await Promise.all(
+        (data || []).map(async (slot) => {
+          const { data: capacityData } = await supabase
+            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+          
+          return {
+            ...slot,
+            remaining_capacity: capacityData || 0
+          };
+        })
+      );
+      
+      setTimeSlots(slotsWithCapacity);
+    } catch (err) {
+      console.error('Erreur chargement créneaux:', err);
+    }
+  };
+
+  const handleCreateSlot = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
+    if (!newSlot.slot_time || newSlot.capacity <= 0) {
+      toast.error('Veuillez remplir tous les champs');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const { error } = await supabase
+        .from('time_slots')
+        .insert({
+          event_activity_id: eventActivity.id,
+          slot_time: new Date(newSlot.slot_time).toISOString(),
+          capacity: newSlot.capacity
+        });
+
+      if (error) throw error;
+      
+      toast.success('Créneau créé avec succès');
+      setNewSlot({ slot_time: '', capacity: 15 });
+      setShowCreateForm(false);
+      loadTimeSlots();
+      onUpdate();
+    } catch (err) {
+      console.error('Erreur création créneau:', err);
+      toast.error('Erreur lors de la création');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeleteSlot = async (slotId: string) => {
+    if (!confirm('Supprimer ce créneau ? Les réservations associées seront également supprimées.')) return;
+
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('id', slotId);
+
+      if (error) throw error;
+      
+      toast.success('Créneau supprimé');
+      loadTimeSlots();
+      onUpdate();
+    } catch (err) {
+      console.error('Erreur suppression créneau:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  return (
+    <div className="mt-4 pt-4 border-t border-gray-200">
+      <div className="flex items-center justify-between mb-4">
+        <h4 className="font-medium text-gray-900 flex items-center gap-2">
+          <Clock className="h-4 w-4" />
+          Créneaux pour {eventActivity.activity.name}
+        </h4>
+        <button
+          onClick={() => setShowCreateForm(!showCreateForm)}
+          className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
+        >
+          <Plus className="h-3 w-3" />
+          Ajouter
+        </button>
+      </div>
+
+      {/* Formulaire de création */}
+      {showCreateForm && (
+        <form onSubmit={handleCreateSlot} className="bg-gray-50 rounded-lg p-4 mb-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Date et heure
+              </label>
+              <input
+                type="datetime-local"
+                value={newSlot.slot_time}
+                onChange={(e) => setNewSlot({ ...newSlot, slot_time: e.target.value })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Capacité
+              </label>
+              <input
+                type="number"
+                min="1"
+                value={newSlot.capacity}
+                onChange={(e) => setNewSlot({ ...newSlot, capacity: parseInt(e.target.value) || 1 })}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                required
+              />
+            </div>
+          </div>
+          <div className="flex gap-2 mt-4">
+            <button
+              type="submit"
+              disabled={loading}
+              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white rounded-md text-sm font-medium transition-colors"
+            >
+              {loading ? 'Création...' : 'Créer'}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowCreateForm(false)}
+              className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm font-medium transition-colors"
+            >
+              Annuler
+            </button>
+          </div>
+        </form>
+      )}
+
+      {/* Liste des créneaux */}
+      <div className="space-y-2">
+        {timeSlots.length === 0 ? (
+          <p className="text-sm text-gray-500 italic">Aucun créneau défini</p>
+        ) : (
+          timeSlots.map((slot) => (
+            <div key={slot.id} className="flex items-center justify-between bg-white border border-gray-200 rounded-lg p-3">
+              <div className="flex items-center gap-3">
+                <div className="text-sm">
+                  <div className="font-medium text-gray-900">
+                    {format(new Date(slot.slot_time), 'EEEE d MMMM yyyy', { locale: fr })}
+                  </div>
+                  <div className="text-gray-600">
+                    {format(new Date(slot.slot_time), 'HH:mm')}
+                  </div>
+                </div>
+                <div className="text-sm">
+                  <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                    slot.remaining_capacity === 0 
+                      ? 'bg-red-100 text-red-800'
+                      : slot.remaining_capacity <= 3
+                      ? 'bg-orange-100 text-orange-800'
+                      : 'bg-green-100 text-green-800'
+                  }`}>
+                    {slot.remaining_capacity}/{slot.capacity} places
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => handleDeleteSlot(slot.id)}
+                className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            </div>
+          ))
+        )}
       </div>
     </div>
   );
