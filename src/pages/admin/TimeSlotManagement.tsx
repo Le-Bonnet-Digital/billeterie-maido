@@ -361,8 +361,8 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
   const loadPassActivities = async () => {
     try {
       const selectedPass = passes.find(p => p.id === formData.pass_id);
-      if (selectedPass?.event_activities) {
-        setAvailableActivities(selectedPass.event_activities);
+      if (selectedPass && 'event_activities' in selectedPass) {
+        setAvailableActivities((selectedPass as any).event_activities);
       }
     } catch (err) {
       console.error('Erreur chargement activités du pass:', err);
