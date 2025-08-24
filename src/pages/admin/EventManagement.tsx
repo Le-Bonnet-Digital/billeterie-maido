@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Eye, EyeOff, X, Activity, Clock, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -33,6 +33,13 @@ interface EventActivity {
   activity: Activity;
 }
 
+interface TimeSlot {
+  id: string;
+  slot_time: string;
+  capacity: number;
+  remaining_capacity?: number;
+  reservations_count?: number;
+}
 interface ActivityFormData {
   stock_limit: string;
   requires_time_slot: boolean;
@@ -45,6 +52,8 @@ export default function EventManagement() {
   const [editingEvent, setEditingEvent] = useState<Event | null>(null);
   const [showActivitiesModal, setShowActivitiesModal] = useState(false);
   const [selectedEventForActivities, setSelectedEventForActivities] = useState<Event | null>(null);
+  const [showTimeSlotsModal, setShowTimeSlotsModal] = useState(false);
+  const [selectedEventActivity, setSelectedEventActivity] = useState<EventActivity | null>(null);
   useEffect(() => {
     loadEvents();
   }, []);
@@ -247,6 +256,21 @@ export default function EventManagement() {
           onClose={() => {
             setShowActivitiesModal(false);
             setSelectedEventForActivities(null);
+          }}
+          onManageTimeSlots={(eventActivity) => {
+            setSelectedEventActivity(eventActivity);
+            setShowTimeSlotsModal(true);
+          }}
+        />
+      )}
+      
+      {/* Modal de gestion des créneaux */}
+      {showTimeSlotsModal && selectedEventActivity && (
+        <TimeSlotsManagementModal
+          eventActivity={selectedEventActivity}
+          onClose={() => {
+            setShowTimeSlotsModal(false);
+            setSelectedEventActivity(null);
           }}
         />
       )}
@@ -457,9 +481,10 @@ function EventFormModal({ event, onClose, onSave }: EventFormModalProps) {
 interface EventActivitiesModalProps {
   event: Event;
   onClose: () => void;
+  onManageTimeSlots: (eventActivity: EventActivity) => void;
 }
 
-function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
+function EventActivitiesModal({ event, onClose, onManageTimeSlots }: EventActivitiesModalProps) {
   const [activities, setActivities] = useState<Activity[]>([]);
   const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
   const [activityForms, setActivityForms] = useState<{[key: string]: ActivityFormData}>({});
@@ -665,6 +690,15 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                       </div>
                       
                       <div className="flex items-center">
+                        {isEnabled && eventActivity && eventActivity.requires_time_slot && (
+                          <button
+                            onClick={() => onManageTimeSlots(eventActivity)}
+                            className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors flex items-center gap-1"
+                          >
+                            <Clock className="h-3 w-3" />
+                            Créneaux
+                          </button>
+                        )}
                         <input
                           type="checkbox"
                           id={`requires-slot-${activity.id}`}
