@@ -62,7 +62,7 @@ export default function TimeSlotManagement() {
           slot_time,
           capacity,
           event_activity_id,
-          event_activities!time_slots_event_activity_id_fkey (
+          event_activities (
             id,
             stock_limit,
             requires_time_slot,
@@ -72,10 +72,10 @@ export default function TimeSlotManagement() {
               icon
             )
           ),
-          passes!time_slots_pass_id_fkey (
+          passes (
             id,
             name,
-            events!passes_event_id_fkey (
+            events (
               id,
               name
             )
@@ -90,10 +90,10 @@ export default function TimeSlotManagement() {
         (slotsData || []).map(async (slot) => {
           // Get event activity remaining capacity
           let eventActivityCapacity = 999999;
-          if (slot.event_activities && slot.event_activities.stock_limit) {
+          if (slot.event_activities?.stock_limit) {
             const { data: activityCapacityData } = await supabase
               .rpc('get_event_activity_remaining_stock', { 
-                event_activity_uuid: slot.event_activities.id 
+                event_activity_id_param: slot.event_activities.id 
               });
             eventActivityCapacity = activityCapacityData || 0;
           }
@@ -110,14 +110,14 @@ export default function TimeSlotManagement() {
           return { 
             ...slot, 
             pass: {
-              ...slot.passes,
+              id: slot.passes?.id || '',
+              name: slot.passes?.name || '',
               event: slot.passes?.events || { id: '', name: 'Événement non défini' }
             }, 
             event_activity: slot.event_activities ? {
               ...slot.event_activities,
-              remaining_capacity: eventActivityCapacity,
               activity: slot.event_activities.activities
-            } : undefined,
+            } : null,
             remaining_capacity: remainingCapacity
           };
         })
@@ -131,7 +131,6 @@ export default function TimeSlotManagement() {
         .select(`
           id,
           name,
-          event_id,
           pass_activities (
             event_activity_id,
             event_activities (
@@ -143,7 +142,7 @@ export default function TimeSlotManagement() {
               )
             )
           ),
-          events!passes_event_id_fkey (
+          events (
             id,
             name
           )
@@ -152,7 +151,8 @@ export default function TimeSlotManagement() {
 
       if (passesError) throw passesError;
       setPasses((passesData || []).map(pass => ({
-        ...pass,
+        id: pass.id,
+        name: pass.name,
         event: pass.events || { id: '', name: 'Événement non défini' },
         event_activities: (pass.pass_activities || []).map((pa: any) => ({
           id: pa.event_activities.id,
