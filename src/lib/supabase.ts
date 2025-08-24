@@ -199,6 +199,22 @@ export type Database = {
         Args: Record<PropertyKey, never>;
         Returns: void;
       };
+      get_event_activity_remaining_stock: {
+        Args: { event_activity_uuid: string };
+        Returns: number;
+      };
+      get_pass_max_stock_from_activities: {
+        Args: { pass_uuid: string };
+        Returns: number;
+      };
+      get_pass_effective_remaining_stock: {
+        Args: { pass_uuid: string };
+        Returns: number;
+      };
+      can_reserve_pass: {
+        Args: { pass_uuid: string; quantity_requested: number };
+        Returns: boolean;
+      };
     };
   };
 };
