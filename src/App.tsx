@@ -47,7 +47,7 @@ export default function App() {
             <Route path="events" element={<EventManagement />} />
             <Route path="activities" element={<ActivityManagement />} />
             <Route path="passes" element={<PassManagement />} />
-            {/* <Route path="time-slots" element={<TimeSlotManagement />} /> */}
+            <Route path="time-slots" element={<TimeSlotManagement />} />
             <Route path="flow" element={<FlowManagement />} />
             <Route path="reservations" element={<ReservationManagement />} />
             <Route path="reports" element={<Reports />} />
