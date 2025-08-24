@@ -19,8 +19,12 @@ interface Reservation {
     };
   };
   time_slots?: {
-    activity: string;
     slot_time: string;
+    event_activities: {
+      activities: {
+        name: string;
+      };
+    };
   };
 }
 
@@ -53,8 +57,12 @@ export default function ReservationManagement() {
             )
           ),
           time_slots (
-            activity,
-            slot_time
+            slot_time,
+            event_activities (
+              activities (
+                name
+              )
+            )
           )
         `)
         .order('created_at', { ascending: false });
@@ -102,7 +110,7 @@ export default function ReservationManagement() {
         res.client_email,
         res.passes.events.name,
         res.passes.name,
-        res.time_slots?.activity === 'poney' ? 'Poney' : res.time_slots?.activity === 'tir_arc' ? 'Tir à l\'Arc' : 'Aucune',
+        res.time_slots?.event_activities?.activities?.name || 'Aucune',
         res.time_slots ? format(new Date(res.time_slots.slot_time), 'HH:mm') : 'Aucun',
         `${res.passes.price}€`,
         res.payment_status,
@@ -273,7 +281,7 @@ export default function ReservationManagement() {
                       {reservation.time_slots ? (
                         <div className="text-sm">
                           <div className="font-medium text-gray-900">
-                            {reservation.time_slots.activity === 'poney' ? 'Poney' : 'Tir à l\'Arc'}
+                            {reservation.time_slots.event_activities?.activities?.name || 'Activité inconnue'}
                           </div>
                           <div className="text-gray-500">
                             {format(new Date(reservation.time_slots.slot_time), 'HH:mm')}
