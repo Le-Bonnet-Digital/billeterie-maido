@@ -11,7 +11,8 @@ import {
   Settings,
   ArrowLeft,
   Clock,
-  LogOut
+  LogOut,
+  Activity
 } from 'lucide-react';
 import AdminLogin from '../../components/AdminLogin';
 import { getCurrentUser, signOut } from '../../lib/auth';
