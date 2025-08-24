@@ -10,7 +10,7 @@ interface Pass {
   description: string;
   initial_stock: number | null;
   remaining_stock?: number;
- calculated_max_stock?: number;
+  calculated_max_stock?: number;
   event_activities?: EventActivity[];
   event: {
     id: string;
@@ -290,8 +290,9 @@ export default function PassManagement() {
                           <span className="text-xs text-gray-500">Activités:</span>
                           {pass.event_activities.map((ea, index) => (
                             <span key={ea.id} className="flex items-center gap-1 text-xs">
-                           {pass.calculated_max_stock !== 999999 && pass.calculated_max_stock !== undefined && pass.calculated_max_stock < 999999 && (
-                              <span>{ea.activity.name}</span>
+                              {pass.calculated_max_stock !== 999999 && pass.calculated_max_stock !== undefined && pass.calculated_max_stock < 999999 && (
+                                <span>{ea.activity.name}</span>
+                              )}
                               {index < pass.event_activities!.length - 1 && <span>,</span>}
                             </span>
                           ))}
@@ -390,7 +391,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     const stocks = selectedActivities.map(activityId => activityStocks[activityId] || 999999);
     const minStock = Math.min(...stocks);
     setCalculatedMaxStock(minStock);
-  }, [formData.event_id]);
+  };
 
   useEffect(() => {
     if (pass?.event_activities) {
