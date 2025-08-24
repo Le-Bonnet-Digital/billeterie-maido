@@ -200,7 +200,7 @@ export type Database = {
         Returns: void;
       };
       get_event_activity_remaining_stock: {
-        Args: { event_activity_uuid: string };
+        Args: { event_activity_id_param: string };
         Returns: number;
       };
       get_pass_max_stock_from_activities: {

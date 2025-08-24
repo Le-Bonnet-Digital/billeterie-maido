@@ -57,7 +57,7 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
     // Si activité sélectionnée, vérifier le stock de l'activité
     if (eventActivityId) {
       const { data: activityStockData } = await supabase
-        .rpc('get_event_activity_remaining_stock', { event_activity_uuid: eventActivityId });
+        .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivityId });
         
       if (activityStockData !== null && activityStockData < quantity) {
         toast.error('Stock insuffisant pour cette activité');

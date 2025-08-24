@@ -125,7 +125,7 @@ export default function EventDetails() {
       const activitiesWithStock = await Promise.all(
         (eventActivitiesData || []).map(async (eventActivity) => {
           const { data: stockData } = await supabase
-            .rpc('get_event_activity_remaining_stock', { event_activity_uuid: eventActivity.id });
+            .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivity.id });
           
           return { 
             ...eventActivity, 

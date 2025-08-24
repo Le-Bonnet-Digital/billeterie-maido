@@ -91,7 +91,7 @@ export default function PassManagement() {
              pass.pass_activities.map(async (pa: any) => {
                const { data: stockData } = await supabase
                  .rpc('get_event_activity_remaining_stock', { 
-                   event_activity_uuid: pa.event_activities.id 
+                   event_activity_id_param: pa.event_activities.id 
                  });
                return stockData || 0;
              })
