@@ -151,21 +151,35 @@ export default function EventDetails() {
           id,
           slot_time,
           capacity,
-          event_activity_id,
-          event_activities (
+          event_activities!inner (
             *,
             activities (*)
           )
         `)
         .eq('event_activity_id', eventActivityId)
+        .gte('slot_time', new Date().toISOString())
         .order('slot_time');
 
       if (slotsError) throw slotsError;
       
-      return (slotsData || []).map(slot => ({
-        ...slot,
-        event_activity: { ...slot.event_activities, activity: slot.event_activities.activities }
-      }));
+      // Calculer la capacité restante pour chaque créneau
+      const slotsWithCapacity = await Promise.all(
+        (slotsData || []).map(async (slot) => {
+          const { data: capacityData } = await supabase
+            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+          
+          return {
+            ...slot,
+            remaining_capacity: capacityData || 0,
+            event_activity: { 
+              ...slot.event_activities, 
+              activity: slot.event_activities.activities 
+            }
+          };
+        })
+      );
+      
+      return slotsWithCapacity;
     } catch (err) {
       console.error('Erreur chargement créneaux pour l\'activité:', err);
       return [];
@@ -356,6 +370,7 @@ function PurchaseModal({
         .eq('event_activity_id', eventActivityId)
         .gte('slot_time', new Date().toISOString())
         .order('slot_time');
+        
       if (error) throw error;
       
       // Calculer la capacité restante pour chaque créneau
@@ -383,7 +398,7 @@ function PurchaseModal({
   const handleActivitySelectionWithSlots = async (index: number, eventActivityId: string) => {
     onActivitySelection(index, eventActivityId);
     
-    // Charger les créneaux pour cette activité
+    // Charger les créneaux pour cette activité d'événement
     const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
     if (eventActivity?.requires_time_slot) {
       await loadTimeSlotsForActivity(eventActivityId);

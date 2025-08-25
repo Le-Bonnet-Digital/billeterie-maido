@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Clock, Plus, Edit, Trash2, Users, Target, X } from 'lucide-react';
+import { Clock, Plus, Edit, Trash2, Users, Target, X, Calendar } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -19,10 +19,6 @@ interface TimeSlot {
       name: string;
       icon: string;
     };
-  };
-  pass: {
-    id: string;
-    name: string;
     event: {
       id: string;
       name: string;
@@ -30,9 +26,21 @@ interface TimeSlot {
   };
 }
 
-interface Pass {
+interface Event {
   id: string;
   name: string;
+  event_date: string;
+}
+
+interface EventActivity {
+  id: string;
+  stock_limit: number | null;
+  requires_time_slot: boolean;
+  activity: {
+    id: string;
+    name: string;
+    icon: string;
+  };
   event: {
     id: string;
     name: string;
@@ -41,7 +49,9 @@ interface Pass {
 
 export default function TimeSlotManagement() {
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [passes, setPasses] = useState<Pass[]>([]);
+  const [events, setEvents] = useState<Event[]>([]);
+  const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
+  const [selectedEvent, setSelectedEvent] = useState<string>('');
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingSlot, setEditingSlot] = useState<TimeSlot | null>(null);
@@ -50,37 +60,103 @@ export default function TimeSlotManagement() {
     loadData();
   }, []);
 
+  useEffect(() => {
+    if (selectedEvent) {
+      loadEventActivities();
+      loadTimeSlots();
+    }
+  }, [selectedEvent]);
+
   const loadData = async () => {
     try {
       setLoading(true);
       
-      // Charger les créneaux avec leurs pass et événements
+      // Charger tous les événements
+      const { data: eventsData, error: eventsError } = await supabase
+        .from('events')
+        .select('id, name, event_date')
+        .order('event_date', { ascending: false });
+
+      if (eventsError) throw eventsError;
+      setEvents(eventsData || []);
+      
+      // Sélectionner automatiquement le premier événement
+      if (eventsData && eventsData.length > 0 && !selectedEvent) {
+        setSelectedEvent(eventsData[0].id);
+      }
+    } catch (err) {
+      console.error('Erreur chargement données:', err);
+      toast.error('Erreur lors du chargement des données');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEventActivities = async () => {
+    if (!selectedEvent) return;
+    
+    try {
+      const { data, error } = await supabase
+        .from('event_activities')
+        .select(`
+          id,
+          stock_limit,
+          requires_time_slot,
+          activities (
+            id,
+            name,
+            icon
+          ),
+          events (
+            id,
+            name
+          )
+        `)
+        .eq('event_id', selectedEvent)
+        .eq('requires_time_slot', true);
+
+      if (error) throw error;
+      
+      setEventActivities((data || []).map(ea => ({
+        id: ea.id,
+        stock_limit: ea.stock_limit,
+        requires_time_slot: ea.requires_time_slot,
+        activity: ea.activities,
+        event: ea.events
+      })));
+    } catch (err) {
+      console.error('Erreur chargement activités événement:', err);
+      toast.error('Erreur lors du chargement des activités');
+    }
+  };
+
+  const loadTimeSlots = async () => {
+    if (!selectedEvent) return;
+    
+    try {
       const { data: slotsData, error: slotsError } = await supabase
         .from('time_slots')
         .select(`
           id,
           slot_time,
           capacity,
-          event_activity_id,
-          event_activities (
+          event_activities!inner (
             id,
             stock_limit,
             requires_time_slot,
+            event_id,
             activities (
               id,
               name,
               icon
-            )
-          ),
-          passes (
-            id,
-            name,
+            ),
             events (
               id,
               name
             )
           )
         `)
+        .eq('event_activities.event_id', selectedEvent)
         .order('slot_time');
 
       if (slotsError) throw slotsError;
@@ -88,82 +164,25 @@ export default function TimeSlotManagement() {
       // Calculer la capacité restante pour chaque créneau
       const slotsWithCapacity = await Promise.all(
         (slotsData || []).map(async (slot) => {
-          // Get event activity remaining capacity
-          let eventActivityCapacity = 999999;
-          if (slot.event_activities?.stock_limit) {
-            const { data: activityCapacityData } = await supabase
-              .rpc('get_event_activity_remaining_stock', { 
-                event_activity_id_param: slot.event_activities.id 
-              });
-            eventActivityCapacity = activityCapacityData || 0;
-          }
-          
-          // Get slot specific remaining capacity
-          const { data: slotCapacityData } = await supabase
+          const { data: capacityData } = await supabase
             .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
-          
-          const slotCapacity = slotCapacityData || 0;
-          
-          // The actual remaining capacity is the minimum of slot capacity and event activity capacity
-          const remainingCapacity = Math.min(slotCapacity, eventActivityCapacity);
           
           return { 
             ...slot, 
-            pass: {
-              id: slot.passes?.id || '',
-              name: slot.passes?.name || '',
-              event: slot.passes?.events || { id: '', name: 'Événement non défini' }
-            }, 
-            event_activity: slot.event_activities ? {
+            event_activity: {
               ...slot.event_activities,
-              activity: slot.event_activities.activities
-            } : null,
-            remaining_capacity: remainingCapacity
+              activity: slot.event_activities.activities,
+              event: slot.event_activities.events
+            },
+            remaining_capacity: capacityData || 0
           };
         })
       );
       
       setTimeSlots(slotsWithCapacity);
-
-      // Charger tous les pass avec leurs activités pour le formulaire
-      const { data: passesData, error: passesError } = await supabase
-        .from('passes')
-        .select(`
-          id,
-          name,
-          pass_activities (
-            event_activity_id,
-            event_activities (
-              id,
-              activities (
-                id,
-                name,
-                icon
-              )
-            )
-          ),
-          events (
-            id,
-            name
-          )
-        `)
-        .order('name');
-
-      if (passesError) throw passesError;
-      setPasses((passesData || []).map(pass => ({
-        id: pass.id,
-        name: pass.name,
-        event: pass.events || { id: '', name: 'Événement non défini' },
-        event_activities: (pass.pass_activities || []).map((pa: any) => ({
-          id: pa.event_activities.id,
-          activity: pa.event_activities.activities
-        }))
-      })));
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
       toast.error('Erreur lors du chargement des créneaux');
-    } finally {
-      setLoading(false);
     }
   };
 
@@ -187,15 +206,61 @@ export default function TimeSlotManagement() {
         .delete()
         .eq('id', slotId);
 
-      if (error) {
-        throw error;
-      }
+      if (error) throw error;
       
       toast.success('Créneau supprimé avec succès');
-      loadData();
+      loadTimeSlots();
     } catch (err) {
       console.error('Erreur suppression créneau:', err);
       toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  const createBulkSlots = async () => {
+    if (!selectedEvent) {
+      toast.error('Veuillez sélectionner un événement');
+      return;
+    }
+
+    const activitiesRequiringSlots = eventActivities.filter(ea => ea.requires_time_slot);
+    
+    if (activitiesRequiringSlots.length === 0) {
+      toast.error('Aucune activité ne nécessite de créneaux pour cet événement');
+      return;
+    }
+
+    try {
+      const selectedEventData = events.find(e => e.id === selectedEvent);
+      if (!selectedEventData) return;
+
+      const eventDate = new Date(selectedEventData.event_date);
+      const slots = [];
+
+      // Créer des créneaux de 9h à 17h pour chaque activité
+      for (const activity of activitiesRequiringSlots) {
+        for (let hour = 9; hour <= 17; hour++) {
+          const slotTime = new Date(eventDate);
+          slotTime.setHours(hour, 0, 0, 0);
+          
+          slots.push({
+            event_activity_id: activity.id,
+            slot_time: slotTime.toISOString(),
+            capacity: 15 // Capacité par défaut
+          });
+        }
+      }
+
+      const { error } = await supabase
+        .from('time_slots')
+        .insert(slots);
+
+      if (error) throw error;
+      
+      toast.success(`${slots.length} créneaux créés avec succès`);
+      loadTimeSlots();
+    } catch (err) {
+      console.error('Erreur création créneaux en masse:', err);
+      toast.error('Erreur lors de la création en masse');
     }
   };
 
@@ -212,54 +277,119 @@ export default function TimeSlotManagement() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Créneaux</h1>
-          <p className="text-gray-600">Planifiez les créneaux horaires pour les activités</p>
+          <p className="text-gray-600">Planifiez les créneaux horaires pour les activités d'événement</p>
         </div>
-        <button 
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nouveau Créneau
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={createBulkSlots}
+            disabled={!selectedEvent || eventActivities.length === 0}
+            className="bg-green-600 hover:bg-green-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            Création en masse
+          </button>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            disabled={!selectedEvent || eventActivities.length === 0}
+            className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
+          >
+            <Plus className="h-4 w-4" />
+            Nouveau Créneau
+          </button>
+        </div>
+      </div>
+
+      {/* Sélection d'événement */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <div className="flex items-center gap-4">
+          <div className="flex-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Événement
+            </label>
+            <select
+              value={selectedEvent}
+              onChange={(e) => setSelectedEvent(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            >
+              <option value="">Sélectionner un événement</option>
+              {events.map((event) => (
+                <option key={event.id} value={event.id}>
+                  {event.name} - {format(new Date(event.event_date), 'dd/MM/yyyy')}
+                </option>
+              ))}
+            </select>
+          </div>
+          
+          {selectedEvent && (
+            <div className="text-sm text-gray-600">
+              <div className="font-medium">Activités nécessitant des créneaux :</div>
+              <div>{eventActivities.length} activité(s)</div>
+            </div>
+          )}
+        </div>
+        
+        {selectedEvent && eventActivities.length === 0 && (
+          <div className="mt-4 p-4 bg-yellow-50 border border-yellow-200 rounded-lg">
+            <p className="text-yellow-800 text-sm">
+              Aucune activité de cet événement ne nécessite de créneaux horaires. 
+              Configurez d'abord les activités dans la gestion des événements.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-900">{timeSlots.length}</div>
-          <div className="text-sm text-gray-600">Total Créneaux</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-green-600">
-            {timeSlots.filter(s => s.event_activity?.activity?.name === 'Poney').length}
+      {selectedEvent && (
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-2xl font-bold text-gray-900">{timeSlots.length}</div>
+            <div className="text-sm text-gray-600">Total Créneaux</div>
           </div>
-          <div className="text-sm text-gray-600">Créneaux Poney</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-orange-600">
-            {timeSlots.filter(s => s.event_activity?.activity?.name === 'Tir à l\'Arc').length}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-2xl font-bold text-green-600">
+              {timeSlots.filter(s => s.remaining_capacity && s.remaining_capacity > 0).length}
+            </div>
+            <div className="text-sm text-gray-600">Créneaux Disponibles</div>
           </div>
-          <div className="text-sm text-gray-600">Créneaux Tir à l'Arc</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-900">
-            {timeSlots.reduce((sum, s) => sum + (s.remaining_capacity || 0), 0)}
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-2xl font-bold text-red-600">
+              {timeSlots.filter(s => s.remaining_capacity === 0).length}
+            </div>
+            <div className="text-sm text-gray-600">Créneaux Complets</div>
           </div>
-          <div className="text-sm text-gray-600">Places Disponibles</div>
+          <div className="bg-white rounded-lg shadow-sm p-4">
+            <div className="text-2xl font-bold text-gray-900">
+              {timeSlots.reduce((sum, s) => sum + (s.remaining_capacity || 0), 0)}
+            </div>
+            <div className="text-sm text-gray-600">Places Disponibles</div>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Liste des créneaux */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Créneaux ({timeSlots.length})</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Créneaux {selectedEvent ? `(${timeSlots.length})` : ''}
+          </h2>
         </div>
 
-        {timeSlots.length === 0 ? (
+        {!selectedEvent ? (
+          <div className="p-12 text-center">
+            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Sélectionnez un événement</h3>
+            <p className="text-gray-600">Choisissez un événement pour voir et gérer ses créneaux.</p>
+          </div>
+        ) : timeSlots.length === 0 ? (
           <div className="p-12 text-center">
             <Clock className="h-12 w-12 text-gray-400 mx-auto mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun créneau</h3>
-            <p className="text-gray-600">Créez votre premier créneau pour commencer.</p>
+            <p className="text-gray-600">
+              {eventActivities.length === 0 
+                ? 'Configurez d\'abord les activités nécessitant des créneaux dans cet événement.'
+                : 'Créez votre premier créneau ou utilisez la création en masse.'
+              }
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
@@ -269,8 +399,8 @@ export default function TimeSlotManagement() {
                   <div className="flex-1">
                     <div className="flex items-center gap-3 mb-2">
                       <div className="flex items-center gap-2 px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-600">
-                        <span className="text-lg">{slot.event_activity?.activity?.icon || '❓'}</span>
-                        {slot.event_activity?.activity?.name || 'Activité inconnue'}
+                        <span className="text-lg">{slot.event_activity.activity.icon}</span>
+                        {slot.event_activity.activity.name}
                       </div>
                       <span className="text-lg font-semibold text-gray-900">
                         {format(new Date(slot.slot_time), 'HH:mm')}
@@ -281,15 +411,11 @@ export default function TimeSlotManagement() {
                       <div>
                         {format(new Date(slot.slot_time), 'EEEE d MMMM yyyy', { locale: fr })}
                       </div>
-                      <div>
+                      <div className="flex items-center gap-1">
+                        <Users className="h-4 w-4" />
                         {slot.remaining_capacity}/{slot.capacity} places disponibles
-                        {slot.event_activity && slot.event_activity.stock_limit && (
-                          <span className="ml-2 text-xs text-blue-600">
-                            (Activité: {slot.event_activity.remaining_capacity}/{slot.event_activity.stock_limit})
-                          </span>
-                        )}
                       </div>
-                      <div>Pass: {slot.pass.name} ({slot.pass.event.name})</div>
+                      <div>Événement: {slot.event_activity.event.name}</div>
                     </div>
                   </div>
                   
@@ -319,7 +445,7 @@ export default function TimeSlotManagement() {
       {(showCreateModal || editingSlot) && (
         <TimeSlotFormModal
           timeSlot={editingSlot}
-          passes={passes}
+          eventActivities={eventActivities}
           onClose={() => {
             setShowCreateModal(false);
             setEditingSlot(null);
@@ -327,7 +453,7 @@ export default function TimeSlotManagement() {
           onSave={() => {
             setShowCreateModal(false);
             setEditingSlot(null);
-            loadData();
+            loadTimeSlots();
           }}
         />
       )}
@@ -337,42 +463,23 @@ export default function TimeSlotManagement() {
 
 interface TimeSlotFormModalProps {
   timeSlot?: TimeSlot | null;
-  passes: Pass[];
+  eventActivities: EventActivity[];
   onClose: () => void;
   onSave: () => void;
 }
 
-function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormModalProps) {
-  const [availableActivities, setAvailableActivities] = useState<any[]>([]);
+function TimeSlotFormModal({ timeSlot, eventActivities, onClose, onSave }: TimeSlotFormModalProps) {
   const [formData, setFormData] = useState({
-    pass_id: timeSlot?.pass.id || '',
-    event_activity_id: timeSlot?.event_activity?.id || '',
+    event_activity_id: timeSlot?.event_activity.id || '',
     slot_time: timeSlot ? format(new Date(timeSlot.slot_time), "yyyy-MM-dd'T'HH:mm") : '',
     capacity: timeSlot?.capacity || 15
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    if (formData.pass_id) {
-      loadPassActivities();
-    }
-  }, [formData.pass_id]);
-
-  const loadPassActivities = async () => {
-    try {
-      const selectedPass = passes.find(p => p.id === formData.pass_id);
-      if (selectedPass && 'event_activities' in selectedPass) {
-        setAvailableActivities((selectedPass as any).event_activities);
-      }
-    } catch (err) {
-      console.error('Erreur chargement activités du pass:', err);
-    }
-  };
-
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!formData.pass_id || !formData.event_activity_id || !formData.slot_time || formData.capacity <= 0) {
+    if (!formData.event_activity_id || !formData.slot_time || formData.capacity <= 0) {
       toast.error('Veuillez remplir tous les champs obligatoires');
       return;
     }
@@ -385,7 +492,6 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
         const { error } = await supabase
           .from('time_slots')
           .update({
-            pass_id: formData.pass_id,
             event_activity_id: formData.event_activity_id,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
@@ -399,7 +505,6 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
         const { error } = await supabase
           .from('time_slots')
           .insert({
-            pass_id: formData.pass_id,
             event_activity_id: formData.event_activity_id,
             slot_time: new Date(formData.slot_time).toISOString(),
             capacity: formData.capacity
@@ -420,7 +525,7 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full max-h-[90vh] overflow-hidden flex flex-col">
+      <div className="bg-white rounded-lg max-w-md w-full">
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
@@ -431,27 +536,7 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
             </button>
           </div>
 
-          <div className="overflow-y-auto flex-1">
-            <form onSubmit={handleSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Pass *
-              </label>
-              <select
-                value={formData.pass_id}
-                onChange={(e) => setFormData({ ...formData, pass_id: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required
-              >
-                <option value="">Sélectionner un pass</option>
-                {passes.map((pass) => (
-                  <option key={pass.id} value={pass.id}>
-                    {pass.name} ({pass.event?.name || 'Événement non défini'})
-                  </option>
-                ))}
-              </select>
-            </div>
-
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Activité *
@@ -461,20 +546,14 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
                 onChange={(e) => setFormData({ ...formData, event_activity_id: e.target.value })}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
-                disabled={!formData.pass_id}
               >
                 <option value="">Sélectionner une activité</option>
-                {availableActivities.map((activity) => (
+                {eventActivities.map((activity) => (
                   <option key={activity.id} value={activity.id}>
                     {activity.activity.icon} {activity.activity.name}
                   </option>
                 ))}
               </select>
-              {!formData.pass_id && (
-                <p className="text-xs text-gray-500 mt-1">
-                  Sélectionnez d'abord un pass pour voir les activités disponibles
-                </p>
-              )}
             </div>
 
             <div>
@@ -521,7 +600,6 @@ function TimeSlotFormModal({ timeSlot, passes, onClose, onSave }: TimeSlotFormMo
               </button>
             </div>
           </form>
-          </div>
         </div>
       </div>
     </div>
