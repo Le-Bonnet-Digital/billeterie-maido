@@ -7,7 +7,7 @@ import {
   clearCart, 
   calculateCartTotal 
 } from '../cart';
-import type { CartItem } from '../cart';
+import type { CartItem, Pass } from '../cart';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -43,17 +43,11 @@ describe('Cart Functions', () => {
 
   describe('calculateCartTotal', () => {
     it('should calculate total correctly', () => {
+      const pass1: Pass = { id: '1', name: 'Pass 1', price: 10, description: 'Test' };
+      const pass2: Pass = { id: '2', name: 'Pass 2', price: 15, description: 'Test' };
       const items: CartItem[] = [
-        {
-          id: '1',
-          pass: { id: '1', name: 'Pass 1', price: 10, description: 'Test' },
-          quantity: 2
-        },
-        {
-          id: '2',
-          pass: { id: '2', name: 'Pass 2', price: 15, description: 'Test' },
-          quantity: 1
-        }
+        { id: '1', pass: pass1, quantity: 2 },
+        { id: '2', pass: pass2, quantity: 1 }
       ];
       expect(calculateCartTotal(items)).toBe(35);
     });
