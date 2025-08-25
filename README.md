@@ -90,7 +90,13 @@
 
 ## Debugging
 
-Définissez la variable d'environnement `VITE_DEBUG=true` lors de l'exécution en développement pour activer les logs détaillés.
+Définissez la variable d'environnement `VITE_DEBUG=true` lors de l'exécution en développement pour activer le logger centralisé et obtenir des messages détaillés.
+Par exemple :
+
+```bash
+VITE_DEBUG=true npm run dev
+```
+
 Les logs sont automatiquement désactivés dans les builds de production.
 
 ## Mode démonstration
