@@ -1,26 +1,28 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
+import remarkGfm from 'remark-gfm';
+import rehypeSanitize from 'rehype-sanitize';
 
 interface MarkdownRendererProps {
-  content: string;
+  content?: string;
+  className?: string;
 }
 
-// Very small markdown parser to keep compatibility
-function parseMarkdown(markdown: string): string {
-  return markdown
-    .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>') // bold
-    .replace(/\*(.*?)\*/g, '<em>$1</em>') // italic
-    .replace(/`([^`]+)`/g, '<code>$1</code>') // inline code
-    .replace(/\n\n/g, '</p><p>') // new paragraphs
-    .replace(/\n/g, '<br />'); // line breaks
-}
+export default function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
+  if (!content || content.trim() === '') {
+    return <p className={className}>Aucun contenu à afficher.</p>;
+  }
 
-export default function MarkdownRenderer({ content }: MarkdownRendererProps) {
-  const html = React.useMemo(() => parseMarkdown(content), [content]);
-
-  return (
-    <div
-      className="prose max-w-none"
-      dangerouslySetInnerHTML={{ __html: `<p>${html}</p>` }}
-    />
-  );
+  try {
+    return (
+      <div className={className || 'prose max-w-none'}>
+        <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
+          {content}
+        </ReactMarkdown>
+      </div>
+    );
+  } catch (error) {
+    console.error('Erreur de rendu Markdown:', error);
+    return <p className={className}>Erreur lors de l'affichage du contenu.</p>;
+  }
 }

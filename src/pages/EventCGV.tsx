@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, FileText } from 'lucide-react';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 interface Event {
   id: string;
@@ -38,15 +39,6 @@ export default function EventCGV() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatCGVContent = (content: string) => {
-    return content
-      .replace(/### (.*?)$/gm, '<h3 class="text-xl font-bold text-gray-900 mb-4 mt-8">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-      .replace(/\n\n/g, '</p><p class="mb-4">')
-      .replace(/^(?!<)(.+)$/gm, '<p class="mb-4">$1</p>');
   };
 
   if (loading) {
@@ -96,11 +88,9 @@ export default function EventCGV() {
 
       {/* CGV Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <div 
+        <MarkdownRenderer
+          content={event.cgv_content}
           className="prose prose-blue max-w-none"
-          dangerouslySetInnerHTML={{ 
-            __html: formatCGVContent(event.cgv_content) 
-          }}
         />
       </div>
 

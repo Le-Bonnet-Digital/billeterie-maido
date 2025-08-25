@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
-import FAQAccordion, { FAQItem } from '../components/FAQAccordion';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 interface Event {
   id: string;
@@ -13,7 +13,6 @@ interface Event {
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -35,70 +34,11 @@ export default function EventFAQ() {
 
       if (error) throw error;
       setEvent(data);
-      if (data?.faq_content) {
-        try {
-          setFaqs(parseFAQContent(data.faq_content));
-        } catch (parseErr) {
-          console.error('Erreur parsing FAQ:', parseErr);
-          setFaqs([]);
-        }
-      } else {
-        setFaqs([]);
-      }
     } catch (err) {
       console.error('Erreur chargement FAQ:', err);
     } finally {
       setLoading(false);
     }
-  };
-
-  const parseFAQContent = (content: string): FAQItem[] => {
-    try {
-      const parsed = JSON.parse(content);
-      if (Array.isArray(parsed)) {
-        return parsed as FAQItem[];
-      }
-    } catch {
-      // ignore and fallback
-    }
-
-    const lines = content.split('\n');
-    const items: FAQItem[] = [];
-    let currentQuestion = '';
-    let currentAnswer: string[] = [];
-
-    const flush = () => {
-      if (currentQuestion) {
-        items.push({
-          question: currentQuestion.trim(),
-          answer: currentAnswer.join('\n').trim()
-        });
-      }
-      currentQuestion = '';
-      currentAnswer = [];
-    };
-
-    for (const line of lines) {
-      const qMatch = line.match(/^Q\s*:\s*"?(.*?)"?$/);
-      if (qMatch) {
-        flush();
-        currentQuestion = qMatch[1];
-        continue;
-      }
-
-      const aMatch = line.match(/^R\s*:\s*"?(.*?)"?$/);
-      if (aMatch) {
-        currentAnswer.push(aMatch[1]);
-        continue;
-      }
-
-      if (currentAnswer.length > 0) {
-        currentAnswer.push(line);
-      }
-    }
-
-    flush();
-    return items;
   };
 
   if (loading) {
@@ -148,7 +88,10 @@ export default function EventFAQ() {
 
       {/* FAQ Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <FAQAccordion faqs={faqs} />
+        <MarkdownRenderer
+          content={event.faq_content || ''}
+          className="prose prose-blue max-w-none"
+        />
       </div>
 
       {/* Contact Section */}
