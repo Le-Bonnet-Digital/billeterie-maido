@@ -23,7 +23,6 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
     );
   } catch (error) {
     console.error('Erreur de rendu Markdown:', error);
-    return <p className={className}>Erreur lors de l\'affichage du contenu.</p>;
+    return <p className={className}>Erreur lors de l'affichage du contenu.</p>;
   }
 }
-
