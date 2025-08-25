@@ -663,13 +663,11 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                       </button>
                       
                       {isEnabled && eventActivity && eventActivity.requires_time_slot && (
-                        <button
-                          onClick={() => setShowTimeSlotsFor(showTimeSlotsFor === eventActivity.id ? null : eventActivity.id)}
-                          className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors flex items-center gap-2"
-                        >
-                          <Clock className="h-4 w-4" />
-                          Créneaux ({eventActivity.time_slots?.length || 0})
-                        </button>
+                        <TimeSlotsButton
+                          eventActivity={eventActivity}
+                          event={event}
+                          onUpdate={loadData}
+                        />
                       )}
                     </div>
                   </div>
@@ -710,31 +708,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                     </div>
                   )}
                   
-                  {/* Lien vers la gestion des créneaux */}
-                  {isEnabled && eventActivity && eventActivity.requires_time_slot && (
-                    <div className="mt-4 pt-4 border-t border-gray-200">
-                      <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                        <div className="flex items-center gap-2 mb-2">
-                          <Clock className="h-4 w-4 text-blue-600" />
-                          <span className="text-sm font-medium text-blue-900">
-                            Gestion des créneaux
-                          </span>
-                        </div>
-                        <p className="text-sm text-blue-700 mb-3">
-                          Cette activité nécessite des créneaux horaires. Utilisez la page dédiée pour les gérer.
-                        </p>
-                        <a
-                          href="/admin/time-slots"
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors"
-                        >
-                          <Settings className="h-4 w-4" />
-                          Gérer les créneaux
-                        </a>
-                      </div>
-                    </div>
-                  )}
                 </div>
               );
             })}
@@ -744,4 +717,302 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
       </div>
     </div>
   );
+}
+
+interface TimeSlotsButtonProps {
+  eventActivity: EventActivity;
+  event: Event;
+  onUpdate: () => void;
+}
+
+function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProps) {
+  const [showModal, setShowModal] = useState(false);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [stats, setStats] = useState({ total: 0, available: 0, capacity: 0 });
+
+  useEffect(() => {
+    if (showModal) {
+      loadTimeSlots();
+    }
+  }, [showModal]);
+
+  const loadTimeSlots = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('id, slot_time, capacity')
+        .eq('event_activity_id', eventActivity.id)
+        .order('slot_time');
+
+      if (error) throw error;
+
+      // Calculer les capacités restantes
+      const slotsWithCapacity = await Promise.all(
+        (data || []).map(async (slot) => {
+          const { data: capacityData } = await supabase
+            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+          
+          return {
+            ...slot,
+            remaining_capacity: capacityData || 0
+          };
+        })
+      );
+
+      setTimeSlots(slotsWithCapacity);
+      
+      // Calculer les statistiques
+      const total = slotsWithCapacity.length;
+      const available = slotsWithCapacity.filter(s => s.remaining_capacity > 0).length;
+      const capacity = slotsWithCapacity.reduce((sum, s) => sum + s.remaining_capacity, 0);
+      setStats({ total, available, capacity });
+    } catch (err) {
+      console.error('Erreur chargement créneaux:', err);
+      toast.error('Erreur lors du chargement des créneaux');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const createTemplate = async (template: 'morning' | 'afternoon' | 'fullday') => {
+    try {
+      const eventDate = new Date(event.event_date);
+      const slots = [];
+      
+      // Durées suggérées selon l'activité
+      const duration = eventActivity.activity.name.toLowerCase().includes('poney') ? 30 : 
+                      eventActivity.activity.name.toLowerCase().includes('tir') ? 45 : 60;
+      
+      // Capacité suggérée selon l'activité
+      const capacity = eventActivity.activity.name.toLowerCase().includes('poney') ? 8 : 15;
+      
+      let startHour, endHour;
+      switch (template) {
+        case 'morning':
+          startHour = 9;
+          endHour = 12;
+          break;
+        case 'afternoon':
+          startHour = 14;
+          endHour = 17;
+          break;
+        case 'fullday':
+          startHour = 9;
+          endHour = 17;
+          break;
+      }
+      
+      // Générer les créneaux
+      for (let hour = startHour; hour < endHour; hour++) {
+        for (let minute = 0; minute < 60; minute += duration) {
+          if (hour === endHour - 1 && minute + duration > 60) break;
+          
+          const slotTime = new Date(eventDate);
+          slotTime.setHours(hour, minute, 0, 0);
+          
+          slots.push({
+            event_activity_id: eventActivity.id,
+            slot_time: slotTime.toISOString(),
+            capacity: capacity
+          });
+        }
+      }
+      
+      const { error } = await supabase
+        .from('time_slots')
+        .insert(slots);
+
+      if (error) throw error;
+      
+      toast.success(`${slots.length} créneaux créés avec succès`);
+      loadTimeSlots();
+      onUpdate();
+    } catch (err) {
+      console.error('Erreur création template:', err);
+      toast.error('Erreur lors de la création des créneaux');
+    }
+  };
+
+  const deleteSlot = async (slotId: string) => {
+    if (!confirm('Supprimer ce créneau ?')) return;
+    
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('id', slotId);
+
+      if (error) throw error;
+      
+      toast.success('Créneau supprimé');
+      loadTimeSlots();
+      onUpdate();
+    } catch (err) {
+      console.error('Erreur suppression:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
+
+  return (
+    <>
+      <button
+        onClick={() => setShowModal(true)}
+        className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors flex items-center gap-2"
+      >
+        <Clock className="h-4 w-4" />
+        Créneaux ({stats.total})
+      </button>
+
+      {showModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+            <div className="p-6 border-b border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                    <span className="text-2xl">{eventActivity.activity.icon}</span>
+                    Créneaux - {eventActivity.activity.name}
+                  </h2>
+                  <p className="text-gray-600">
+                    {format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
+                  </p>
+                </div>
+                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+            </div>
+            
+            <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
+              {/* Statistiques */}
+              <div className="grid grid-cols-3 gap-4 mb-6">
+                <div className="bg-blue-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-blue-600">{stats.total}</div>
+                  <div className="text-sm text-blue-800">Créneaux total</div>
+                </div>
+                <div className="bg-green-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-green-600">{stats.available}</div>
+                  <div className="text-sm text-green-800">Créneaux disponibles</div>
+                </div>
+                <div className="bg-purple-50 rounded-lg p-4 text-center">
+                  <div className="text-2xl font-bold text-purple-600">{stats.capacity}</div>
+                  <div className="text-sm text-purple-800">Places disponibles</div>
+                </div>
+              </div>
+
+              {/* Templates rapides */}
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">🎯 Templates rapides</h3>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <button
+                    onClick={() => createTemplate('morning')}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">🌅</span>
+                      <span className="font-medium">Matinée</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      9h00 - 12h00<br />
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => createTemplate('afternoon')}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">🌞</span>
+                      <span className="font-medium">Après-midi</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      14h00 - 17h00<br />
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                    </div>
+                  </button>
+                  
+                  <button
+                    onClick={() => createTemplate('fullday')}
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-2 mb-2">
+                      <span className="text-xl">📅</span>
+                      <span className="font-medium">Journée</span>
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      9h00 - 17h00<br />
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
+              {/* Liste des créneaux */}
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-3">📋 Créneaux existants</h3>
+                
+                {loading ? (
+                  <div className="text-center py-8">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
+                  </div>
+                ) : timeSlots.length === 0 ? (
+                  <div className="text-center py-8 text-gray-500">
+                    <Clock className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>Aucun créneau créé</p>
+                    <p className="text-sm">Utilisez les templates ci-dessus pour commencer</p>
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 max-h-64 overflow-y-auto">
+                    {timeSlots.map((slot) => (
+                      <div key={slot.id} className="border border-gray-200 rounded-lg p-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <div className="font-medium">
+                              {format(new Date(slot.slot_time), 'HH:mm')}
+                            </div>
+                            <div className="text-sm text-gray-600">
+                              {slot.remaining_capacity}/{slot.capacity} places
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => deleteSlot(slot.id)}
+                            className="text-red-600 hover:text-red-700 p-1"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <div className="mt-2">
+                          <div className="w-full bg-gray-200 rounded-full h-2">
+                            <div 
+                              className={`h-2 rounded-full ${
+                                slot.remaining_capacity === 0 ? 'bg-red-500' :
+                                slot.remaining_capacity <= slot.capacity * 0.25 ? 'bg-orange-500' :
+                                slot.remaining_capacity <= slot.capacity * 0.5 ? 'bg-yellow-500' :
+                                'bg-green-500'
+                              }`}
+                              style={{ width: `${((slot.capacity - slot.remaining_capacity) / slot.capacity) * 100}%` }}
+                            ></div>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </>
+  );
+}
+
+interface TimeSlot {
+  id: string;
+  slot_time: string;
+  capacity: number;
+  remaining_capacity: number;
 }

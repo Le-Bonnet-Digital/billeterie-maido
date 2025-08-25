@@ -196,18 +196,11 @@ export default function EventDetails() {
   const handlePurchase = async () => {
     if (!selectedPass) return;
     
-    // Vérifier que toutes les activités requises sont sélectionnées
-    for (let i = 0; i < selectedQuantity; i++) {
-      if (!selectedActivities[i]) {
-        toast.error('Veuillez sélectionner une activité pour chaque pass');
-        return;
-      }
-    }
-    
     // Ajouter chaque pass individuellement au panier
     for (let i = 0; i < selectedQuantity; i++) {
       const eventActivityId = selectedActivities[i];
-      const success = await addToCart(selectedPass.id, eventActivityId);
+      const timeSlotId = selectedTimeSlots?.[i];
+      const success = await addToCart(selectedPass.id, eventActivityId, timeSlotId);
       if (!success) {
         toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
         return;
@@ -342,7 +335,7 @@ interface PurchaseModalProps {
   selectedActivities: {[key: string]: string};
   selectedTimeSlots?: {[key: string]: string};
   onActivitySelection: (index: number, eventActivityId: string) => void;
-  onTimeSlotSelection?: (index: number, timeSlotId: string) => void;
+  onTimeSlotSelection?: (index: number, eventActivityId: string, timeSlotId: string) => void;
   onPurchase: () => void;
   onClose: () => void;
 }
@@ -355,12 +348,12 @@ function PurchaseModal({
   selectedActivities, 
   selectedTimeSlots = {},
   onActivitySelection, 
-  onTimeSlotSelection = () => {},
+  onTimeSlotSelection,
   onPurchase, 
   onClose 
 }: PurchaseModalProps) {
   const [availableTimeSlots, setAvailableTimeSlots] = useState<{[key: string]: TimeSlot[]}>({});
-  const [selectedActivityTimeSlots, setSelectedActivityTimeSlots] = useState<{[key: string]: string}>({});
+  const [selectedSlots, setSelectedSlots] = useState<{[key: string]: string}>({});
   
   const loadTimeSlotsForActivity = async (eventActivityId: string) => {
     try {
@@ -406,10 +399,14 @@ function PurchaseModal({
   };
 
   const handleTimeSlotSelection = (index: number, eventActivityId: string, timeSlotId: string) => {
-    setSelectedActivityTimeSlots(prev => ({
+    setSelectedSlots(prev => ({
       ...prev,
       [`${index}-${eventActivityId}`]: timeSlotId
     }));
+    
+    if (onTimeSlotSelection) {
+      onTimeSlotSelection(index, eventActivityId, timeSlotId);
+    }
   };
 
   const getCapacityColor = (remaining: number, total: number) => {
@@ -427,7 +424,7 @@ function PurchaseModal({
       
       // Vérifier que les créneaux sont sélectionnés si nécessaire
       const eventActivity = eventActivities.find(ea => ea.id === selectedActivities[i]);
-      if (eventActivity?.requires_time_slot && !selectedActivityTimeSlots[`${i}-${selectedActivities[i]}`]) {
+      if (eventActivity?.requires_time_slot && !selectedSlots[`${i}-${selectedActivities[i]}`]) {
         return false;
       }
     }
@@ -438,7 +435,7 @@ function PurchaseModal({
     // Ajouter chaque pass individuellement au panier avec son créneau
     for (let i = 0; i < quantity; i++) {
       const eventActivityId = selectedActivities[i];
-      const timeSlotId = selectedActivityTimeSlots[`${i}-${eventActivityId}`];
+      const timeSlotId = selectedSlots[`${i}-${eventActivityId}`];
       
       const success = await addToCart(pass.id, eventActivityId, timeSlotId);
       if (!success) {
@@ -496,31 +493,67 @@ function PurchaseModal({
                 
                 <div className="grid grid-cols-1 gap-3">
                   {eventActivities.map((eventActivity) => (
-                    <button
+                    <div
                       key={eventActivity.id}
-                      onClick={() => onActivitySelection(index, eventActivity.id)}
-                      className={`p-3 text-left border rounded-md transition-colors ${
+                      className={`border rounded-md transition-colors ${
                         selectedActivities[index] === eventActivity.id
                           ? 'border-blue-500 bg-blue-50'
                           : 'border-gray-200 hover:border-gray-300'
                       }`}
                     >
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <span className="text-xl">{eventActivity.activity.icon}</span>
-                          <div>
-                            <div className="font-medium">{eventActivity.activity.name}</div>
-                            <div className="text-sm text-gray-600">{eventActivity.activity.description}</div>
+                      <button
+                        onClick={() => handleActivitySelectionWithSlots(index, eventActivity.id)}
+                        className="w-full p-3 text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center gap-3">
+                            <span className="text-xl">{eventActivity.activity.icon}</span>
+                            <div>
+                              <div className="font-medium">{eventActivity.activity.name}</div>
+                              <div className="text-sm text-gray-600">{eventActivity.activity.description}</div>
+                            </div>
+                          </div>
+                          <div className="text-sm text-gray-500">
+                            {eventActivity.stock_limit === null 
+                              ? 'Illimité' 
+                              : `${eventActivity.remaining_stock} restant(s)`
+                            }
                           </div>
                         </div>
-                        <div className="text-sm text-gray-500">
-                          {eventActivity.stock_limit === null 
-                            ? 'Illimité' 
-                            : `${eventActivity.remaining_stock} restant(s)`
-                          }
+                      </button>
+                      
+                      {/* Sélection de créneaux si nécessaire */}
+                      {selectedActivities[index] === eventActivity.id && eventActivity.requires_time_slot && (
+                        <div className="border-t border-gray-200 p-3">
+                          <div className="text-sm font-medium text-gray-700 mb-2">
+                            Choisissez un créneau :
+                          </div>
+                          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
+                            {availableTimeSlots[eventActivity.id]?.map((slot) => (
+                              <button
+                                key={slot.id}
+                                onClick={() => handleTimeSlotSelection(index, eventActivity.id, slot.id)}
+                                disabled={slot.remaining_capacity === 0}
+                                className={`p-2 text-xs border rounded transition-colors ${
+                                  selectedSlots[`${index}-${eventActivity.id}`] === slot.id
+                                    ? 'border-blue-500 bg-blue-100 text-blue-700'
+                                    : slot.remaining_capacity === 0
+                                    ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
+                                    : 'border-gray-200 hover:border-gray-300'
+                                }`}
+                              >
+                                <div className="font-medium">
+                                  {format(new Date(slot.slot_time), 'HH:mm')}
+                                </div>
+                                <div className="text-gray-600">
+                                  {slot.remaining_capacity}/{slot.capacity}
+                                </div>
+                              </button>
+                            ))}
+                          </div>
                         </div>
-                      </div>
-                    </button>
+                      )}
+                    </div>
                   ))}
                 </div>
               </div>
@@ -544,7 +577,7 @@ function PurchaseModal({
             </button>
             <button
               onClick={onPurchase}
-              disabled={Object.keys(selectedActivities).length < quantity}
+              disabled={!canPurchase()}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
             >
               Ajouter au Panier
