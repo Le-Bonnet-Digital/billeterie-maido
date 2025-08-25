@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '../../lib/auth';
 import type { User as AuthUser } from '../../lib/auth';
 import { logger } from '../../lib/logger';
+import { safeStorage } from '../../lib/storage';
 
 interface SystemSettings {
   site_name: string;
@@ -42,7 +43,7 @@ export default function Settings() {
 
       // Charger les paramètres système (simulés pour le moment)
       // En production, ces paramètres seraient stockés dans une table dédiée
-      const savedSettings = localStorage.getItem('system_settings');
+      const savedSettings = safeStorage.getItem('system_settings');
       if (savedSettings) {
         setSettings(JSON.parse(savedSettings));
       }
@@ -60,7 +61,7 @@ export default function Settings() {
       
       // Sauvegarder les paramètres (simulé avec localStorage)
       // En production, cela serait sauvegardé dans Supabase
-      localStorage.setItem('system_settings', JSON.stringify(settings));
+      safeStorage.setItem('system_settings', JSON.stringify(settings));
       
       toast.success('Paramètres sauvegardés avec succès');
     } catch (err) {

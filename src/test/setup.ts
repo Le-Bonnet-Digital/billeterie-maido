@@ -119,7 +119,7 @@ const localStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 };
-Object.defineProperty(window, 'localStorage', { value: localStorageMock });
+Object.defineProperty(window, 'localStorage', { value: localStorageMock, configurable: true });
 
 // Mock HTMLAnchorElement.click for download tests
 Object.defineProperty(HTMLAnchorElement.prototype, 'click', {

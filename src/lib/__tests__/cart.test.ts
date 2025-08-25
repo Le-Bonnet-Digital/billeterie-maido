@@ -13,6 +13,7 @@ import {
 } from '../cart';
 import type { CartItem, Pass } from '../cart';
 import type { CartRepository } from '../cartRepository';
+import { safeStorage } from '../storage';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -57,6 +58,19 @@ describe('Cart Functions', () => {
       const sessionId = getSessionId();
       expect(sessionId).toBe('test-session-id');
       expect(mockLocalStorage.setItem).toHaveBeenCalledWith('cart_session_id', 'test-session-id');
+    });
+
+    it('should fall back to memory when localStorage is unavailable', () => {
+      safeStorage.removeItem('cart_session_id');
+      const original = (window as any).localStorage;
+      delete (window as any).localStorage;
+
+      const sessionId1 = getSessionId();
+      const sessionId2 = getSessionId();
+      expect(sessionId1).toBe('test-session-id');
+      expect(sessionId2).toBe('test-session-id');
+
+      Object.defineProperty(window, 'localStorage', { value: original, configurable: true });
     });
   });
 
