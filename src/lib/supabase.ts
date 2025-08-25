@@ -41,7 +41,6 @@ export type Database = {
           sales_closing_date: string;
           status: 'draft' | 'published' | 'finished' | 'cancelled';
           cgv_content: string;
-          faq_content: string;
           key_info_content: string;
           has_animations: boolean;
           created_at: string;
@@ -55,7 +54,6 @@ export type Database = {
           sales_closing_date: string;
           status?: 'draft' | 'published' | 'finished' | 'cancelled';
           cgv_content?: string;
-          faq_content?: string;
           key_info_content?: string;
           has_animations?: boolean;
           created_at?: string;
@@ -69,7 +67,6 @@ export type Database = {
           sales_closing_date?: string;
           status?: 'draft' | 'published' | 'finished' | 'cancelled';
           cgv_content?: string;
-          faq_content?: string;
           key_info_content?: string;
           has_animations?: boolean;
           updated_at?: string;
@@ -255,4 +252,13 @@ export type Database = {
       };
     };
   };
+};
+
+export interface FAQItem {
+  question: string;
+  answer: string;
+}
+
+export type Event = Database['public']['Tables']['events']['Row'] & {
+  faqs: FAQItem[];
 };

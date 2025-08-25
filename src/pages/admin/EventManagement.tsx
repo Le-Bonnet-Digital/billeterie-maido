@@ -9,6 +9,7 @@ import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import { debugLog } from '../../lib/logger';
+import type { FAQItem } from '../../components/FAQAccordion';
 
 interface Event {
   id: string;
@@ -18,11 +19,11 @@ interface Event {
   sales_closing_date: string;
   status: 'draft' | 'published' | 'finished' | 'cancelled';
   cgv_content: string;
-  faq_content: string;
   key_info_content: string;
   has_animations: boolean;
   created_at: string;
   updated_at: string;
+  faqs: FAQItem[];
 }
 
 export default function EventManagement() {
@@ -58,17 +59,23 @@ export default function EventManagement() {
           sales_closing_date,
           status,
           cgv_content,
-          faq_content,
           key_info_content,
           has_animations,
           created_at,
-          updated_at
+          updated_at,
+          event_faqs(question, answer, position)
         `)
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      debugLog('🔧 EventManagement Events loaded with has_animations:', data?.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
-      setEvents(data || []);
+      const eventsWithFaqs = (data || []).map(e => ({
+        ...e,
+        faqs: (e.event_faqs || [])
+          .sort((a, b) => a.position - b.position)
+          .map(({ question, answer }) => ({ question, answer })),
+      }));
+      debugLog('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
+      setEvents(eventsWithFaqs);
     } catch (err) {
       console.error('Erreur chargement événements:', err);
       toast.error('Erreur lors du chargement des événements');
