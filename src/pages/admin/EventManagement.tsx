@@ -236,12 +236,10 @@ export default function EventManagement() {
   const [showActivitiesModal, setShowActivitiesModal] = useState<Event | null>(null);
 
   useEffect(() => {
-    console.log('🔧 EventManagement mounted');
     loadEvents();
   }, []);
 
   const loadEvents = async () => {
-    console.log('🔧 EventManagement loadEvents called');
     if (!isSupabaseConfigured()) {
       toast.error('Configuration Supabase manquante');
       setLoading(false);
@@ -252,11 +250,11 @@ export default function EventManagement() {
       setLoading(true);
       const { data, error } = await supabase
         .from('events')
-        .select('id, name, event_date, sales_opening_date, sales_closing_date, status, cgv_content, faq_content, key_info_content, has_animations, created_at, updated_at')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('🔧 EventManagement Events loaded:', data);
+      console.log('Events loaded:', data);
       setEvents(data || []);
     } catch (err) {
       console.error('Erreur chargement événements:', err);
@@ -302,7 +300,6 @@ export default function EventManagement() {
   };
 
   const handleFormClose = () => {
-    console.log('🔧 EventManagement handleFormClose called');
     setShowCreateModal(false);
     setEditingEvent(null);
     loadEvents(); // Recharger après fermeture
@@ -316,36 +313,15 @@ export default function EventManagement() {
     );
   }
 
-  console.log('🔧 EventManagement rendering with modals:', {
-    showCreateModal,
-    editingEvent: editingEvent?.id,
-    showAnimationsModal: showAnimationsModal?.id,
-    showActivitiesModal: showActivitiesModal?.id
-  });
-
   return (
     <div className="space-y-6">
-      {/* Debug Panel */}
-      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-        <div className="text-sm font-mono text-yellow-800">
-          🔧 DEBUG EventManagement - Modals: 
-          Create={showCreateModal ? 'OPEN' : 'CLOSED'} | 
-          Edit={editingEvent ? `OPEN(${editingEvent.id})` : 'CLOSED'} | 
-          Animations={showAnimationsModal ? `OPEN(${showAnimationsModal.id})` : 'CLOSED'} | 
-          Activities={showActivitiesModal ? `OPEN(${showActivitiesModal.id})` : 'CLOSED'}
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Événements</h1>
           <p className="text-gray-600">Créez et gérez vos événements</p>
         </div>
         <button 
-          onClick={() => {
-            console.log('🔧 EventManagement opening create modal');
-            setShowCreateModal(true);
-          }}
+          onClick={() => setShowCreateModal(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
         >
           <Plus className="h-4 w-4" />
@@ -393,10 +369,7 @@ export default function EventManagement() {
               Créez votre premier événement pour commencer à vendre des billets.
             </p>
             <button
-              onClick={() => {
-                console.log('🔧 EventManagement opening create modal from empty state');
-                setShowCreateModal(true);
-              }}
+              onClick={() => setShowCreateModal(true)}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
             >
               Créer un événement
@@ -431,10 +404,7 @@ export default function EventManagement() {
                   
                   <div className="flex items-center gap-2 ml-4">
                     <button
-                      onClick={() => {
-                        console.log('🔧 EventManagement opening activities modal for:', event.id);
-                        setShowActivitiesModal(event);
-                      }}
+                      onClick={() => setShowActivitiesModal(event)}
                       className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
                       title="Gérer les activités"
                     >
@@ -444,7 +414,7 @@ export default function EventManagement() {
                     {event.has_animations && (
                       <button
                         onClick={() => {
-                          console.log('🔧 EventManagement opening animations modal for:', event.id);
+                          console.log('Opening animations for event:', event.id);
                           setShowAnimationsModal(event);
                         }}
                         className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
@@ -455,10 +425,7 @@ export default function EventManagement() {
                     )}
                     
                     <button
-                      onClick={() => {
-                        console.log('🔧 EventManagement opening edit modal for:', event.id);
-                        setEditingEvent(event);
-                      }}
+                      onClick={() => setEditingEvent(event)}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
                       title="Modifier l'événement"
                     >
@@ -481,41 +448,25 @@ export default function EventManagement() {
       </div>
 
       {/* Modals - UN SEUL À LA FOIS */}
-      {console.log('🔧 EventManagement about to render modals')}
       {(showCreateModal || editingEvent) && (
-        <>
-          {console.log('🔧 EventManagement rendering EventForm modal')}
-          <EventForm
-            event={editingEvent}
-            onClose={handleFormClose}
-          />
-        </>
+        <EventForm
+          event={editingEvent}
+          onClose={handleFormClose}
+        />
       )}
 
       {showAnimationsModal && (
-        <>
-          {console.log('🔧 EventManagement rendering AnimationsManager modal')}
-          <AnimationsManager
-            event={showAnimationsModal}
-            onClose={() => {
-              console.log('🔧 EventManagement closing animations modal');
-              setShowAnimationsModal(null);
-            }}
-          />
-        </>
+        <AnimationsManager
+          event={showAnimationsModal}
+          onClose={() => setShowAnimationsModal(null)}
+        />
       )}
 
       {showActivitiesModal && (
-        <>
-          {console.log('🔧 EventManagement rendering EventActivitiesManager modal')}
-          <EventActivitiesManager
-            event={showActivitiesModal}
-            onClose={() => {
-              console.log('🔧 EventManagement closing activities modal');
-              setShowActivitiesModal(null);
-            }}
-          />
-        </>
+        <EventActivitiesManager
+          event={showActivitiesModal}
+          onClose={() => setShowActivitiesModal(null)}
+        />
       )}
     </div>
   );
