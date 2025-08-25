@@ -100,7 +100,9 @@
    ```
 
    Cette requête garantit que l'entrée de `public.users` correspond à `auth.uid()` avec `role = 'admin'`.
-3. Si l'application utilise des rôles via un claim JWT, ajoutez également `{"role": "admin"}` aux claims du token de l'utilisateur afin que la policy "Admins can manage events" le reconnaisse.
+3. La policy `"Admins can manage events"` s'appuie sur cette table pour vérifier le rôle administrateur.
+   Si votre application préfère utiliser un claim JWT pour stocker le rôle, adaptez la policy en conséquence et
+   assurez‑vous que le token contient `{"role": "admin"}`.
 
 ## Debugging
 
