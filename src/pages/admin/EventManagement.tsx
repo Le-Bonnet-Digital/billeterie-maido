@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import EventForm from '../../components/admin/EventForm';
 import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
+import { debugLog } from '../../lib/logger';
 
 interface Event {
   id: string;
@@ -32,12 +33,12 @@ export default function EventManagement() {
   const [showActivitiesModal, setShowActivitiesModal] = useState<Event | null>(null);
 
   useEffect(() => {
-    console.log('🔧 EventManagement mounted');
+    debugLog('🔧 EventManagement mounted');
     loadEvents();
   }, []);
 
   const loadEvents = async () => {
-    console.log('🔧 EventManagement loadEvents called');
+    debugLog('🔧 EventManagement loadEvents called');
     if (!isSupabaseConfigured()) {
       toast.error('Configuration Supabase manquante');
       setLoading(false);
@@ -65,7 +66,7 @@ export default function EventManagement() {
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      console.log('🔧 EventManagement Events loaded with has_animations:', data?.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
+      debugLog('🔧 EventManagement Events loaded with has_animations:', data?.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
       setEvents(data || []);
     } catch (err) {
       console.error('Erreur chargement événements:', err);
@@ -111,7 +112,7 @@ export default function EventManagement() {
   };
 
   const handleFormClose = () => {
-    console.log('🔧 EventManagement handleFormClose called');
+    debugLog('🔧 EventManagement handleFormClose called');
     setShowCreateModal(false);
     setEditingEvent(null);
     loadEvents(); // Recharger après fermeture
@@ -125,7 +126,7 @@ export default function EventManagement() {
     );
   }
 
-  console.log('🔧 EventManagement rendering with modals:', {
+  debugLog('🔧 EventManagement rendering with modals:', {
     showCreateModal,
     editingEvent: editingEvent?.id,
     showAnimationsModal: showAnimationsModal?.id,
@@ -134,17 +135,6 @@ export default function EventManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Debug Panel */}
-      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-        <div className="text-sm font-mono text-yellow-800">
-          🔧 DEBUG EventManagement - Modals: 
-          Create={showCreateModal ? 'OPEN' : 'CLOSED'} | 
-          Edit={editingEvent ? `OPEN(${editingEvent.id})` : 'CLOSED'} | 
-          Animations={showAnimationsModal ? `OPEN(${showAnimationsModal.id})` : 'CLOSED'} | 
-          Activities={showActivitiesModal ? `OPEN(${showActivitiesModal.id})` : 'CLOSED'}
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Événements</h1>
@@ -152,7 +142,7 @@ export default function EventManagement() {
         </div>
         <button 
           onClick={() => {
-            console.log('🔧 EventManagement opening create modal');
+            debugLog('🔧 EventManagement opening create modal');
             setShowCreateModal(true);
           }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -203,7 +193,7 @@ export default function EventManagement() {
             </p>
             <button
               onClick={() => {
-                console.log('🔧 EventManagement opening create modal from empty state');
+                debugLog('🔧 EventManagement opening create modal from empty state');
                 setShowCreateModal(true);
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -241,7 +231,7 @@ export default function EventManagement() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => {
-                        console.log('🔧 EventManagement opening activities modal for:', event.id);
+                        debugLog('🔧 EventManagement opening activities modal for:', event.id);
                         setShowActivitiesModal(event);
                       }}
                       className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
@@ -253,7 +243,7 @@ export default function EventManagement() {
                     {event.has_animations && (
                       <button
                         onClick={() => {
-                          console.log('🔧 EventManagement opening animations modal for:', event.id);
+                          debugLog('🔧 EventManagement opening animations modal for:', event.id);
                           setShowAnimationsModal(event);
                         }}
                         className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
@@ -265,7 +255,7 @@ export default function EventManagement() {
                     
                     <button
                       onClick={() => {
-                        console.log('🔧 EventManagement opening edit modal for:', event.id);
+                        debugLog('🔧 EventManagement opening edit modal for:', event.id);
                         setEditingEvent(event);
                       }}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"

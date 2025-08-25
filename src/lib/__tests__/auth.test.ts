@@ -3,35 +3,81 @@ import { signInWithEmail, signOut } from '../auth';
 import { supabase } from '../supabase';
 import { toast } from 'react-hot-toast';
 
-// Ensure auth methods exist on supabase mock
+// Mock toast
+vi.mock('react-hot-toast', () => ({
+  toast: { error: vi.fn(), success: vi.fn() }
+}));
+
+// Mock supabase
+type SupabaseMock = {
+  auth: {
+    signInWithPassword: any,
+    signOut: any,
+    getUser: any
+  },
+  from: any
+};
+
+const insertMock = vi.fn().mockResolvedValue({ error: null });
+const singleMock = vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null });
+const eqMock = vi.fn().mockReturnValue({ single: singleMock });
+const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+const fromMock = vi.fn().mockReturnValue({ select: selectMock, insert: insertMock });
+
+vi.mock('../supabase', () => ({
+  supabase: {
+    auth: {
+      signInWithPassword: vi.fn(),
+      signOut: vi.fn(),
+      getUser: vi.fn()
+    },
+    from: fromMock
+  }
+}));
+
+// Ensure mocks reset before each test
 beforeEach(() => {
   vi.clearAllMocks();
   (supabase.auth as any).signInWithPassword = vi.fn();
   (supabase.auth as any).signOut = vi.fn();
+  singleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
+  insertMock.mockResolvedValue({ error: null });
 });
 
 describe('signInWithEmail', () => {
-  it('should return user when sign in succeeds', async () => {
+  it('should return user with admin role when found in DB', async () => {
     const user = { id: 'user-1', email: 'test@example.com' };
     (supabase.auth.signInWithPassword as any).mockResolvedValue({
       data: { user },
-      error: null,
-    });
-    supabase.from.mockReturnValue({
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null }),
-      insert: vi.fn(),
+      error: null
     });
 
     const result = await signInWithEmail('test@example.com', 'password');
     expect(result).toEqual({ id: 'user-1', email: 'test@example.com', role: 'admin' });
   });
 
+  it('should assign client role when user does not exist', async () => {
+    singleMock.mockResolvedValue({ data: null, error: { message: 'No user' } });
+
+    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+      data: { user: { id: 'user-2', email: 'client@example.com' } },
+      error: null
+    });
+
+    const result = await signInWithEmail('client@example.com', 'password');
+
+    expect(result?.role).toBe('client');
+    expect(insertMock).toHaveBeenCalledWith({
+      id: 'user-2',
+      email: 'client@example.com',
+      role: 'client'
+    });
+  });
+
   it('should return null and show error on failure', async () => {
     (supabase.auth.signInWithPassword as any).mockResolvedValue({
       data: { user: null },
-      error: new Error('Invalid credentials'),
+      error: new Error('Invalid credentials')
     });
 
     const result = await signInWithEmail('test@example.com', 'wrong');
