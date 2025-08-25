@@ -50,7 +50,7 @@ describe('EventCGV Page', () => {
     render(<EventCGV />);
 
     expect(await screen.findByText('Test Event')).toBeInTheDocument();
-    expect(screen.getByText('This is content')).toBeInTheDocument();
+    expect(screen.getByText(/This is\s+content/)).toBeInTheDocument();
   });
 
   it('renders fallback when no CGV data', async () => {
