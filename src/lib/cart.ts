@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from './errors';
 
 export interface CartItem {
   id: string;
@@ -186,7 +187,8 @@ export async function getCartItems(): Promise<CartItem[]> {
     if (error) {
       console.error('Erreur récupération panier:', error);
       // Si c'est une erreur de connectivité, retourner un tableau vide plutôt que de faire planter l'app
-      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+      const errorMessage = getErrorMessage(error);
+      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('fetch')) {
         console.warn('Network error, returning empty cart');
         return [];
       }
