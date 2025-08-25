@@ -2,26 +2,35 @@ import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
 import { toast } from 'react-hot-toast';
 
-export interface CartItem {
+/** Represents a pass returned by Supabase */
+export interface Pass {
   id: string;
-  pass: {
+  name: string;
+  price: number;
+  description: string;
+}
+
+/** Represents an event activity returned by Supabase */
+export interface EventActivity {
+  id: string;
+  activities: {
     id: string;
     name: string;
-    price: number;
-    description: string;
+    icon: string;
   };
-  eventActivity?: {
-    id: string;
-    activities: {
-      id: string;
-      name: string;
-      icon: string;
-    };
-  };
-  timeSlot?: {
-    id: string;
-    slot_time: string;
-  };
+}
+
+/** Represents a time slot returned by Supabase */
+export interface TimeSlot {
+  id: string;
+  slot_time: string;
+}
+
+export interface CartItem {
+  id: string;
+  pass: Pass;
+  eventActivity?: EventActivity;
+  timeSlot?: TimeSlot;
   quantity: number;
 }
 
@@ -193,11 +202,21 @@ export async function getCartItems(): Promise<CartItem[]> {
       return [];
     }
     
-    return (data || []).map(item => ({
+    interface CartItemFromDB {
+      id: string;
+      quantity: number;
+      passes: Pass;
+      event_activities: EventActivity | null;
+      time_slots: TimeSlot | null;
+    }
+
+    const typedData: CartItemFromDB[] = data || [];
+
+    return typedData.map(item => ({
       id: item.id,
-      pass: item.passes as any,
-      eventActivity: item.event_activities as any,
-      timeSlot: item.time_slots as any,
+      pass: item.passes,
+      eventActivity: item.event_activities ?? undefined,
+      timeSlot: item.time_slots ?? undefined,
       quantity: item.quantity
     }));
   } catch (err) {
