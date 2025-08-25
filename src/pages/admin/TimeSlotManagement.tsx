@@ -291,7 +291,7 @@ export default function TimeSlotManagement() {
         </div>
         
         <div className="overflow-x-auto">
-          <div className="min-w-full">
+          <div className="min-w-max">
             {/* En-têtes des heures */}
             <div className="flex border-b border-gray-200">
               <div className="w-32 p-4 font-medium text-gray-900">Activité</div>
