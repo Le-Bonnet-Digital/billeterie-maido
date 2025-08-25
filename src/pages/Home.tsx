@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import EventCard from '../components/EventCard';
 import { Calendar, Loader2 } from 'lucide-react';
+import { logger } from '../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface Event {
   id: string;
@@ -44,7 +46,8 @@ export default function Home() {
 
       setEvents(data || []);
     } catch (err) {
-      console.error('Erreur lors du chargement des événements:', err);
+      logger.error('Erreur lors du chargement des événements', { error: err });
+      toast.error('Impossible de charger les événements');
       setError('Impossible de charger les événements');
     } finally {
       setLoading(false);

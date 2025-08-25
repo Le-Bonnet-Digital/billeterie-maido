@@ -4,6 +4,7 @@ import { Users, Clock, Calendar, Download, Mail, CheckCircle, AlertCircle } from
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface TimeSlotWithReservations {
   id: string;
@@ -73,7 +74,7 @@ export default function FlowManagement() {
         setSelectedDate(format(new Date(data[0].event_date), 'yyyy-MM-dd'));
       }
     } catch (err) {
-      console.error('Erreur chargement événements:', err);
+      logger.error('Erreur chargement événements', { error: err });
       toast.error('Erreur lors du chargement des événements');
     } finally {
       setLoading(false);
@@ -144,7 +145,7 @@ export default function FlowManagement() {
 
       setTimeSlots(slotsWithCapacity);
     } catch (err) {
-      console.error('Erreur chargement créneaux:', err);
+      logger.error('Erreur chargement créneaux', { error: err });
       toast.error('Erreur lors du chargement des créneaux');
     } finally {
       setLoading(false);

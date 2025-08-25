@@ -4,6 +4,7 @@ import { Settings as SettingsIcon, Save, User, Mail, Shield, Database, Globe, Be
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '../../lib/auth';
 import type { User as AuthUser } from '../../lib/auth';
+import { logger } from '../../lib/logger';
 
 interface SystemSettings {
   site_name: string;
@@ -46,7 +47,7 @@ export default function Settings() {
         setSettings(JSON.parse(savedSettings));
       }
     } catch (err) {
-      console.error('Erreur chargement paramètres:', err);
+      logger.error('Erreur chargement paramètres', { error: err });
       toast.error('Erreur lors du chargement des paramètres');
     } finally {
       setLoading(false);
@@ -63,7 +64,7 @@ export default function Settings() {
       
       toast.success('Paramètres sauvegardés avec succès');
     } catch (err) {
-      console.error('Erreur sauvegarde paramètres:', err);
+      logger.error('Erreur sauvegarde paramètres', { error: err });
       toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
@@ -92,7 +93,7 @@ export default function Settings() {
       
       toast.success('Base de données réinitialisée avec succès');
     } catch (err) {
-      console.error('Erreur réinitialisation:', err);
+      logger.error('Erreur réinitialisation', { error: err });
       toast.error('Erreur lors de la réinitialisation');
     } finally {
       setSaving(false);

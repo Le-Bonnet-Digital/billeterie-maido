@@ -4,6 +4,7 @@ import { X, Plus, Trash2, Clock, Users, Calendar } from 'lucide-react';
 import { format, addMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface TimeSlot {
   id: string;
@@ -67,7 +68,7 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
 
       setTimeSlots(slotsWithCapacity);
     } catch (err) {
-      console.error('Erreur chargement créneaux:', err);
+      logger.error('Erreur chargement créneaux', { error: err });
       toast.error('Erreur lors du chargement des créneaux');
     } finally {
       setLoading(false);
@@ -88,7 +89,7 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
       toast.success('Créneau supprimé');
       loadTimeSlots();
     } catch (err) {
-      console.error('Erreur suppression créneau:', err);
+      logger.error('Erreur suppression créneau', { error: err });
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -290,7 +291,7 @@ function CreateTimeSlotsForm({ eventActivity, event, onClose }: CreateTimeSlotsF
       toast.success(`${slotsToCreate.length} créneaux créés avec succès`);
       onClose();
     } catch (err) {
-      console.error('Erreur création créneaux:', err);
+      logger.error('Erreur création créneaux', { error: err });
       toast.error('Erreur lors de la création des créneaux');
     } finally {
       setCreating(false);

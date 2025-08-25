@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Mail, Send, Users, Calendar, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface Event {
   id: string;
@@ -104,7 +105,7 @@ L'équipe BilletEvent`
       if (error) throw error;
       setEvents(data || []);
     } catch (err) {
-      console.error('Erreur chargement événements:', err);
+      logger.error('Erreur chargement événements', { error: err });
       toast.error('Erreur lors du chargement des événements');
     }
   };
@@ -128,7 +129,8 @@ L'équipe BilletEvent`
       const uniqueEmails = new Set((data || []).map(r => r.client_email));
       setRecipientCount(uniqueEmails.size);
     } catch (err) {
-      console.error('Erreur comptage destinataires:', err);
+      logger.error('Erreur comptage destinataires', { error: err });
+      toast.error('Erreur lors du comptage des destinataires');
       setRecipientCount(0);
     }
   };
@@ -158,7 +160,7 @@ L'équipe BilletEvent`
       setSelectedEvent('');
       setRecipientCount(0);
     } catch (err) {
-      console.error('Erreur envoi email:', err);
+      logger.error('Erreur envoi email', { error: err });
       toast.error('Erreur lors de l\'envoi');
     } finally {
       setSending(false);

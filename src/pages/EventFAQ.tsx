@@ -1,53 +1,12 @@
-import React, { useEffect, useState } from 'react';
+import React from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
-import FAQAccordion, { FAQItem } from '../components/FAQAccordion';
-
-interface Event {
-  id: string;
-  name: string;
-}
+import FAQAccordion from '../components/FAQAccordion';
+import { useFaq } from '../hooks/useFaq';
 
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (eventId) {
-      loadEventFAQ();
-    }
-  }, [eventId]);
-
-  const loadEventFAQ = async () => {
-    try {
-      setLoading(true);
-
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('id, name')
-        .eq('id', eventId)
-        .eq('status', 'published')
-        .single();
-
-      if (eventError) throw eventError;
-      setEvent(eventData);
-
-      const { data: faqData, error: faqError } = await supabase
-        .from('event_faqs')
-        .select('question, answer, position')
-        .eq('event_id', eventId)
-        .order('position');
-      if (faqError) throw faqError;
-      setFaqs(faqData || []);
-    } catch (err) {
-      console.error('Erreur chargement FAQ:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { event, faqs, loading } = useFaq(eventId);
 
   if (loading) {
     return (
@@ -76,7 +35,7 @@ export default function EventFAQ() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Navigation */}
       <div className="mb-8">
-        <Link 
+        <Link
           to={`/event/${eventId}`}
           className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
         >
