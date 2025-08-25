@@ -1,4 +1,5 @@
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { fetchEventStock } from '../lib/eventStock';
 
 export interface Event {
   id: string;
@@ -55,48 +56,14 @@ export async function fetchEvent(eventId: string): Promise<Event | null> {
 
 export async function fetchPasses(eventId: string): Promise<Pass[]> {
   if (!isSupabaseConfigured()) return [];
-  const { data, error } = await supabase
-    .from('passes')
-    .select('id, name, price, description, initial_stock')
-    .eq('event_id', eventId);
-  if (error) throw error;
-
-  const passesWithStock = await Promise.all(
-    (data || []).map(async (pass) => {
-      if (pass.initial_stock === null) {
-        return { ...pass, remaining_stock: 999999 };
-      }
-      const { data: stockData } = await supabase.rpc('get_pass_remaining_stock', {
-        pass_uuid: pass.id,
-      });
-      return { ...pass, remaining_stock: stockData || 0 };
-    })
-  );
-  return passesWithStock;
+  const { passes } = await fetchEventStock(eventId);
+  return passes as Pass[];
 }
 
 export async function fetchEventActivities(eventId: string): Promise<EventActivity[]> {
   if (!isSupabaseConfigured()) return [];
-  const { data, error } = await supabase
-    .from('event_activities')
-    .select(`*, activities (*)`)
-    .eq('event_id', eventId);
-  if (error) throw error;
-
-  const activitiesWithStock = await Promise.all(
-    (data || []).map(async (eventActivity: any) => {
-      const { data: stockData } = await supabase.rpc(
-        'get_event_activity_remaining_stock',
-        { event_activity_id_param: eventActivity.id }
-      );
-      return {
-        ...eventActivity,
-        activity: eventActivity.activities,
-        remaining_stock: stockData || 0,
-      };
-    })
-  );
-  return activitiesWithStock;
+  const { eventActivities } = await fetchEventStock(eventId);
+  return eventActivities as EventActivity[];
 }
 
 export async function fetchTimeSlotsForActivity(eventActivityId: string): Promise<TimeSlot[]> {

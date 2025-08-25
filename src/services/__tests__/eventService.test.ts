@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, afterAll } from 'vitest';
+import { describe, it, expect, vi, afterAll, afterEach } from 'vitest';
 
 vi.mock('../../lib/supabase', () => {
   const from = vi.fn((table: string) => {
@@ -41,6 +41,32 @@ vi.mock('../../lib/supabase', () => {
     if (fn === 'get_slot_remaining_capacity') {
       return Promise.resolve({ data: 5 });
     }
+    if (fn === 'get_event_passes_activities_stock') {
+      return Promise.resolve({
+        data: {
+          passes: [
+            {
+              id: 'p1',
+              name: 'Pass',
+              price: 10,
+              description: 'Desc',
+              initial_stock: 100,
+              remaining_stock: 50,
+            },
+          ],
+          event_activities: [
+            {
+              id: 'ea1',
+              activity_id: 'a1',
+              stock_limit: null,
+              requires_time_slot: false,
+              remaining_stock: 3,
+              activity: { id: 'a1', name: 'Act', description: 'Desc', icon: '🎯' },
+            },
+          ],
+        },
+      });
+    }
     return Promise.resolve({ data: null });
   });
 
@@ -54,7 +80,17 @@ afterAll(() => {
   vi.resetModules();
 });
 
-import { fetchEvent, fetchTimeSlotsForActivity } from '../eventService';
+afterEach(() => {
+  vi.clearAllMocks();
+});
+
+import { supabase } from '../../lib/supabase';
+import {
+  fetchEvent,
+  fetchTimeSlotsForActivity,
+  fetchPasses,
+  fetchEventActivities,
+} from '../eventService';
 
 describe('eventService', () => {
   it('fetchEvent returns event data', async () => {
@@ -66,5 +102,22 @@ describe('eventService', () => {
     const slots = await fetchTimeSlotsForActivity('ea1');
     expect(slots[0].remaining_capacity).toBe(5);
     expect(slots[0].event_activity.activity.name).toBe('Act');
+  });
+
+  it('fetchPasses uses grouped RPC to return remaining stock', async () => {
+    const passes = await fetchPasses('1');
+    expect(passes[0].remaining_stock).toBe(50);
+    expect(supabase.rpc).toHaveBeenCalledWith('get_event_passes_activities_stock', {
+      event_uuid: '1',
+    });
+  });
+
+  it('fetchEventActivities uses grouped RPC to return remaining stock', async () => {
+    const activities = await fetchEventActivities('1');
+    expect(activities[0].remaining_stock).toBe(3);
+    expect(activities[0].activity.name).toBe('Act');
+    expect(supabase.rpc).toHaveBeenCalledWith('get_event_passes_activities_stock', {
+      event_uuid: '1',
+    });
   });
 });
