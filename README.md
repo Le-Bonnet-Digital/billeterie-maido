@@ -88,6 +88,20 @@
   VITE_SUPABASE_ANON_KEY="votre_clef_anon"
   ```
 
+### Promouvoir un utilisateur en admin
+
+1. Récupérez l'UUID de l'utilisateur à promouvoir.
+2. Dans le projet Supabase, exécutez la requête SQL suivante pour ajouter ou mettre à jour son rôle :
+
+   ```sql
+   insert into public.users (id, role)
+   values ('<uuid-utilisateur>', 'admin')
+   on conflict (id) do update set role = 'admin';
+   ```
+
+   Cette requête garantit que l'entrée de `public.users` correspond à `auth.uid()` avec `role = 'admin'`.
+3. Si l'application utilise des rôles via un claim JWT, ajoutez également `{"role": "admin"}` aux claims du token de l'utilisateur afin que la policy "Admins can manage events" le reconnaisse.
+
 ## Debugging
 
 Définissez la variable d'environnement `VITE_DEBUG=true` lors de l'exécution en développement pour activer le logger centralisé et obtenir des messages détaillés.
