@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { supabase, isSupabaseConfigured } from '../lib/supabase';
 import { addToCart } from '../lib/cart';
+import { fetchEventStock } from '../lib/eventStock';
 import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -87,56 +88,10 @@ export default function EventDetails() {
       if (eventError) throw eventError;
       setEvent(eventData);
 
-      // Charger les pass
-      const { data: passesData, error: passesError } = await supabase
-        .from('passes')
-        .select('id, name, price, description, initial_stock')
-        .eq('event_id', eventId);
-
-      if (passesError) throw passesError;
-      
-      // Calculer le stock restant pour chaque pass
-      const passesWithStock = await Promise.all(
-        (passesData || []).map(async (pass) => {
-          if (pass.initial_stock === null) {
-            return { ...pass, remaining_stock: 999999 }; // Stock illimité
-          }
-          
-          const { data: stockData } = await supabase
-            .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
-          
-          return { ...pass, remaining_stock: stockData || 0 };
-        })
-      );
-      
+      // Charger les pass et activités avec leurs stocks via un RPC unique
+      const { passes: passesWithStock, eventActivities } = await fetchEventStock(eventId);
       setPasses(passesWithStock);
-
-      // Charger les activités disponibles pour cet événement
-      const { data: eventActivitiesData, error: activitiesError } = await supabase
-        .from('event_activities')
-        .select(`
-          *,
-          activities (*)
-        `)
-        .eq('event_id', eventId);
-
-      if (activitiesError) throw activitiesError;
-      
-      // Calculer le stock restant pour chaque activité
-      const activitiesWithStock = await Promise.all(
-        (eventActivitiesData || []).map(async (eventActivity) => {
-          const { data: stockData } = await supabase
-            .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivity.id });
-          
-          return { 
-            ...eventActivity, 
-            activity: eventActivity.activities,
-            remaining_stock: stockData || 0 
-          };
-        })
-      );
-      
-      setEventActivities(activitiesWithStock);
+      setEventActivities(eventActivities);
     } catch (err) {
       console.error('Erreur chargement événement:', err);
     } finally {

@@ -250,6 +250,32 @@ export type Database = {
         Args: { pass_uuid: string; quantity_requested: number };
         Returns: boolean;
       };
+      get_event_passes_activities_stock: {
+        Args: { event_uuid: string };
+        Returns: {
+          passes: {
+            id: string;
+            name: string;
+            price: number;
+            description: string;
+            initial_stock: number | null;
+            remaining_stock: number;
+          }[];
+          event_activities: {
+            id: string;
+            activity_id: string;
+            stock_limit: number | null;
+            requires_time_slot: boolean;
+            remaining_stock: number;
+            activity: {
+              id: string;
+              name: string;
+              description: string;
+              icon: string;
+            };
+          }[];
+        };
+      };
     };
   };
 };
