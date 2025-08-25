@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Activity, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 
 interface ActivityType {
   id: string;
@@ -41,7 +42,7 @@ export default function ActivityManagement() {
   };
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l\'utilisent.')) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l'utilisent.")) return;
 
     try {
       const { error } = await supabase
@@ -241,7 +242,7 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              {activity ? 'Modifier l\'Activité' : 'Créer une Activité'}
+              {activity ? "Modifier l'Activité" : 'Créer une Activité'}
             </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="h-6 w-6" />
@@ -263,14 +264,12 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
+              <MarkdownEditor
+                id="description"
+                label="Description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, description: value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
