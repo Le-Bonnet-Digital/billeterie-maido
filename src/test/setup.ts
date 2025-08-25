@@ -4,13 +4,24 @@ import React from 'react';
 
 // Mock only specific URL methods for file download tests
 if (!('createObjectURL' in window.URL)) {
-  Object.defineProperty(window.URL, 'createObjectURL', { value: vi.fn(), writable: true, configurable: true });
+  Object.defineProperty(window.URL, 'createObjectURL', {
+    value: vi.fn(() => 'mock-url'),
+    writable: true,
+    configurable: true,
+  });
+} else {
+  vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
 }
+
 if (!('revokeObjectURL' in window.URL)) {
-  Object.defineProperty(window.URL, 'revokeObjectURL', { value: vi.fn(), writable: true, configurable: true });
+  Object.defineProperty(window.URL, 'revokeObjectURL', {
+    value: vi.fn(),
+    writable: true,
+    configurable: true,
+  });
+} else {
+  vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
 }
-vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
-vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
 
 // Mock BroadcastChannel for Supabase auth
 Object.defineProperty(window, 'BroadcastChannel', {
@@ -24,7 +35,7 @@ Object.defineProperty(window, 'BroadcastChannel', {
 
 // Mock Supabase with proper method chaining
 const createMockQueryBuilder = () => {
-  const mockBuilder = {
+  const mockBuilder: any = {
     select: vi.fn(() => mockBuilder),
     eq: vi.fn(() => mockBuilder),
     gte: vi.fn(() => mockBuilder),
@@ -42,7 +53,7 @@ const createMockQueryBuilder = () => {
       return Promise.resolve({ data: [], error: null });
     }),
   };
-  
+
   // Make it thenable so it can be awaited
   mockBuilder.then = vi.fn((callback) => {
     if (callback) {
@@ -50,7 +61,7 @@ const createMockQueryBuilder = () => {
     }
     return Promise.resolve({ data: [], error: null });
   });
-  
+
   return mockBuilder;
 };
 
