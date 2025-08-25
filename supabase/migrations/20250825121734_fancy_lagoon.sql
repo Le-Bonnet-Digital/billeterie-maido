@@ -3,7 +3,7 @@
 
   1. Security Updates
     - Update RLS policies to allow admins to update events
-    - Ensure proper admin role checking
+    - Ensure proper admin role checking via JWT claim
     - Add debugging for permission issues
 
   2. Policy Changes
@@ -20,18 +20,10 @@ CREATE POLICY "Admins can manage events"
   FOR ALL
   TO authenticated
   USING (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
+    auth.jwt() ->> 'role' = 'admin'
   )
   WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM public.users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
+    auth.jwt() ->> 'role' = 'admin'
   );
 
 -- Also ensure service role can manage everything
