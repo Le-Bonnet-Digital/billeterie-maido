@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
+import { debugLog } from '../../lib/logger';
 
 interface Event {
   id: string;
@@ -107,9 +108,11 @@ export default function EventForm({ event, onClose }: EventFormProps) {
 
       toast.success(`Événement ${event ? 'mis à jour' : 'créé'} avec succès`);
       onClose();
-    } catch (err) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : JSON.stringify(err);
+      debugLog('Erreur sauvegarde événement:', err);
       console.error('Erreur sauvegarde événement:', err);
-      toast.error("Erreur lors de la sauvegarde de l'événement");
+      toast.error(`Erreur lors de la sauvegarde de l'événement: ${message}`);
     } finally {
       setLoading(false);
     }
