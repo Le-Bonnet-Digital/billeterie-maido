@@ -100,7 +100,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           .update(eventData)
           .eq('id', event.id)
           .select()
-          .maybeSingle();          // remplace .single()
+          .single();
 
         debugLog('Supabase update data:', data);
         console.log('Supabase update data:', data);
@@ -109,14 +109,14 @@ export default function EventForm({ event, onClose }: EventFormProps) {
         debugLog('Supabase update error code:', error?.code);
         console.log('Supabase update error code:', error?.code);
 
+        if (error?.code === 'PGRST116') {
+          toast.error('Événement introuvable ou accès refusé');
+          return;
+        }
+
         if (error) {
           const errorMessage = error.message || 'événement introuvable';
           throw new Error(errorMessage);
-        }
-
-        if (!data) {
-          toast.error('Événement introuvable ou accès refusé');
-          return;
         }
       } else {
         // Create new event
