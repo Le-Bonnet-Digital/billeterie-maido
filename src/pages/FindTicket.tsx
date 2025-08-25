@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Search, Mail, Shield, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
+import { sendReservationEmail } from '../lib/sendReservationEmail';
 import { toast } from 'react-hot-toast';
 
 export default function FindTicket() {
@@ -36,9 +37,12 @@ export default function FindTicket() {
       if (error) throw error;
 
       if (data && data.length > 0) {
+        await sendReservationEmail({
+          email,
+          reservationId: data[0].id,
+        });
         setFound(true);
         toast.success('E-mail de confirmation renvoyé !');
-        // TODO: Déclencher l'envoi d'e-mail
       } else {
         toast.error('Aucune réservation trouvée pour cette adresse e-mail');
       }

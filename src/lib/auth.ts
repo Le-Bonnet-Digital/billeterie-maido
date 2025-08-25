@@ -1,11 +1,28 @@
 import { supabase } from './supabase';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from './errors';
 
 export interface User {
   id: string;
   email: string;
   role: 'admin' | 'pony_provider' | 'archery_provider' | 'client';
 }
+
+const ALLOWED_ROLES: User['role'][] = ['admin', 'pony_provider', 'archery_provider', 'client'];
+
+export const createUser = async (id: string, email: string, role: User['role']): Promise<User> => {
+  if (!role || !ALLOWED_ROLES.includes(role)) {
+    throw new Error('Rôle non autorisé');
+  }
+
+  const { error } = await supabase
+    .from('users')
+    .insert({ id, email, role });
+
+  if (error) throw error;
+
+  return { id, email, role };
+};
 
 export const signInWithEmail = async (email: string, password: string): Promise<User | null> => {
   try {
@@ -26,20 +43,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 
       if (userError) {
         console.warn('Utilisateur non trouvé dans la table users, création...');
-        // Créer l'utilisateur avec le rôle admin par défaut
-        await supabase
-          .from('users')
-          .insert({
-            id: data.user.id,
-            email: data.user.email!,
-            role: 'admin'
-          });
-        
-        return {
-          id: data.user.id,
-          email: data.user.email!,
-          role: 'admin'
-        };
+        return await createUser(data.user.id, data.user.email!, 'client');
       }
 
       return {
@@ -52,7 +56,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
     return null;
   } catch (err) {
     console.error('Erreur connexion:', err);
-    toast.error(err.message || 'Erreur lors de la connexion');
+    toast.error(getErrorMessage(err) || 'Erreur lors de la connexion');
     return null;
   }
 };
