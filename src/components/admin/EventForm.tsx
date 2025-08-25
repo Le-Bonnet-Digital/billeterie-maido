@@ -1,12 +1,7 @@
-import React, { useEffect, useState } from 'react';
-import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Settings, X, MapPin, Clock } from 'lucide-react';
-import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
-import EventForm from '../../components/admin/EventForm';
-import AnimationsManager from '../../components/admin/AnimationsManager';
-import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
+import { X } from 'lucide-react';
 
 interface Event {
   id: string;
@@ -19,517 +14,193 @@ interface Event {
   faq_content: string;
   key_info_content: string;
   has_animations: boolean;
-  created_at: string;
-  updated_at: string;
 }
 
-interface Animation {
-  id: string;
-  name: string;
-  description: string;
-  location: string;
-  start_time: string;
-  end_time: string;
-  capacity: number | null;
-  is_active: boolean;
-}
-
-interface AnimationsManagementModalProps {
-  event: Event;
+interface EventFormProps {
+  event: Event | null;
   onClose: () => void;
 }
 
-function AnimationsManagementModal({ event, onClose }: AnimationsManagementModalProps) {
-  const [animations, setAnimations] = useState<Animation[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingAnimation, setEditingAnimation] = useState<Animation | null>(null);
+export default function EventForm({ event, onClose }: EventFormProps) {
+  const [formData, setFormData] = useState({
+    name: '',
+    event_date: '',
+    sales_opening_date: '',
+    sales_closing_date: '',
+    status: 'draft',
+    cgv_content: '',
+    faq_content: '',
+    key_info_content: '',
+    has_animations: false,
+  });
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    loadAnimations();
-  }, []);
+    if (event) {
+      setFormData({
+        name: event.name,
+        event_date: event.event_date ? new Date(event.event_date).toISOString().substring(0, 10) : '',
+        sales_opening_date: event.sales_opening_date ? new Date(event.sales_opening_date).toISOString().substring(0, 16) : '',
+        sales_closing_date: event.sales_closing_date ? new Date(event.sales_closing_date).toISOString().substring(0, 16) : '',
+        status: event.status,
+        cgv_content: event.cgv_content || '',
+        faq_content: event.faq_content || '',
+        key_info_content: event.key_info_content || '',
+        has_animations: event.has_animations || false,
+      });
+    } else {
+      // Reset for new event
+      setFormData({
+        name: '',
+        event_date: '',
+        sales_opening_date: '',
+        sales_closing_date: '',
+        status: 'draft',
+        cgv_content: '',
+        faq_content: '',
+        key_info_content: '',
+        has_animations: false,
+      });
+    }
+  }, [event]);
 
-  const loadAnimations = async () => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+    const { name, value, type } = e.target;
+
+    if (type === 'checkbox') {
+        const { checked } = e.target as HTMLInputElement;
+        setFormData(prev => ({ ...prev, [name]: checked }));
+    } else {
+        setFormData(prev => ({ ...prev, [name]: value }));
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const eventData = {
+        ...formData,
+        event_date: new Date(formData.event_date).toISOString(),
+        sales_opening_date: new Date(formData.sales_opening_date).toISOString(),
+        sales_closing_date: new Date(formData.sales_closing_date).toISOString(),
+    };
+
     try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('event_animations')
-        .select('*')
-        .eq('event_id', event.id)
-        .order('start_time');
+      let error;
+      if (event) {
+        // Update existing event
+        const { error: updateError } = await supabase
+          .from('events')
+          .update(eventData)
+          .eq('id', event.id);
+        error = updateError;
+      } else {
+        // Create new event
+        const { error: insertError } = await supabase
+          .from('events')
+          .insert(eventData);
+        error = insertError;
+      }
 
       if (error) throw error;
-      setAnimations(data || []);
+
+      toast.success(`Événement ${event ? 'mis à jour' : 'créé'} avec succès`);
+      onClose();
     } catch (err) {
-      console.error('Erreur chargement animations:', err);
-      toast.error('Erreur lors du chargement des animations');
+      console.error('Erreur sauvegarde événement:', err);
+      toast.error("Erreur lors de la sauvegarde de l'événement");
     } finally {
       setLoading(false);
-    }
-  };
-
-  const handleDeleteAnimation = async (animationId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette animation ?')) return;
-
-    try {
-      const { error } = await supabase
-        .from('event_animations')
-        .delete()
-        .eq('id', animationId);
-
-      if (error) throw error;
-      
-      toast.success('Animation supprimée avec succès');
-      loadAnimations();
-    } catch (err) {
-      console.error('Erreur suppression animation:', err);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  const toggleAnimationStatus = async (animation: Animation) => {
-    try {
-      const { error } = await supabase
-        .from('event_animations')
-        .update({ is_active: !animation.is_active })
-        .eq('id', animation.id);
-
-      if (error) throw error;
-      
-      toast.success(`Animation ${!animation.is_active ? 'activée' : 'désactivée'}`);
-      loadAnimations();
-    } catch (err) {
-      console.error('Erreur changement statut animation:', err);
-      toast.error('Erreur lors du changement de statut');
     }
   };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden flex flex-col">
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
-            <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
-                🎭 Animations - {event.name}
-              </h2>
-              <p className="text-gray-600">
-                {format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-              >
-                <Plus className="h-4 w-4" />
-                Nouvelle Animation
-              </button>
-              <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)]">
-          {loading ? (
-            <div className="flex items-center justify-center h-32">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
-            </div>
-          ) : animations.length === 0 ? (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🎭</div>
-              <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune animation</h3>
-              <p className="text-gray-600 mb-4">
-                Créez votre première animation pour enrichir l'expérience de vos participants.
-              </p>
-              <button
-                onClick={() => setShowCreateForm(true)}
-                className="bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-              >
-                Créer une animation
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {animations.map((animation) => (
-                <div key={animation.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50 transition-colors">
-                  <div className="flex items-start justify-between">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-3 mb-2">
-                        <h3 className="text-lg font-semibold text-gray-900">{animation.name}</h3>
-                        <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                          animation.is_active 
-                            ? 'bg-green-100 text-green-800' 
-                            : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {animation.is_active ? 'Active' : 'Inactive'}
-                        </span>
-                      </div>
-                      
-                      <p className="text-gray-600 mb-3">{animation.description}</p>
-                      
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-500">
-                        <div className="flex items-center gap-2">
-                          <MapPin className="h-4 w-4" />
-                          <span>{animation.location}</span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4" />
-                          <span>
-                            {format(new Date(animation.start_time), 'HH:mm')} - {format(new Date(animation.end_time), 'HH:mm')}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <span>Capacité: {animation.capacity || 'Illimitée'}</span>
-                        </div>
-                      </div>
-                    </div>
-                    
-                    <div className="flex items-center gap-2 ml-4">
-                      <button
-                        onClick={() => setEditingAnimation(animation)}
-                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
-                        title="Modifier l'animation"
-                      >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      
-                      <button
-                        onClick={() => toggleAnimationStatus(animation)}
-                        className={`p-2 rounded-md transition-colors ${
-                          animation.is_active 
-                            ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' 
-                            : 'text-green-600 hover:text-green-700 hover:bg-green-50'
-                        }`}
-                        title={animation.is_active ? 'Désactiver' : 'Activer'}
-                      >
-                        <Settings className="h-4 w-4" />
-                      </button>
-                      
-                      <button
-                        onClick={() => handleDeleteAnimation(animation.id)}
-                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                        title="Supprimer l'animation"
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-export default function EventManagement() {
-  const [events, setEvents] = useState<Event[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingEvent, setEditingEvent] = useState<Event | null>(null);
-  const [showAnimationsModal, setShowAnimationsModal] = useState<Event | null>(null);
-  const [showActivitiesModal, setShowActivitiesModal] = useState<Event | null>(null);
-
-  useEffect(() => {
-    console.log('🔧 EventManagement mounted');
-    loadEvents();
-  }, []);
-
-  const loadEvents = async () => {
-    console.log('🔧 EventManagement loadEvents called');
-    if (!isSupabaseConfigured()) {
-      toast.error('Configuration Supabase manquante');
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const { data, error } = await supabase
-        .from('events')
-        .select(`
-          id,
-          name,
-          event_date,
-          sales_opening_date,
-          sales_closing_date,
-          status,
-          cgv_content,
-          faq_content,
-          key_info_content,
-          has_animations,
-          created_at,
-          updated_at
-        `)
-        .order('created_at', { ascending: false });
-
-      if (error) throw error;
-      console.log('🔧 EventManagement Events loaded with has_animations:', data?.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
-      setEvents(data || []);
-    } catch (err) {
-      console.error('Erreur chargement événements:', err);
-      toast.error('Erreur lors du chargement des événements');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleDeleteEvent = async (eventId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cet événement ? Cette action est irréversible.')) return;
-
-    try {
-      const { error } = await supabase
-        .from('events')
-        .delete()
-        .eq('id', eventId);
-
-      if (error) throw error;
-      
-      toast.success('Événement supprimé avec succès');
-      loadEvents();
-    } catch (err) {
-      console.error('Erreur suppression événement:', err);
-      toast.error('Erreur lors de la suppression');
-    }
-  };
-
-  const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      draft: { label: 'Brouillon', color: 'bg-gray-100 text-gray-800' },
-      published: { label: 'Publié', color: 'bg-green-100 text-green-800' },
-      finished: { label: 'Terminé', color: 'bg-blue-100 text-blue-800' },
-      cancelled: { label: 'Annulé', color: 'bg-red-100 text-red-800' }
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig];
-    return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
-        {config.label}
-      </span>
-    );
-  };
-
-  const handleFormClose = () => {
-    console.log('🔧 EventManagement handleFormClose called');
-    setShowCreateModal(false);
-    setEditingEvent(null);
-    loadEvents(); // Recharger après fermeture
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
-
-  console.log('🔧 EventManagement rendering with modals:', {
-    showCreateModal,
-    editingEvent: editingEvent?.id,
-    showAnimationsModal: showAnimationsModal?.id,
-    showActivitiesModal: showActivitiesModal?.id
-  });
-
-  return (
-    <div className="space-y-6">
-      {/* Debug Panel */}
-      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-        <div className="text-sm font-mono text-yellow-800">
-          🔧 DEBUG EventManagement - Modals: 
-          Create={showCreateModal ? 'OPEN' : 'CLOSED'} | 
-          Edit={editingEvent ? `OPEN(${editingEvent.id})` : 'CLOSED'} | 
-          Animations={showAnimationsModal ? `OPEN(${showAnimationsModal.id})` : 'CLOSED'} | 
-          Activities={showActivitiesModal ? `OPEN(${showActivitiesModal.id})` : 'CLOSED'}
-        </div>
-      </div>
-
-      <div className="flex items-center justify-between">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Événements</h1>
-          <p className="text-gray-600">Créez et gérez vos événements</p>
-        </div>
-        <button 
-          onClick={() => {
-            console.log('🔧 EventManagement opening create modal');
-            setShowCreateModal(true);
-          }}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
-        >
-          <Plus className="h-4 w-4" />
-          Nouvel Événement
-        </button>
-      </div>
-
-      {/* Statistiques */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-900">{events.length}</div>
-          <div className="text-sm text-gray-600">Total événements</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-green-600">
-            {events.filter(e => e.status === 'published').length}
-          </div>
-          <div className="text-sm text-gray-600">Publiés</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-600">
-            {events.filter(e => e.status === 'draft').length}
-          </div>
-          <div className="text-sm text-gray-600">Brouillons</div>
-        </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-purple-600">
-            {events.filter(e => e.has_animations).length}
-          </div>
-          <div className="text-sm text-gray-600">Avec animations</div>
-        </div>
-      </div>
-
-      {/* Liste des événements */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Événements ({events.length})</h2>
-        </div>
-
-        {events.length === 0 ? (
-          <div className="p-12 text-center">
-            <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun événement</h3>
-            <p className="text-gray-600 mb-4">
-              Créez votre premier événement pour commencer à vendre des billets.
-            </p>
-            <button
-              onClick={() => {
-                console.log('🔧 EventManagement opening create modal from empty state');
-                setShowCreateModal(true);
-              }}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
-            >
-              Créer un événement
+            <h2 className="text-xl font-semibold text-gray-900">
+              {event ? "Modifier l'événement" : 'Nouvel Événement'}
+            </h2>
+            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+              <X className="h-6 w-6" />
             </button>
           </div>
-        ) : (
-          <div className="divide-y divide-gray-200">
-            {events.map((event) => (
-              <div key={event.id} className="p-6 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3 mb-2">
-                      <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
-                      {getStatusBadge(event.status)}
-                    </div>
-                    
-                    <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
-                      <div className="flex items-center gap-1">
-                        <Calendar className="h-4 w-4" />
-                        <span>{format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}</span>
-                      </div>
-                      <div>Créé le {format(new Date(event.created_at), 'dd/MM/yyyy')}</div>
-                      <div>
-                        Animations: {event.has_animations ? '✅ Activées' : '❌ Désactivées'}
-                      </div>
-                    </div>
-                    
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {event.key_info_content || 'Aucune information clé définie'}
-                    </p>
-                  </div>
-                  
-                  <div className="flex items-center gap-2 ml-4">
-                    <button
-                      onClick={() => {
-                        console.log('🔧 EventManagement opening activities modal for:', event.id);
-                        setShowActivitiesModal(event);
-                      }}
-                      className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
-                      title="Gérer les activités"
-                    >
-                      <Settings className="h-4 w-4" />
-                    </button>
-                    
-                    {event.has_animations && (
-                      <button
-                        onClick={() => {
-                          console.log('🔧 EventManagement opening animations modal for:', event.id);
-                          setShowAnimationsModal(event);
-                        }}
-                        className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
-                        title="Gérer les animations"
-                      >
-                        <span className="text-lg">🎭</span>
-                      </button>
-                    )}
-                    
-                    <button
-                      onClick={() => {
-                        console.log('🔧 EventManagement opening edit modal for:', event.id);
-                        setEditingEvent(event);
-                      }}
-                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
-                      title="Modifier l'événement"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                      title="Supprimer l'événement"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-              </div>
-            ))}
+        </div>
+
+        <form onSubmit={handleSubmit} className="p-6 space-y-6 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div>
+              <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-1">Nom de l'événement</label>
+              <input type="text" name="name" id="name" value={formData.name} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div>
+              <label htmlFor="event_date" className="block text-sm font-medium text-gray-700 mb-1">Date de l'événement</label>
+              <input type="date" name="event_date" id="event_date" value={formData.event_date} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div>
+              <label htmlFor="sales_opening_date" className="block text-sm font-medium text-gray-700 mb-1">Ouverture des ventes</label>
+              <input type="datetime-local" name="sales_opening_date" id="sales_opening_date" value={formData.sales_opening_date} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div>
+              <label htmlFor="sales_closing_date" className="block text-sm font-medium text-gray-700 mb-1">Fermeture des ventes</label>
+              <input type="datetime-local" name="sales_closing_date" id="sales_closing_date" value={formData.sales_closing_date} onChange={handleChange} required className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500" />
+            </div>
+
+            <div>
+              <label htmlFor="status" className="block text-sm font-medium text-gray-700 mb-1">Statut</label>
+              <select name="status" id="status" value={formData.status} onChange={handleChange} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500">
+                <option value="draft">Brouillon</option>
+                <option value="published">Publié</option>
+                <option value="finished">Terminé</option>
+                <option value="cancelled">Annulé</option>
+              </select>
+            </div>
+
+             <div className="flex items-center">
+                <input
+                    type="checkbox"
+                    name="has_animations"
+                    id="has_animations"
+                    checked={formData.has_animations}
+                    onChange={handleChange}
+                    className="h-4 w-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+                />
+                <label htmlFor="has_animations" className="ml-2 block text-sm text-gray-900">
+                    Activer les animations pour cet événement
+                </label>
+            </div>
           </div>
-        )}
+
+          <div>
+            <label htmlFor="key_info_content" className="block text-sm font-medium text-gray-700 mb-1">Informations clés</label>
+            <textarea name="key_info_content" id="key_info_content" value={formData.key_info_content} onChange={handleChange} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+          </div>
+
+          <div>
+            <label htmlFor="cgv_content" className="block text-sm font-medium text-gray-700 mb-1">Conditions Générales de Vente (CGV)</label>
+            <textarea name="cgv_content" id="cgv_content" value={formData.cgv_content} onChange={handleChange} rows={6} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+          </div>
+
+          <div>
+            <label htmlFor="faq_content" className="block text-sm font-medium text-gray-700 mb-1">Foire Aux Questions (FAQ)</label>
+            <textarea name="faq_content" id="faq_content" value={formData.faq_content} onChange={handleChange} rows={6} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+          </div>
+
+          <div className="flex justify-end items-center p-6 bg-gray-50 border-t border-gray-200">
+            <button type="button" onClick={onClose} className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500">
+              Annuler
+            </button>
+            <button type="submit" disabled={loading} className="ml-3 px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:bg-blue-300">
+              {loading ? 'Sauvegarde...' : 'Sauvegarder'}
+            </button>
+          </div>
+        </form>
       </div>
-
-      {/* Modals - UN SEUL À LA FOIS */}
-      {console.log('🔧 EventManagement about to render modals')}
-      {(showCreateModal || editingEvent) && (
-        <>
-          {console.log('🔧 EventManagement rendering EventForm modal')}
-          <EventForm
-            event={editingEvent}
-            onClose={handleFormClose}
-          />
-        </>
-      )}
-
-      {showAnimationsModal && (
-        <>
-          {console.log('🔧 EventManagement rendering AnimationsManager modal')}
-          <AnimationsManager
-            event={showAnimationsModal}
-            onClose={() => {
-              console.log('🔧 EventManagement closing animations modal');
-              setShowAnimationsModal(null);
-            }}
-          />
-        </>
-      )}
-
-      {showActivitiesModal && (
-        <>
-          {console.log('🔧 EventManagement rendering EventActivitiesManager modal')}
-          <EventActivitiesManager
-            event={showActivitiesModal}
-            onClose={() => {
-              console.log('🔧 EventManagement closing activities modal');
-              setShowActivitiesModal(null);
-            }}
-          />
-        </>
-      )}
     </div>
   );
 }
