@@ -593,8 +593,6 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     }
     
     toast.success('Activité mise à jour');
-    loadData();
-  };
 
   const handleFormChange = (activityId: string, field: keyof ActivityFormData, value: string | boolean) => {
     setActivityForms(prev => ({
