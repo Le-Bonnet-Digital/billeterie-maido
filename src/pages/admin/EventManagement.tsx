@@ -249,20 +249,12 @@ export default function EventManagement() {
 
     try {
       setLoading(true);
-      console.log('🔄 Chargement des événements...');
-      
       const { data, error } = await supabase
         .from('events')
-        .select('id, name, event_date, sales_opening_date, sales_closing_date, status, cgv_content, faq_content, key_info_content, has_animations, created_at, updated_at')
+        .select('*')
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      
-      console.log('📥 Événements chargés:', data);
-      data?.forEach(event => {
-        console.log(`📋 Événement "${event.name}" - has_animations: ${event.has_animations}`);
-      });
-      
       setEvents(data || []);
     } catch (err) {
       console.error('Erreur chargement événements:', err);
@@ -424,7 +416,7 @@ export default function EventManagement() {
                         className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
                         title="Gérer les animations"
                       >
-                        🎭
+                        <span className="text-lg">🎭</span>
                       </button>
                     )}
                     
