@@ -100,16 +100,23 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           .update(eventData)
           .eq('id', event.id)
           .select()
-          .single();
+          .maybeSingle();          // remplace .single()
 
         debugLog('Supabase update data:', data);
         console.log('Supabase update data:', data);
         debugLog('Supabase update error:', error);
         console.log('Supabase update error:', error);
+        debugLog('Supabase update error code:', error?.code);
+        console.log('Supabase update error code:', error?.code);
 
-        if (error || !data) {
-          const errorMessage = error?.message || 'événement introuvable';
+        if (error) {
+          const errorMessage = error.message || 'événement introuvable';
           throw new Error(errorMessage);
+        }
+
+        if (!data) {
+          toast.error('Événement introuvable ou accès refusé');
+          return;
         }
       } else {
         // Create new event
