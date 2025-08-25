@@ -338,17 +338,6 @@ export default function EventManagement() {
 
   return (
     <div className="space-y-6">
-      {/* Debug Panel */}
-      <div className="bg-yellow-100 border border-yellow-300 rounded-lg p-4">
-        <div className="text-sm font-mono text-yellow-800">
-          🔧 DEBUG EventManagement - Modals: 
-          Create={showCreateModal ? 'OPEN' : 'CLOSED'} | 
-          Edit={editingEvent ? `OPEN(${editingEvent.id})` : 'CLOSED'} | 
-          Animations={showAnimationsModal ? `OPEN(${showAnimationsModal.id})` : 'CLOSED'} | 
-          Activities={showActivitiesModal ? `OPEN(${showActivitiesModal.id})` : 'CLOSED'}
-        </div>
-      </div>
-
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Gestion des Événements</h1>
