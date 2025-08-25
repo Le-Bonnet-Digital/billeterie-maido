@@ -7,7 +7,7 @@ import { toast } from 'react-hot-toast';
 
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, faqs, loading, error } = useFaq(eventId) as any;
+  const { event, faqs, loading, error } = useFaq(eventId);
 
   useEffect(() => {
     if (error) {

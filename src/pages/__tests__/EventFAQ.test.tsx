@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../test/utils';
 import EventFAQ from '../EventFAQ';
 import { useFaq } from '../../hooks/useFaq';
@@ -6,9 +6,19 @@ import { toast } from 'react-hot-toast';
 
 vi.mock('../../hooks/useFaq');
 
+const mockedUseFaq = useFaq as unknown as jest.Mock;
+
+vi.mock('react-hot-toast', () => ({
+  toast: { error: vi.fn() },
+}));
+
 describe('EventFAQ Page', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('shows spinner and loading text when loading', () => {
-    (useFaq as unknown as any).mockReturnValue({ event: null, faqs: [], loading: true });
+    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: true, error: null });
 
     const { container } = render(<EventFAQ />);
 
@@ -17,7 +27,7 @@ describe('EventFAQ Page', () => {
   });
 
   it('shows not found message when no event', () => {
-    (useFaq as unknown as any).mockReturnValue({ event: null, faqs: [], loading: false });
+    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: false, error: null });
 
     render(<EventFAQ />);
 
@@ -25,10 +35,11 @@ describe('EventFAQ Page', () => {
   });
 
   it('renders event name and FAQ content', () => {
-    (useFaq as unknown as any).mockReturnValue({
+    mockedUseFaq.mockReturnValue({
       event: { id: '1', name: 'Event' },
       faqs: [{ question: 'Q', answer: 'A' }],
       loading: false,
+      error: null,
     });
 
     render(<EventFAQ />);
@@ -41,17 +52,13 @@ describe('EventFAQ Page', () => {
   });
 
   it('displays error toast when request fails', async () => {
-    (useFaq as unknown as any).mockReturnValue({
-      event: null,
-      faqs: [],
-      loading: false,
-      error: new Error('network'),
-    });
+    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: false, error: new Error('fail') });
 
     render(<EventFAQ />);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalled();
+      expect(toast.error).toHaveBeenCalledWith('Erreur lors du chargement de la FAQ');
     });
+    expect(screen.getByText(/faq introuvable/i)).toBeInTheDocument();
   });
 });
