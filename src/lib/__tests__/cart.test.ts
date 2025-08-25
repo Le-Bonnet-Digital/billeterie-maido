@@ -1,13 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { 
-  getSessionId, 
-  addToCart, 
-  getCartItems, 
-  removeFromCart, 
-  clearCart, 
-  calculateCartTotal 
+import {
+  getSessionId,
+  addToCart,
+  getCartItems,
+  removeFromCart,
+  clearCart,
+  calculateCartTotal,
+  validateStock,
+  updateExistingItem,
+  insertNewItem,
+  notifyUser,
 } from '../cart';
 import type { CartItem, Pass } from '../cart';
+import type { CartRepository } from '../cartRepository';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -21,6 +26,20 @@ Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
 Object.defineProperty(global, 'crypto', {
   value: { randomUUID: () => 'test-session-id' }
 });
+
+function createRepo(overrides: Partial<CartRepository> = {}): CartRepository {
+  return {
+    isConfigured: vi.fn().mockReturnValue(true),
+    getPassRemainingStock: vi.fn().mockResolvedValue(10),
+    getEventActivityRemainingStock: vi.fn().mockResolvedValue(10),
+    getSlotRemainingCapacity: vi.fn().mockResolvedValue(10),
+    cleanupExpiredCartItems: vi.fn().mockResolvedValue(undefined),
+    findCartItem: vi.fn().mockResolvedValue(null),
+    updateCartItem: vi.fn().mockResolvedValue(true),
+    insertCartItem: vi.fn().mockResolvedValue(true),
+    ...overrides,
+  } as unknown as CartRepository;
+}
 
 describe('Cart Functions', () => {
   beforeEach(() => {
@@ -58,29 +77,65 @@ describe('Cart Functions', () => {
   });
 
   describe('addToCart', () => {
-    it('should return false when Supabase is not configured', async () => {
-      const { isSupabaseConfigured } = await import('../supabase');
-      vi.mocked(isSupabaseConfigured).mockReturnValue(false);
-
-      const result = await addToCart('pass-id');
+    it('should return false when repository is not configured', async () => {
+      const repo = createRepo({ isConfigured: vi.fn().mockReturnValue(false) });
+      const notify = vi.fn();
+      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
       expect(result).toBe(false);
+      expect(notify).toHaveBeenCalledWith('error', 'Configuration requise. Veuillez connecter Supabase.');
     });
 
-    it('should add item to cart when Supabase is configured', async () => {
-      const { supabase } = await import('../supabase');
-      const builder = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
-        insert: vi.fn().mockResolvedValue({ error: null }),
-      };
-      vi.mocked(supabase.from).mockReturnValue(builder as any);
+    it('should add item to cart when repository is configured', async () => {
+      const repo = createRepo();
+      const notify = vi.fn();
       mockLocalStorage.getItem.mockReturnValue('session-123');
 
-      const result = await addToCart('pass-id');
+      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
       expect(result).toBe(true);
-      expect(builder.insert).toHaveBeenCalled();
+      expect(repo.insertCartItem).toHaveBeenCalled();
+      expect(notify).toHaveBeenCalledWith('success', 'Article ajouté au panier');
+    });
+  });
+
+  describe('validateStock', () => {
+    it('should return null when stock is sufficient', async () => {
+      const repo = createRepo();
+      const result = await validateStock(repo, 'pass', undefined, undefined, 1);
+      expect(result).toBeNull();
+    });
+
+    it('should return error message when stock is insufficient', async () => {
+      const repo = createRepo({ getPassRemainingStock: vi.fn().mockResolvedValue(0) });
+      const result = await validateStock(repo, 'pass', undefined, undefined, 1);
+      expect(result).toBe('Stock insuffisant pour ce pass');
+    });
+  });
+
+  describe('updateExistingItem', () => {
+    it('should update quantity using repository', async () => {
+      const updateCartItem = vi.fn().mockResolvedValue(true);
+      const repo = createRepo({ updateCartItem });
+      const success = await updateExistingItem(repo, { id: '1', quantity: 2 }, 1);
+      expect(success).toBe(true);
+      expect(updateCartItem).toHaveBeenCalledWith('1', 3);
+    });
+  });
+
+  describe('insertNewItem', () => {
+    it('should insert item using repository', async () => {
+      const insertCartItem = vi.fn().mockResolvedValue(true);
+      const repo = createRepo({ insertCartItem });
+      const success = await insertNewItem(repo, 'sess', 'pass', undefined, undefined, 1);
+      expect(success).toBe(true);
+      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', undefined, undefined, 1);
+    });
+  });
+
+  describe('notifyUser', () => {
+    it('should call notify function with given message', () => {
+      const notify = vi.fn();
+      notifyUser(notify, 'success', 'ok');
+      expect(notify).toHaveBeenCalledWith('success', 'ok');
     });
   });
 

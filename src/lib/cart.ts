@@ -1,8 +1,9 @@
-import { supabase } from './supabase';
-import { isSupabaseConfigured } from './supabase';
-import { toast } from 'react-hot-toast';
+import { supabase, isSupabaseConfigured } from './supabase';
 import { getErrorMessage } from './errors';
 import { logger } from './logger';
+import type { CartRepository } from './cartRepository';
+import { SupabaseCartRepository } from './cartRepository';
+import { toastNotify, type NotifyFn } from './notifications';
 
 /** Represents a pass returned by Supabase */
 export interface Pass {
@@ -46,114 +47,108 @@ export function getSessionId(): string {
   return sessionId;
 }
 
+export async function validateStock(
+  repo: CartRepository,
+  passId: string,
+  eventActivityId: string | undefined,
+  timeSlotId: string | undefined,
+  quantity: number,
+): Promise<string | null> {
+  const passStock = await repo.getPassRemainingStock(passId);
+  if (passStock !== null && passStock < quantity) {
+    return 'Stock insuffisant pour ce pass';
+  }
+
+  if (eventActivityId) {
+    const activityStock = await repo.getEventActivityRemainingStock(eventActivityId);
+    if (activityStock !== null && activityStock < quantity) {
+      return 'Stock insuffisant pour cette activité';
+    }
+  }
+
+  if (timeSlotId) {
+    const slotCapacity = await repo.getSlotRemainingCapacity(timeSlotId);
+    if (slotCapacity !== null && slotCapacity < quantity) {
+      return 'Plus de places disponibles pour ce créneau';
+    }
+  }
+  return null;
+}
+
+export async function updateExistingItem(
+  repo: CartRepository,
+  existingItem: { id: string; quantity: number },
+  quantity: number,
+): Promise<boolean> {
+  return repo.updateCartItem(existingItem.id, existingItem.quantity + quantity);
+}
+
+export async function insertNewItem(
+  repo: CartRepository,
+  sessionId: string,
+  passId: string,
+  eventActivityId: string | undefined,
+  timeSlotId: string | undefined,
+  quantity: number,
+): Promise<boolean> {
+  return repo.insertCartItem(sessionId, passId, eventActivityId, timeSlotId, quantity);
+}
+
+export function notifyUser(notify: NotifyFn, type: 'success' | 'error', message: string): void {
+  notify(type, message);
+}
+
 // Ajouter un article au panier
-export async function addToCart(passId: string, eventActivityId?: string, timeSlotId?: string, quantity = 1): Promise<boolean> {
-  if (!isSupabaseConfigured()) {
-    toast.error('Configuration requise. Veuillez connecter Supabase.');
+export async function addToCart(
+  passId: string,
+  eventActivityId?: string,
+  timeSlotId?: string,
+  quantity = 1,
+  repo: CartRepository = new SupabaseCartRepository(),
+  notify: NotifyFn = toastNotify,
+): Promise<boolean> {
+  if (!repo.isConfigured()) {
+    notifyUser(notify, 'error', 'Configuration requise. Veuillez connecter Supabase.');
     return false;
   }
 
   try {
     const sessionId = getSessionId();
-    
-    // Vérifier d'abord le stock disponible
-    const { data: stockData } = await supabase
-      .rpc('get_pass_remaining_stock', { pass_uuid: passId });
-      
-    if (stockData !== null && stockData < quantity) {
-      toast.error('Stock insuffisant pour ce pass');
+
+    const stockError = await validateStock(repo, passId, eventActivityId, timeSlotId, quantity);
+    if (stockError) {
+      notifyUser(notify, 'error', stockError);
       return false;
     }
-    
-    // Si activité sélectionnée, vérifier le stock de l'activité
-    if (eventActivityId) {
-      const { data: activityStockData } = await supabase
-        .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivityId });
-        
-      if (activityStockData !== null && activityStockData < quantity) {
-        toast.error('Stock insuffisant pour cette activité');
-        return false;
-      }
-    }
-    
-    // Si créneau requis, vérifier la capacité
-    if (timeSlotId) {
-      const { data: slotCapacityData } = await supabase
-        .rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
-      
-      if (slotCapacityData !== null && slotCapacityData < quantity) {
-        toast.error('Plus de places disponibles pour ce créneau');
-        return false;
-      }
-    }
-    
-    // Nettoyer les articles expirés
-    await supabase.rpc('cleanup_expired_cart_items');
-    
-    // Vérifier si l'article existe déjà dans le panier
-    let query = supabase
-      .from('cart_items')
-      .select('id, quantity')
-      .eq('session_id', sessionId)
-      .eq('pass_id', passId)
-      .eq('event_activity_id', eventActivityId || null);
-    
-    if (timeSlotId) {
-      query = query.eq('time_slot_id', timeSlotId);
-    } else {
-      query = query.is('time_slot_id', null);
-    }
-    
-    const { data: existingItem } = await query.maybeSingle();
-    
-    if (existingItem) {
-      // Mettre à jour la quantité
-      const { error } = await supabase
-        .from('cart_items')
-        .update({
-          quantity: existingItem.quantity + quantity,
-          reserved_until: new Date(Date.now() + 10 * 60 * 1000).toISOString()
-        })
-        .eq('id', existingItem.id);
 
-      if (error) {
-        logger.error('Erreur mise à jour panier', {
-          error,
-          query: { table: 'cart_items', action: 'update', id: existingItem.id }
-        });
-        toast.error('Erreur lors de la mise à jour du panier');
-        return false;
+    await repo.cleanupExpiredCartItems();
+
+    const existingItem = await repo.findCartItem(sessionId, passId, eventActivityId, timeSlotId);
+
+    let success = false;
+    if (existingItem) {
+      success = await updateExistingItem(repo, existingItem, quantity);
+      if (!success) {
+        notifyUser(notify, 'error', 'Erreur lors de la mise à jour du panier');
       }
     } else {
-      // Ajouter nouvel article
-      const { error } = await supabase
-        .from('cart_items')
-        .insert({
-          session_id: sessionId,
-          pass_id: passId,
-          event_activity_id: eventActivityId,
-          time_slot_id: timeSlotId,
-          quantity: quantity
-        });
-        
-      if (error) {
-        logger.error('Erreur ajout panier', {
-          error,
-          query: { table: 'cart_items', action: 'insert', passId, eventActivityId, timeSlotId }
-        });
-        toast.error('Erreur lors de l\'ajout au panier');
-        return false;
+      success = await insertNewItem(repo, sessionId, passId, eventActivityId, timeSlotId, quantity);
+      if (!success) {
+        notifyUser(notify, 'error', "Erreur lors de l'ajout au panier");
       }
     }
-    
-    toast.success('Article ajouté au panier');
-    return true;
+
+    if (success) {
+      notifyUser(notify, 'success', 'Article ajouté au panier');
+    }
+
+    return success;
   } catch (err) {
     logger.error('Erreur addToCart', {
       error: err,
-      query: { action: 'addToCart', passId, eventActivityId, timeSlotId }
+      query: { action: 'addToCart', passId, eventActivityId, timeSlotId },
     });
-    toast.error('Une erreur est survenue');
+    notifyUser(notify, 'error', 'Une erreur est survenue');
     return false;
   }
 }
@@ -250,21 +245,21 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
       .from('cart_items')
       .delete()
       .eq('id', cartItemId);
-      
+
     if (error) {
       logger.error('Erreur suppression panier', {
         error,
         query: { table: 'cart_items', action: 'delete', id: cartItemId }
       });
-      toast.error('Erreur lors de la suppression');
+      notifyUser(toastNotify, 'error', 'Erreur lors de la suppression');
       return false;
     }
-    
-    toast.success('Article supprimé du panier');
+
+    notifyUser(toastNotify, 'success', 'Article supprimé du panier');
     return true;
   } catch (err) {
     logger.error('Erreur removeFromCart', { error: err, query: { id: cartItemId } });
-    toast.error('Une erreur est survenue');
+    notifyUser(toastNotify, 'error', 'Une erreur est survenue');
     return false;
   }
 }
