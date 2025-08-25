@@ -730,6 +730,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
   const [stats, setStats] = useState({ total: 0, available: 0, capacity: 0 });
+  const [creating, setCreating] = useState(false);
 
   useEffect(() => {
     if (showModal) {
@@ -737,6 +738,27 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
     }
   }, [showModal]);
 
+  // Charger les créneaux au montage du composant pour afficher le bon nombre
+  useEffect(() => {
+    loadTimeSlotsCount();
+  }, []);
+
+  const loadTimeSlotsCount = async () => {
+    try {
+      const { data, error } = await supabase
+        .from('time_slots')
+        .select('id', { count: 'exact', head: true })
+        .eq('event_activity_id', eventActivity.id);
+
+      if (error) throw error;
+      
+      // Mettre à jour le bouton avec le bon nombre
+      const count = data?.length || 0;
+      setStats(prev => ({ ...prev, total: count }));
+    } catch (err) {
+      console.error('Erreur comptage créneaux:', err);
+    }
+  };
   const loadTimeSlots = async () => {
     try {
       setLoading(true);
@@ -777,7 +799,10 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
   };
 
   const createTemplate = async (template: 'morning' | 'afternoon' | 'fullday') => {
+    if (creating) return;
+    
     try {
+      setCreating(true);
       const eventDate = new Date(event.event_date);
       const slots = [];
       
@@ -828,10 +853,13 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       
       toast.success(`${slots.length} créneaux créés avec succès`);
       loadTimeSlots();
+      await loadTimeSlotsCount();
       onUpdate();
     } catch (err) {
       console.error('Erreur création template:', err);
       toast.error('Erreur lors de la création des créneaux');
+    } finally {
+      setCreating(false);
     }
   };
 
@@ -847,7 +875,8 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       if (error) throw error;
       
       toast.success('Créneau supprimé');
-      loadTimeSlots();
+      await loadTimeSlots();
+      await loadTimeSlotsCount();
       onUpdate();
     } catch (err) {
       console.error('Erreur suppression:', err);
@@ -855,6 +884,26 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
     }
   };
 
+  const deleteAllSlots = async () => {
+    if (!confirm(`Supprimer tous les ${timeSlots.length} créneaux de cette activité ?`)) return;
+    
+    try {
+      const { error } = await supabase
+        .from('time_slots')
+        .delete()
+        .eq('event_activity_id', eventActivity.id);
+
+      if (error) throw error;
+      
+      toast.success('Tous les créneaux ont été supprimés');
+      await loadTimeSlots();
+      await loadTimeSlotsCount();
+      onUpdate();
+    } catch (err) {
+      console.error('Erreur suppression en masse:', err);
+      toast.error('Erreur lors de la suppression');
+    }
+  };
   return (
     <>
       <button
@@ -879,9 +928,19 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                     {format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
                   </p>
                 </div>
-                <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
+                <div className="flex items-center gap-2">
+                  {timeSlots.length > 0 && (
+                    <button
+                      onClick={deleteAllSlots}
+                      className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-sm font-medium transition-colors"
+                    >
+                      Supprimer tout
+                    </button>
+                  )}
+                  <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
                   <X className="h-6 w-6" />
                 </button>
+                </div>
               </div>
             </div>
             
@@ -908,6 +967,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
                   <button
                     onClick={() => createTemplate('morning')}
+                    disabled={creating}
                     className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -922,6 +982,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                   
                   <button
                     onClick={() => createTemplate('afternoon')}
+                    disabled={creating}
                     className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -936,6 +997,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                   
                   <button
                     onClick={() => createTemplate('fullday')}
+                    disabled={creating}
                     className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
@@ -948,6 +1010,12 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                     </div>
                   </button>
                 </div>
+                {creating && (
+                  <div className="mt-3 text-center text-blue-600">
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 inline-block mr-2"></div>
+                    Création des créneaux en cours...
+                  </div>
+                )}
               </div>
 
               {/* Liste des créneaux */}
