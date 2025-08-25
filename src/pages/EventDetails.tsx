@@ -5,15 +5,12 @@ import { Calendar, Info, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import { useEvent, TimeSlot } from '../hooks/useEvent';
-import { fetchTimeSlotsForActivity } from '../services/eventService';
-import type { Pass, EventActivity } from '../services/eventService';
+import useEventDetails, { Pass, EventActivity } from '../hooks/useEventDetails';
 import { toast } from 'react-hot-toast';
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, passes, eventActivities, loading, reload } = useEvent(eventId);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const { event, passes, eventActivities, loading, refresh } = useEventDetails(eventId);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
@@ -40,17 +37,11 @@ export default function EventDetails() {
 
     setShowPurchaseModal(false);
     setSelectedPass(null);
-    reload();
+    await refresh(); // Recharger pour mettre à jour les stocks
   };
 
-  const handleActivitySelection = async (index: number, eventActivityId: string) => {
+  const handleActivitySelection = (index: number, eventActivityId: string) => {
     setSelectedActivities({ ...selectedActivities, [index]: eventActivityId });
-
-    const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
-    if (eventActivity?.requires_time_slot) {
-      const slots = await fetchTimeSlotsForActivity(eventActivityId);
-      setTimeSlots(slots);
-    }
   };
 
   if (loading) {
