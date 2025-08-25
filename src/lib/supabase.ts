@@ -43,6 +43,7 @@ export type Database = {
           cgv_content: string;
           faq_content: string;
           key_info_content: string;
+          has_animations: boolean;
           created_at: string;
           updated_at: string;
         };
@@ -56,6 +57,7 @@ export type Database = {
           cgv_content?: string;
           faq_content?: string;
           key_info_content?: string;
+          has_animations?: boolean;
           created_at?: string;
           updated_at?: string;
         };
@@ -69,6 +71,7 @@ export type Database = {
           cgv_content?: string;
           faq_content?: string;
           key_info_content?: string;
+          has_animations?: boolean;
           updated_at?: string;
         };
       };
