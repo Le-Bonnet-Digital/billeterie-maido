@@ -1,12 +1,19 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
 import FAQAccordion from '../components/FAQAccordion';
 import { useFaq } from '../hooks/useFaq';
+import { toast } from 'react-hot-toast';
 
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, faqs, loading } = useFaq(eventId);
+  const { event, faqs, loading, error } = useFaq(eventId) as any;
+
+  useEffect(() => {
+    if (error) {
+      toast.error('Erreur lors du chargement de la FAQ');
+    }
+  }, [error]);
 
   if (loading) {
     return (
