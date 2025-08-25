@@ -90,33 +90,35 @@ export default function PassManagement() {
       // Calculer le stock restant pour chaque pass
       const passesWithStock = await Promise.all(
         (passesData || []).map(async (pass) => {
-          // Calculer le stock maximum basé sur les activités liées
-          let calculatedMaxStock = 999999;
+          // Calculer le stock maximum basé sur les activités liées (maintenant synchronisé automatiquement)
+          let calculatedMaxStock = null;
           
           if (pass.pass_activities && pass.pass_activities.length > 0) {
-            // Pour chaque activité du pass, récupérer le stock limite initial (pas le restant)
+            // Pour chaque activité du pass, récupérer le stock limite (maintenant synchronisé avec les créneaux)
             const activityStocks = await Promise.all(
               pass.pass_activities.map(async (pa: any) => {
-                // Récupérer le stock limite de l'activité depuis event_activities
                 const { data: eventActivityData } = await supabase
                   .from('event_activities')
                   .select('stock_limit')
                   .eq('id', pa.event_activities.id)
                   .single();
                 
-                return eventActivityData?.stock_limit || 999999;
+                return eventActivityData?.stock_limit || null;
               })
             );
             
-            // Le stock maximum du pass est limité par l'activité avec le moins de stock
-            calculatedMaxStock = Math.min(...activityStocks);
+            // Le stock maximum du pass est limité par l'activité avec le moins de stock (en excluant les null)
+            const validStocks = activityStocks.filter(stock => stock !== null);
+            if (validStocks.length > 0) {
+              calculatedMaxStock = Math.min(...validStocks);
+            }
           }
           
           if (pass.initial_stock === null) {
             return { 
               ...pass, 
               event: pass.events, 
-              remaining_stock: calculatedMaxStock === 999999 ? 999999 : calculatedMaxStock,
+              remaining_stock: calculatedMaxStock || 999999,
               calculated_max_stock: calculatedMaxStock,
               event_activities: (pass.pass_activities || []).map((pa: any) => ({
                 id: pa.event_activities.id,
@@ -129,7 +131,7 @@ export default function PassManagement() {
           const { data: stockData } = await supabase
             .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
           
-          const actualStock = Math.min(stockData || 0, calculatedMaxStock === 999999 ? stockData || 0 : calculatedMaxStock);
+          const actualStock = calculatedMaxStock ? Math.min(stockData || 0, calculatedMaxStock) : stockData || 0;
           
           return { 
             ...pass, 
@@ -362,8 +364,8 @@ interface PassFormModalProps {
 function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const [availableActivities, setAvailableActivities] = useState<EventActivity[]>([]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [activityStocks, setActivityStocks] = useState<{[key: string]: number}>({});
-  const [calculatedMaxStock, setCalculatedMaxStock] = useState<number>(999999);
+  const [activityStocks, setActivityStocks] = useState<{[key: string]: number | null}>({});
+  const [calculatedMaxStock, setCalculatedMaxStock] = useState<number | null>(null);
   const [formData, setFormData] = useState({
     event_id: pass?.event.id || '',
     name: pass?.name || '',
@@ -379,18 +381,17 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
 
   const updateCalculatedStock = () => {
     if (selectedActivities.length === 0) {
-      setCalculatedMaxStock(999999);
-      // Réinitialiser le stock initial quand aucune activité n'est sélectionnée
+      setCalculatedMaxStock(null);
       setFormData(prev => ({ ...prev, initial_stock: null }));
       return;
     }
 
-    const stocks = selectedActivities.map(activityId => activityStocks[activityId] || 999999);
-    const minStock = Math.min(...stocks);
+    const stocks = selectedActivities.map(activityId => activityStocks[activityId]).filter(stock => stock !== null);
+    const minStock = stocks.length > 0 ? Math.min(...stocks) : null;
     setCalculatedMaxStock(minStock);
     
-    // Mettre à jour automatiquement le stock initial avec le minimum calculé
-    if (minStock !== 999999) {
+    // Mettre à jour automatiquement le stock initial avec le minimum calculé (si limité)
+    if (minStock !== null) {
       setFormData(prev => ({ ...prev, initial_stock: minStock }));
     } else {
       setFormData(prev => ({ ...prev, initial_stock: null }));
@@ -443,10 +444,10 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
       
       setAvailableActivities(activities);
       
-      // Créer un mapping des stocks par activité
-      const stocksMap: {[key: string]: number} = {};
+      // Créer un mapping des stocks par activité (maintenant synchronisé automatiquement)
+      const stocksMap: {[key: string]: number | null} = {};
       activities.forEach(ea => {
-        stocksMap[ea.id] = ea.stock_limit || 999999;
+        stocksMap[ea.id] = ea.stock_limit;
       });
       setActivityStocks(stocksMap);
     } catch (err) {
@@ -647,7 +648,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Stock Initial
-                {calculatedMaxStock !== 999999 && (
+                {calculatedMaxStock !== null && (
                   <span className="text-xs text-gray-500 ml-2">
                     (Maximum autorisé: {calculatedMaxStock})
                   </span>
@@ -656,17 +657,17 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
               <input
                 type="number"
                 min="0"
-                max={calculatedMaxStock === 999999 ? undefined : calculatedMaxStock}
+                max={calculatedMaxStock || undefined}
                 value={formData.initial_stock || ''}
                 onChange={(e) => setFormData({ 
                   ...formData, 
                   initial_stock: e.target.value ? parseInt(e.target.value) : null 
                 })}
-                placeholder={calculatedMaxStock === 999999 ? "Laisser vide pour stock illimité" : `Maximum: ${calculatedMaxStock}`}
+                placeholder={calculatedMaxStock ? `Maximum: ${calculatedMaxStock}` : "Laisser vide pour stock illimité"}
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                required={calculatedMaxStock !== 999999}
+                required={calculatedMaxStock !== null}
               />
-              {calculatedMaxStock !== 999999 && (
+              {calculatedMaxStock !== null && (
                 <p className="text-xs text-orange-600 mt-1">
                   Le stock est limité par les activités sélectionnées
                 </p>

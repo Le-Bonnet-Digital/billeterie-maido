@@ -577,8 +577,12 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     
     if (!eventActivity || !formData) return;
     
+    // Si on active requires_time_slot, le stock sera calculé automatiquement par les triggers
+    // Si on le désactive, on peut définir un stock manuel
     const updates = {
-      stock_limit: (stockLimit !== undefined ? stockLimit : formData.stock_limit) ? parseInt(stockLimit !== undefined ? stockLimit : formData.stock_limit) : null,
+      stock_limit: requiresTimeSlot === true ? null : // Sera calculé automatiquement
+                   (stockLimit !== undefined ? stockLimit : formData.stock_limit) ? 
+                   parseInt(stockLimit !== undefined ? stockLimit : formData.stock_limit) : null,
       requires_time_slot: requiresTimeSlot !== undefined ? requiresTimeSlot : formData.requires_time_slot
     };
     
@@ -592,7 +596,11 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
       return;
     }
     
-    toast.success('Activité mise à jour');
+    if (requiresTimeSlot === true) {
+      toast.success('Activité mise à jour - Le stock sera calculé automatiquement selon les créneaux');
+    } else {
+      toast.success('Activité mise à jour');
+    }
     loadData();
   };
 
@@ -674,9 +682,9 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                   
                   {isEnabled && eventActivity && (
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
-                      <div>
+                      <div className={formData.requires_time_slot ? 'opacity-50' : ''}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Stock limite
+                          Stock limite {formData.requires_time_slot ? '(calculé automatiquement)' : ''}
                         </label>
                         <input
                           type="number"
@@ -684,9 +692,15 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                           value={formData.stock_limit}
                           onChange={(e) => handleFormChange(activity.id, 'stock_limit', e.target.value)}
                           onBlur={() => handleUpdateEventActivity(activity.id)}
-                          placeholder="Illimité"
+                          placeholder={formData.requires_time_slot ? "Auto" : "Illimité"}
+                          disabled={formData.requires_time_slot}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
+                        {formData.requires_time_slot && (
+                          <p className="text-xs text-blue-600 mt-1">
+                            Le stock est calculé automatiquement selon la capacité totale des créneaux
+                          </p>
+                        )}
                       </div>
                       
                       <div className="flex items-center">
