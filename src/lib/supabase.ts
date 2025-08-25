@@ -1,4 +1,5 @@
 import { createClient } from '@supabase/supabase-js';
+import { debugLog } from './logger';
 
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
@@ -9,6 +10,20 @@ export const isSupabaseConfigured = () => {
          !!supabaseAnonKey &&
          supabaseUrl.includes('.supabase.co');
 };
+
+// Helper to ensure Supabase configuration is present
+export const ensureSupabaseConfigured = () => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('Supabase configuration is missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
+  }
+};
+
+// Warn during module initialization if configuration is missing
+if (!isSupabaseConfigured()) {
+  const message = 'Supabase configuration is missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.';
+  debugLog(message);
+  console.warn(message);
+}
 
 export const supabase = isSupabaseConfigured()
   ? createClient(supabaseUrl, supabaseAnonKey)
