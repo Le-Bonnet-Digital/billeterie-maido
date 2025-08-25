@@ -4,6 +4,7 @@ import { Calendar, Clock, Users, Filter, Eye, BarChart3, AlertCircle } from 'luc
 import { format, startOfDay, endOfDay, eachHourOfInterval, isSameHour } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface Event {
   id: string;
@@ -69,7 +70,7 @@ export default function TimeSlotManagement() {
         setSelectedDate(format(new Date(data[0].event_date), 'yyyy-MM-dd'));
       }
     } catch (err) {
-      console.error('Erreur chargement événements:', err);
+      logger.error('Erreur chargement événements', { error: err });
       toast.error('Erreur lors du chargement des événements');
     } finally {
       setLoading(false);
@@ -133,7 +134,7 @@ export default function TimeSlotManagement() {
 
       setTimeSlots(slotsWithDetails);
     } catch (err) {
-      console.error('Erreur chargement créneaux:', err);
+      logger.error('Erreur chargement créneaux', { error: err });
       toast.error('Erreur lors du chargement des créneaux');
     } finally {
       setLoading(false);

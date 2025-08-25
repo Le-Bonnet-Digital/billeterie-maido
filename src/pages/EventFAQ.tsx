@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
 import FAQAccordion, { FAQItem } from '../components/FAQAccordion';
+import { logger } from '../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface Event {
   id: string;
@@ -43,7 +45,8 @@ export default function EventFAQ() {
       if (faqError) throw faqError;
       setFaqs(faqData || []);
     } catch (err) {
-      console.error('Erreur chargement FAQ:', err);
+      logger.error('Erreur chargement FAQ', { error: err });
+      toast.error('Erreur lors du chargement de la FAQ');
     } finally {
       setLoading(false);
     }

@@ -4,6 +4,7 @@ import { Users, Search, Download, Filter, Mail } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface Reservation {
   id: string;
@@ -70,7 +71,7 @@ export default function ReservationManagement() {
       if (error) throw error;
       setReservations(data || []);
     } catch (err) {
-      console.error('Erreur chargement réservations:', err);
+      logger.error('Erreur chargement réservations', { error: err });
       toast.error('Erreur lors du chargement des réservations');
     } finally {
       setLoading(false);

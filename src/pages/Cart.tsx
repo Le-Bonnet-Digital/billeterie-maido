@@ -8,6 +8,7 @@ import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckSquare, Square } from
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../lib/logger';
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -28,7 +29,7 @@ export default function Cart() {
       const items = await getCartItems();
       setCartItems(items);
     } catch (err) {
-      console.error('Erreur chargement panier:', err);
+      logger.error('Erreur chargement panier', { error: err });
       toast.error('Erreur lors du chargement du panier');
     } finally {
       setLoading(false);
@@ -128,7 +129,7 @@ export default function Cart() {
       toast.success('Paiement réussi ! Réservation confirmée.');
       
     } catch (err) {
-      console.error('Erreur lors du paiement:', err);
+      logger.error('Erreur lors du paiement', { error: err });
       toast.error('Erreur lors du paiement. Veuillez réessayer.');
     } finally {
       setProcessingPayment(false);

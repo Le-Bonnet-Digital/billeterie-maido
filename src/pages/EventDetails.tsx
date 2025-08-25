@@ -6,6 +6,8 @@ import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { toast } from 'react-hot-toast';
+import { logger } from '../lib/logger';
 
 interface Event {
   id: string;
@@ -138,7 +140,8 @@ export default function EventDetails() {
       
       setEventActivities(activitiesWithStock);
     } catch (err) {
-      console.error('Erreur chargement événement:', err);
+      logger.error('Erreur chargement événement', { error: err });
+      toast.error("Erreur lors du chargement de l'événement");
     } finally {
       setLoading(false);
     }
@@ -182,7 +185,8 @@ export default function EventDetails() {
       
       return slotsWithCapacity;
     } catch (err) {
-      console.error('Erreur chargement créneaux pour l\'activité:', err);
+      logger.error("Erreur chargement créneaux pour l'activité", { error: err });
+      toast.error('Erreur lors du chargement des créneaux');
       return [];
     }
   };
@@ -385,7 +389,8 @@ function PurchaseModal({
         [eventActivityId]: slotsWithCapacity
       }));
     } catch (err) {
-      console.error('Erreur chargement créneaux:', err);
+      logger.error('Erreur chargement créneaux', { error: err });
+      toast.error('Erreur lors du chargement des créneaux');
     }
   };
   

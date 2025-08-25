@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmail } from '../lib/auth';
 import type { User } from '../lib/auth';
+import { logger } from '../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface AdminLoginProps {
   onLogin: (user: User) => void;
@@ -31,7 +33,8 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
         alert('Accès refusé. Seuls les administrateurs peuvent accéder au dashboard.');
       }
     } catch (err) {
-      console.error('Erreur connexion:', err);
+      logger.error('Erreur connexion', { error: err });
+      toast.error('Erreur de connexion');
     } finally {
       setLoading(false);
     }

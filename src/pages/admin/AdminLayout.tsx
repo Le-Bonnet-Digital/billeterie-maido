@@ -17,6 +17,8 @@ import {
 import AdminLogin from '../../components/AdminLogin';
 import { getCurrentUser, signOut } from '../../lib/auth';
 import type { User } from '../../lib/auth';
+import { logger } from '../../lib/logger';
+import { toast } from 'react-hot-toast';
 
 export default function AdminLayout() {
   const location = useLocation();
@@ -32,7 +34,8 @@ export default function AdminLayout() {
       const currentUser = await getCurrentUser();
       setUser(currentUser);
     } catch (err) {
-      console.error('Erreur vérification auth:', err);
+      logger.error('Erreur vérification auth', { error: err });
+      toast.error('Erreur lors de la vérification des permissions');
     } finally {
       setLoading(false);
     }

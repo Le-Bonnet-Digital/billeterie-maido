@@ -5,6 +5,7 @@ import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContaine
 import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface ReportData {
   totalRevenue: number;
@@ -129,7 +130,7 @@ export default function Reports() {
         activityStats
       });
     } catch (err) {
-      console.error('Erreur chargement rapports:', err);
+      logger.error('Erreur chargement rapports', { error: err });
       toast.error('Erreur lors du chargement des rapports');
     } finally {
       setLoading(false);

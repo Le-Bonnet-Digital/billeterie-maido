@@ -2,6 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { supabase } from '../../lib/supabase';
 import { Calendar, Users, Euro, TrendingUp, Activity } from 'lucide-react';
+import { logger } from '../../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface DashboardStats {
   totalEvents: number;
@@ -69,7 +71,8 @@ export default function AdminDashboard() {
         activeEvents: activeEventCount || 0
       });
     } catch (err) {
-      console.error('Erreur chargement statistiques:', err);
+      logger.error('Erreur chargement statistiques', { error: err });
+      toast.error('Erreur lors du chargement des statistiques');
     } finally {
       setLoading(false);
     }
