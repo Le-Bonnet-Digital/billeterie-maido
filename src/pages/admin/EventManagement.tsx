@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Settings } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Settings, X, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -178,14 +178,55 @@ function AnimationsManagementModal({ event, onClose }: AnimationsManagementModal
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           <span>
-          </div>
-          <div className="text-sm text-gray-600">Brouillons</div>
+                            {format(new Date(animation.start_time), 'HH:mm')} - {format(new Date(animation.end_time), 'HH:mm')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span>Capacité: {animation.capacity || 'Illimitée'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => setEditingAnimation(animation)}
+                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Modifier l'animation"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => toggleAnimationStatus(animation)}
+                        className={`p-2 rounded-md transition-colors ${
+                          animation.is_active 
+                            ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' 
+                            : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                        }`}
+                        title={animation.is_active ? 'Désactiver' : 'Activer'}
+                      >
+                        <Settings className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDeleteAnimation(animation.id)}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                        title="Supprimer l'animation"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-        <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-purple-600">
-            {events.filter(e => e.has_animations).length}
-          </div>
-          <div className="text-sm text-gray-600">Avec animations</div>
+      </div>
+    </div>
+  );
+}
+
 export default function EventManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
@@ -319,13 +360,32 @@ export default function EventManagement() {
         <div className="px-6 py-4 border-b border-gray-200">
           <h2 className="text-lg font-semibold text-gray-900">Événements ({events.length})</h2>
         </div>
-      </div>
 
         {events.length === 0 ? (
           <div className="p-12 text-center">
             <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-      {/* Liste des événements */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucun événement</h3>
+            <p className="text-gray-600 mb-4">
+              Créez votre premier événement pour commencer à vendre des billets.
+            </p>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
+            >
+              Créer un événement
+            </button>
+          </div>
+        ) : (
+          <div className="divide-y divide-gray-200">
+            {events.map((event) => (
+              <div key={event.id} className="p-6 hover:bg-gray-50 transition-colors">
+                <div className="flex items-start justify-between">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="text-lg font-semibold text-gray-900">{event.name}</h3>
+                      {getStatusBadge(event.status)}
+                    </div>
+                    
                     <div className="flex items-center gap-6 text-sm text-gray-500 mb-3">
                       <div className="flex items-center gap-1">
                         <Calendar className="h-4 w-4" />
@@ -335,23 +395,7 @@ export default function EventManagement() {
                       <div>
                         Animations: {event.has_animations ? '✅ Activées' : '❌ Désactivées'}
                       </div>
-                    )}
-                    
-                    <button
-                      onClick={() => setEditingEvent(event)}
-                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
-                      title="Modifier l'événement"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    
-                    <button
-                      onClick={() => handleDeleteEvent(event.id)}
-                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                      title="Supprimer l'événement"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                    </div>
                     
                     <p className="text-gray-600 text-sm line-clamp-2">
                       {event.key_info_content || 'Aucune information clé définie'}
@@ -381,27 +425,27 @@ export default function EventManagement() {
                     )}
                     
                     <button
-      {/* Modals - UN SEUL À LA FOIS */}
-      {(showCreateModal || editingEvent) && (
-        <EventForm
-          event={editingEvent}
-          onClose={handleFormClose}
-        />
-      )}
+                      onClick={() => setEditingEvent(event)}
+                      className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                      title="Modifier l'événement"
+                    >
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    
                     <button
-      {showAnimationsModal && (
-        <AnimationsManager
-          event={showAnimationsModal}
-          onClose={() => setShowAnimationsModal(null)}
-        />
-      )}
+                      onClick={() => handleDeleteEvent(event.id)}
+                      className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                      title="Supprimer l'événement"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
-      {showActivitiesModal && (
-        <EventActivitiesManager
-          event={showActivitiesModal}
-          onClose={() => setShowActivitiesModal(null)}
-        />
-      )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
 
       {/* Modals - UN SEUL À LA FOIS */}
       {(showCreateModal || editingEvent) && (
