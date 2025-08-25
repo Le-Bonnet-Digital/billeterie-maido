@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 interface Event {
   id: string;
@@ -38,17 +39,6 @@ export default function EventFAQ() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const formatFAQContent = (content: string) => {
-    return content
-      .replace(/### (.*?)$/gm, '<h3 class="text-xl font-bold text-gray-900 mb-4 mt-8">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-      .replace(/^Q\s*:\s*"?(.*?)"?$/gm, '<div class="bg-blue-50 p-4 rounded-lg mb-4"><h4 class="font-semibold text-blue-900 mb-2"><strong>Q :</strong> $1</h4>')
-      .replace(/^R\s*:\s*"?(.*?)"?$/gm, '<p class="text-blue-800"><strong>R :</strong> $1</p></div>')
-      .replace(/\n\n/g, '</p><p class="mb-4">')
-      .replace(/^(?!<|Q\s*:|R\s*:)(.+)$/gm, '<p class="mb-4">$1</p>');
   };
 
   if (loading) {
@@ -98,11 +88,9 @@ export default function EventFAQ() {
 
       {/* FAQ Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <div 
+        <MarkdownRenderer
+          content={event.faq_content}
           className="prose prose-blue max-w-none"
-          dangerouslySetInnerHTML={{ 
-            __html: formatFAQContent(event.faq_content) 
-          }}
         />
       </div>
 
