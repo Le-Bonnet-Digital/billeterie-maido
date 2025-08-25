@@ -9,6 +9,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { logger } from '../lib/logger';
+import { safeStorage } from '../lib/storage';
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -97,7 +98,7 @@ export default function Cart() {
       }
       
       // Vider le panier
-      const sessionId = localStorage.getItem('cart_session_id');
+      const sessionId = safeStorage.getItem('cart_session_id');
       if (sessionId) {
         await supabase
           .from('cart_items')

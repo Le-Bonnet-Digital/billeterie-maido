@@ -4,6 +4,7 @@ import { logger } from './logger';
 import type { CartRepository } from './cartRepository';
 import { SupabaseCartRepository } from './cartRepository';
 import { toastNotify, type NotifyFn } from './notifications';
+import { safeStorage } from './storage';
 
 /** Represents a pass returned by Supabase */
 export interface Pass {
@@ -39,10 +40,10 @@ export interface CartItem {
 
 // Générer un ID de session unique si pas déjà existant
 export function getSessionId(): string {
-  let sessionId = localStorage.getItem('cart_session_id');
+  let sessionId = safeStorage.getItem('cart_session_id');
   if (!sessionId) {
     sessionId = crypto.randomUUID();
-    localStorage.setItem('cart_session_id', sessionId);
+    safeStorage.setItem('cart_session_id', sessionId);
   }
   return sessionId;
 }
