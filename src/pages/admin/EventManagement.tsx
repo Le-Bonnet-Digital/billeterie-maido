@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Eye, Settings, Users } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Eye, Settings, Users, X, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -178,6 +178,56 @@ function AnimationsManagementModal({ event, onClose }: AnimationsManagementModal
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4" />
                           <span>
+                            {format(new Date(animation.start_time), 'HH:mm')} - {format(new Date(animation.end_time), 'HH:mm')}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Users className="h-4 w-4" />
+                          <span>{animation.capacity ? `${animation.capacity} places` : 'Illimité'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    
+                    <div className="flex items-center gap-2 ml-4">
+                      <button
+                        onClick={() => toggleAnimationStatus(animation)}
+                        className={`p-2 rounded-md transition-colors ${
+                          animation.is_active 
+                            ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
+                            : 'text-green-600 hover:text-green-700 hover:bg-green-50'
+                        }`}
+                        title={animation.is_active ? 'Désactiver' : 'Activer'}
+                      >
+                        <Eye className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => setEditingAnimation(animation)}
+                        className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                        title="Modifier"
+                      >
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      
+                      <button
+                        onClick={() => handleDeleteAnimation(animation.id)}
+                        className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                        title="Supprimer"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function EventManagement() {
   const [events, setEvents] = useState<Event[]>([]);
   const [loading, setLoading] = useState(true);
