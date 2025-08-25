@@ -729,8 +729,17 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
   const [showModal, setShowModal] = useState(false);
   const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
   const [loading, setLoading] = useState(false);
+  const [timeSlotsCount, setTimeSlotsCount] = useState(0);
   const [stats, setStats] = useState({ total: 0, available: 0, capacity: 0 });
   const [creating, setCreating] = useState(false);
+  const [showCustomForm, setShowCustomForm] = useState(false);
+  const [customForm, setCustomForm] = useState({
+    startTime: '09:00',
+    endTime: '17:00',
+    duration: 60,
+    capacity: 15,
+    breakDuration: 0
+  });
 
   useEffect(() => {
     if (showModal) {
@@ -738,7 +747,6 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
     }
   }, [showModal]);
 
-  // Charger les créneaux au montage du composant pour afficher le bon nombre
   useEffect(() => {
     loadTimeSlotsCount();
   }, []);
@@ -747,18 +755,19 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
     try {
       const { data, error } = await supabase
         .from('time_slots')
-        .select('id', { count: 'exact', head: true })
+        .select('id')
         .eq('event_activity_id', eventActivity.id);
 
       if (error) throw error;
       
-      // Mettre à jour le bouton avec le bon nombre
-      const count = data?.length || 0;
-      setStats(prev => ({ ...prev, total: count }));
+      const count = data ? data.length : 0;
+      setTimeSlotsCount(count);
     } catch (err) {
       console.error('Erreur comptage créneaux:', err);
+      setTimeSlotsCount(0);
     }
   };
+
   const loadTimeSlots = async () => {
     try {
       setLoading(true);
@@ -790,6 +799,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       const available = slotsWithCapacity.filter(s => s.remaining_capacity > 0).length;
       const capacity = slotsWithCapacity.reduce((sum, s) => sum + s.remaining_capacity, 0);
       setStats({ total, available, capacity });
+      setTimeSlotsCount(total);
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
       toast.error('Erreur lors du chargement des créneaux');
@@ -852,11 +862,58 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       if (error) throw error;
       
       toast.success(`${slots.length} créneaux créés avec succès`);
-      loadTimeSlots();
+      await loadTimeSlots();
       await loadTimeSlotsCount();
-      onUpdate();
     } catch (err) {
       console.error('Erreur création template:', err);
+      toast.error('Erreur lors de la création des créneaux');
+    } finally {
+      setCreating(false);
+    }
+  };
+
+  const createCustomSlots = async () => {
+    if (creating) return;
+    
+    try {
+      setCreating(true);
+      const eventDate = new Date(event.event_date);
+      const slots = [];
+      
+      const [startHour, startMinute] = customForm.startTime.split(':').map(Number);
+      const [endHour, endMinute] = customForm.endTime.split(':').map(Number);
+      
+      const startTotalMinutes = startHour * 60 + startMinute;
+      const endTotalMinutes = endHour * 60 + endMinute;
+      
+      for (let minutes = startTotalMinutes; minutes < endTotalMinutes; minutes += customForm.duration + customForm.breakDuration) {
+        const hour = Math.floor(minutes / 60);
+        const minute = minutes % 60;
+        
+        if (hour >= 24) break;
+        
+        const slotTime = new Date(eventDate);
+        slotTime.setHours(hour, minute, 0, 0);
+        
+        slots.push({
+          event_activity_id: eventActivity.id,
+          slot_time: slotTime.toISOString(),
+          capacity: customForm.capacity
+        });
+      }
+      
+      const { error } = await supabase
+        .from('time_slots')
+        .insert(slots);
+
+      if (error) throw error;
+      
+      toast.success(`${slots.length} créneaux personnalisés créés`);
+      await loadTimeSlots();
+      await loadTimeSlotsCount();
+      setShowCustomForm(false);
+    } catch (err) {
+      console.error('Erreur création personnalisée:', err);
       toast.error('Erreur lors de la création des créneaux');
     } finally {
       setCreating(false);
@@ -877,7 +934,6 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       toast.success('Créneau supprimé');
       await loadTimeSlots();
       await loadTimeSlotsCount();
-      onUpdate();
     } catch (err) {
       console.error('Erreur suppression:', err);
       toast.error('Erreur lors de la suppression');
@@ -898,12 +954,12 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       toast.success('Tous les créneaux ont été supprimés');
       await loadTimeSlots();
       await loadTimeSlotsCount();
-      onUpdate();
     } catch (err) {
       console.error('Erreur suppression en masse:', err);
       toast.error('Erreur lors de la suppression');
     }
   };
+
   return (
     <>
       <button
@@ -911,7 +967,7 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
         className="px-3 py-2 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded-md font-medium transition-colors flex items-center gap-2"
       >
         <Clock className="h-4 w-4" />
-        Créneaux ({stats.total})
+        Créneaux ({timeSlotsCount})
       </button>
 
       {showModal && (
@@ -932,14 +988,15 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                   {timeSlots.length > 0 && (
                     <button
                       onClick={deleteAllSlots}
-                      className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 rounded-md text-sm font-medium transition-colors"
+                      disabled={creating}
+                      className="px-3 py-2 bg-red-100 text-red-700 hover:bg-red-200 disabled:bg-gray-100 disabled:text-gray-400 rounded-md text-sm font-medium transition-colors"
                     >
                       Supprimer tout
                     </button>
                   )}
                   <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600">
-                  <X className="h-6 w-6" />
-                </button>
+                    <X className="h-6 w-6" />
+                  </button>
                 </div>
               </div>
             </div>
@@ -964,11 +1021,11 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
               {/* Templates rapides */}
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-gray-900 mb-3">🎯 Templates rapides</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-3 mb-4">
                   <button
                     onClick={() => createTemplate('morning')}
                     disabled={creating}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl">🌅</span>
@@ -976,14 +1033,14 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                     </div>
                     <div className="text-sm text-gray-600">
                       9h00 - 12h00<br />
-                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : eventActivity.activity.name.toLowerCase().includes('tir') ? '45min' : '60min'}
                     </div>
                   </button>
                   
                   <button
                     onClick={() => createTemplate('afternoon')}
                     disabled={creating}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl">🌞</span>
@@ -991,14 +1048,14 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                     </div>
                     <div className="text-sm text-gray-600">
                       14h00 - 17h00<br />
-                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : eventActivity.activity.name.toLowerCase().includes('tir') ? '45min' : '60min'}
                     </div>
                   </button>
                   
                   <button
                     onClick={() => createTemplate('fullday')}
                     disabled={creating}
-                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 transition-colors text-left"
+                    className="p-4 border border-gray-200 rounded-lg hover:border-blue-300 hover:bg-blue-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-left"
                   >
                     <div className="flex items-center gap-2 mb-2">
                       <span className="text-xl">📅</span>
@@ -1006,10 +1063,100 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                     </div>
                     <div className="text-sm text-gray-600">
                       9h00 - 17h00<br />
-                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : '60min'}
+                      Créneaux de {eventActivity.activity.name.toLowerCase().includes('poney') ? '30min' : eventActivity.activity.name.toLowerCase().includes('tir') ? '45min' : '60min'}
                     </div>
                   </button>
                 </div>
+                
+                {/* Bouton création personnalisée */}
+                <button
+                  onClick={() => setShowCustomForm(!showCustomForm)}
+                  disabled={creating}
+                  className="w-full p-3 border-2 border-dashed border-gray-300 rounded-lg hover:border-blue-400 hover:bg-blue-50 disabled:bg-gray-50 disabled:cursor-not-allowed transition-colors text-gray-600 hover:text-blue-600"
+                >
+                  <div className="flex items-center justify-center gap-2">
+                    <Settings className="h-5 w-5" />
+                    <span className="font-medium">Création personnalisée</span>
+                  </div>
+                </button>
+                
+                {/* Formulaire personnalisé */}
+                {showCustomForm && (
+                  <div className="mt-4 p-4 bg-gray-50 rounded-lg">
+                    <h4 className="font-medium text-gray-900 mb-3">⚙️ Configuration personnalisée</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Début</label>
+                        <input
+                          type="time"
+                          value={customForm.startTime}
+                          onChange={(e) => setCustomForm({...customForm, startTime: e.target.value})}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Fin</label>
+                        <input
+                          type="time"
+                          value={customForm.endTime}
+                          onChange={(e) => setCustomForm({...customForm, endTime: e.target.value})}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Durée (min)</label>
+                        <input
+                          type="number"
+                          min="15"
+                          max="180"
+                          step="15"
+                          value={customForm.duration}
+                          onChange={(e) => setCustomForm({...customForm, duration: parseInt(e.target.value) || 60})}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-700 mb-1">Capacité</label>
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          value={customForm.capacity}
+                          onChange={(e) => setCustomForm({...customForm, capacity: parseInt(e.target.value) || 15})}
+                          className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="mb-4">
+                      <label className="block text-xs font-medium text-gray-700 mb-1">Pause entre créneaux (min)</label>
+                      <input
+                        type="number"
+                        min="0"
+                        max="60"
+                        step="5"
+                        value={customForm.breakDuration}
+                        onChange={(e) => setCustomForm({...customForm, breakDuration: parseInt(e.target.value) || 0})}
+                        className="w-full px-2 py-1 text-sm border border-gray-300 rounded focus:ring-1 focus:ring-blue-500 focus:border-blue-500"
+                      />
+                    </div>
+                    <div className="flex gap-2">
+                      <button
+                        onClick={createCustomSlots}
+                        disabled={creating}
+                        className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                      >
+                        {creating ? 'Création...' : 'Créer les créneaux'}
+                      </button>
+                      <button
+                        onClick={() => setShowCustomForm(false)}
+                        className="px-4 py-2 bg-gray-200 hover:bg-gray-300 text-gray-700 rounded-md text-sm font-medium transition-colors"
+                      >
+                        Annuler
+                      </button>
+                    </div>
+                  </div>
+                )}
+                
                 {creating && (
                   <div className="mt-3 text-center text-blue-600">
                     <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-600 inline-block mr-2"></div>
@@ -1047,7 +1194,8 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
                           </div>
                           <button
                             onClick={() => deleteSlot(slot.id)}
-                            className="text-red-600 hover:text-red-700 p-1"
+                            disabled={creating}
+                            className="text-red-600 hover:text-red-700 disabled:text-gray-400 p-1"
                           >
                             <Trash2 className="h-4 w-4" />
                           </button>
