@@ -3,6 +3,12 @@ import { vi } from 'vitest';
 import React from 'react';
 
 // Mock only specific URL methods for file download tests
+if (!('createObjectURL' in window.URL)) {
+  Object.defineProperty(window.URL, 'createObjectURL', { value: vi.fn(), configurable: true });
+}
+if (!('revokeObjectURL' in window.URL)) {
+  Object.defineProperty(window.URL, 'revokeObjectURL', { value: vi.fn(), configurable: true });
+}
 vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
 vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
 
