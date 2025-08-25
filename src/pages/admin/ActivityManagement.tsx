@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Activity, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import MarkdownEditor from '../../components/admin/MarkdownEditor';
 
 interface ActivityType {
   id: string;
@@ -259,14 +260,12 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Description
-              </label>
-              <textarea
+              <MarkdownEditor
+                id="description"
+                label="Description"
                 value={formData.description}
-                onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                onChange={(value) => setFormData({ ...formData, description: value })}
                 rows={3}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
             </div>
 
