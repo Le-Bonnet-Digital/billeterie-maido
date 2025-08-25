@@ -3,8 +3,21 @@ import { vi } from 'vitest';
 import React from 'react';
 
 // Mock only specific URL methods for file download tests
-vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
-vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+if (!window.URL.createObjectURL) {
+  Object.defineProperty(window.URL, 'createObjectURL', {
+    value: vi.fn(() => 'mock-url'),
+  });
+} else {
+  vi.spyOn(window.URL, 'createObjectURL').mockReturnValue('mock-url');
+}
+
+if (!window.URL.revokeObjectURL) {
+  Object.defineProperty(window.URL, 'revokeObjectURL', {
+    value: vi.fn(),
+  });
+} else {
+  vi.spyOn(window.URL, 'revokeObjectURL').mockImplementation(() => {});
+}
 
 // Mock BroadcastChannel for Supabase auth
 Object.defineProperty(window, 'BroadcastChannel', {

@@ -67,9 +67,26 @@ describe('Cart Functions', () => {
     it('should return false when Supabase is not configured', async () => {
       const { isSupabaseConfigured } = await import('../supabase');
       vi.mocked(isSupabaseConfigured).mockReturnValue(false);
-      
+
       const result = await addToCart('pass-id');
       expect(result).toBe(false);
+    });
+
+    it('should add item to cart when Supabase is configured', async () => {
+      const { supabase } = await import('../supabase');
+      const builder = {
+        select: vi.fn().mockReturnThis(),
+        eq: vi.fn().mockReturnThis(),
+        is: vi.fn().mockReturnThis(),
+        maybeSingle: vi.fn().mockResolvedValue({ data: null, error: null }),
+        insert: vi.fn().mockResolvedValue({ error: null }),
+      };
+      vi.mocked(supabase.from).mockReturnValue(builder as any);
+      mockLocalStorage.getItem.mockReturnValue('session-123');
+
+      const result = await addToCart('pass-id');
+      expect(result).toBe(true);
+      expect(builder.insert).toHaveBeenCalled();
     });
   });
 
@@ -77,9 +94,40 @@ describe('Cart Functions', () => {
     it('should return empty array when Supabase is not configured', async () => {
       const { isSupabaseConfigured } = await import('../supabase');
       vi.mocked(isSupabaseConfigured).mockReturnValue(false);
-      
+
       const result = await getCartItems();
       expect(result).toEqual([]);
+    });
+  });
+
+  describe('removeFromCart', () => {
+    it('should remove item successfully', async () => {
+      const { supabase } = await import('../supabase');
+      const builder = {
+        delete: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        })),
+      };
+      vi.mocked(supabase.from).mockReturnValue(builder as any);
+
+      const result = await removeFromCart('item-id');
+      expect(result).toBe(true);
+    });
+  });
+
+  describe('clearCart', () => {
+    it('should clear cart successfully', async () => {
+      const { supabase } = await import('../supabase');
+      const builder = {
+        delete: vi.fn(() => ({
+          eq: vi.fn().mockResolvedValue({ error: null }),
+        })),
+      };
+      vi.mocked(supabase.from).mockReturnValue(builder as any);
+      mockLocalStorage.getItem.mockReturnValue('session-123');
+
+      const result = await clearCart();
+      expect(result).toBe(true);
     });
   });
 });

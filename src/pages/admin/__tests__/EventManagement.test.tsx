@@ -1,4 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
+import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '../../../test/utils';
 import EventManagement from '../EventManagement';
 
@@ -35,5 +36,24 @@ describe('EventManagement', () => {
       // Should not show loading spinner after data loads
       expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
+  });
+
+  it('should render header and add button', async () => {
+    render(<EventManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /gestion des événements/i })).toBeInTheDocument();
+    });
+    expect(screen.getByRole('button', { name: /nouvel événement/i })).toBeInTheDocument();
+  });
+
+  it('should open create modal when clicking add button', async () => {
+    const user = userEvent.setup();
+    render(<EventManagement />);
+
+    const button = await screen.findByRole('button', { name: /nouvel événement/i });
+    await user.click(button);
+
+    expect(await screen.findByText(/nouvel événement/i)).toBeInTheDocument();
   });
 });
