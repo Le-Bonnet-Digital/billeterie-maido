@@ -36,4 +36,25 @@ describe('EventManagement', () => {
       expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
     }, { timeout: 3000 });
   });
+
+  it('should not output debug logs in production mode', async () => {
+    vi.stubEnv('DEV', 'false');
+    vi.stubEnv('PROD', 'true');
+    vi.stubEnv('MODE', 'production');
+    vi.stubEnv('VITE_DEBUG', 'true');
+
+    const logSpy = vi.spyOn(console, 'log').mockImplementation(() => {});
+
+    render(<EventManagement />);
+
+    await waitFor(() => {
+      expect(screen.getByText('Gestion des Événements')).toBeInTheDocument();
+    });
+
+    expect(logSpy).not.toHaveBeenCalled();
+    expect(screen.queryByText(/DEBUG EventManagement/i)).not.toBeInTheDocument();
+
+    logSpy.mockRestore();
+    vi.unstubAllEnvs();
+  });
 });

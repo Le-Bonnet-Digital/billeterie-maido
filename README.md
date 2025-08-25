@@ -1,3 +1,9 @@
+billeterie-maido
+
+## Debugging
+
+Set the environment variable `VITE_DEBUG=true` when running in development to enable verbose debug logs. Logs are automatically suppressed in production builds.
+
 # billeterie-maido
 
 ## Mode démonstration
@@ -13,3 +19,4 @@ Ou ajoutez cette variable à votre fichier `.env` :
 ```
 VITE_SHOW_TEST_CREDENTIALS=true
 ```
+
