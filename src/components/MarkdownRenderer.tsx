@@ -10,7 +10,7 @@ interface MarkdownRendererProps {
 
 export default function MarkdownRenderer({ content, className }: MarkdownRendererProps) {
   if (!content || content.trim() === '') {
-    return <p className={className}>Aucun contenu à afficher.</p>;
+    return <p className={className}>Aucune information définie</p>;
   }
 
   try {

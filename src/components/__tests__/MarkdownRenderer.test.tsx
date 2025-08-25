@@ -28,4 +28,9 @@ describe('MarkdownRenderer', () => {
     // @ts-expect-error - ensure global not set
     expect((window as any).hacked).toBeUndefined();
   });
+
+  it('renders fallback message when content is empty', () => {
+    render(<MarkdownRenderer content="" />);
+    expect(screen.getByText('Aucune information définie')).toBeInTheDocument();
+  });
 });

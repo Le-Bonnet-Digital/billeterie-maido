@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Activity, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 
 interface ActivityType {
   id: string;
@@ -123,7 +124,10 @@ export default function ActivityManagement() {
                     <div className="text-3xl">{activity.icon}</div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{activity.name}</h3>
-                      <p className="text-gray-600">{activity.description}</p>
+                      <MarkdownRenderer
+                        content={activity.description}
+                        className="text-gray-600"
+                      />
                     </div>
                   </div>
                   

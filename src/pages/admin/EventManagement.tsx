@@ -7,6 +7,7 @@ import { toast } from 'react-hot-toast';
 import EventForm from '../../components/admin/EventForm';
 import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 import { debugLog } from '../../lib/logger';
 
 interface Event {
@@ -223,9 +224,10 @@ export default function EventManagement() {
                       </div>
                     </div>
                     
-                    <p className="text-gray-600 text-sm line-clamp-2">
-                      {event.key_info_content || 'Aucune information clé définie'}
-                    </p>
+                    <MarkdownRenderer
+                      content={event.key_info_content}
+                      className="text-gray-600 text-sm line-clamp-2"
+                    />
                   </div>
                   
                   <div className="flex items-center gap-2 ml-4">
