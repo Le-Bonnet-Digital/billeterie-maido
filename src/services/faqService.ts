@@ -11,6 +11,12 @@ export interface FAQItem {
   position?: number;
 }
 
+/**
+ * Récupère la FAQ et les informations d'un événement.
+ * @param eventId Identifiant de l'événement
+ * @param client Client Supabase optionnel
+ * @returns L'événement et sa liste de FAQ
+ */
 export async function fetchEventFaq(
   eventId: string,
   client: DatabaseClient = supabase

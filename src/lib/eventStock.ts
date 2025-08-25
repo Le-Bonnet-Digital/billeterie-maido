@@ -31,8 +31,11 @@ export interface EventStockResult {
 }
 
 /**
- * Fetch all passes and activities for an event with their remaining stock
- * in a single RPC call.
+ * Récupère les passes et activités d'un événement avec leurs stocks restants
+ * via une seule fonction RPC.
+ * @param eventId Identifiant de l'événement
+ * @param client Client Supabase optionnel
+ * @returns Les passes et activités avec leurs stocks
  */
 export const fetchEventStock = async (
   eventId: string,

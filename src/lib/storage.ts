@@ -1,6 +1,14 @@
 const memoryStorage: Record<string, string> = {};
 
+/**
+ * Wrapper autour du stockage local qui fonctionne aussi côté serveur.
+ */
 export const safeStorage = {
+  /**
+   * Récupère un élément du stockage.
+   * @param key Clé de l'élément
+   * @returns Valeur associée ou `null`
+   */
   getItem(key: string): string | null {
     if (typeof window === 'undefined') {
       return memoryStorage[key] ?? null;
@@ -12,6 +20,11 @@ export const safeStorage = {
     }
   },
 
+  /**
+   * Stocke une valeur.
+   * @param key Clé de l'élément
+   * @param value Valeur à stocker
+   */
   setItem(key: string, value: string): void {
     if (typeof window === 'undefined') {
       memoryStorage[key] = value;
@@ -24,6 +37,10 @@ export const safeStorage = {
     }
   },
 
+  /**
+   * Supprime une valeur du stockage.
+   * @param key Clé de l'élément
+   */
   removeItem(key: string): void {
     if (typeof window === 'undefined') {
       delete memoryStorage[key];
