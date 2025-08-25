@@ -5,6 +5,7 @@ import { X } from 'lucide-react';
 import { debugLog } from '../../lib/logger';
 import MarkdownEditor from './MarkdownEditor';
 import FAQEditor, { FAQFormItem } from './FAQEditor';
+import type { FAQItem } from '../FAQAccordion';
 
 interface Event {
   id: string;
@@ -16,6 +17,7 @@ interface Event {
   cgv_content: string;
   key_info_content: string;
   has_animations: boolean;
+  faqs: FAQItem[];
 }
 
 interface EventFormProps {
@@ -49,7 +51,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
         key_info_content: event.key_info_content || '',
         has_animations: event.has_animations || false,
       });
-      loadFaqs(event.id);
+      setFaqs(event.faqs.map(f => ({ id: crypto.randomUUID(), question: f.question, answer: f.answer })));
     } else {
       // Reset for new event
       setFormData({
@@ -65,15 +67,6 @@ export default function EventForm({ event, onClose }: EventFormProps) {
       setFaqs([]);
     }
   }, [event]);
-
-  const loadFaqs = async (eventId: string) => {
-    const { data } = await supabase
-      .from('event_faqs')
-      .select('id, question, answer, position')
-      .eq('event_id', eventId)
-      .order('position');
-    setFaqs((data || []).map(f => ({ id: f.id, question: f.question, answer: f.answer })));
-  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -117,7 +110,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           .from('events')
           .update(eventData)
           .eq('id', event.id)
-          .select()
+          .select('id, event_faqs(question, answer, position)')
           .single();
 
         debugLog('Supabase update data:', data);
@@ -142,7 +135,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
         const { data: inserted, error: insertError } = await supabase
           .from('events')
           .insert(eventData)
-          .select()
+          .select('id, event_faqs(question, answer, position)')
           .single();
         if (insertError) throw insertError;
         eventId = inserted.id;
