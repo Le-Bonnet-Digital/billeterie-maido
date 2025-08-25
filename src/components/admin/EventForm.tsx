@@ -4,6 +4,7 @@ import { toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
 import { debugLog } from '../../lib/logger';
 import MarkdownEditor from './MarkdownEditor';
+import FAQEditor, { FAQFormItem } from './FAQEditor';
 
 interface Event {
   id: string;
@@ -13,7 +14,6 @@ interface Event {
   sales_closing_date: string;
   status: 'draft' | 'published' | 'finished' | 'cancelled';
   cgv_content: string;
-  faq_content: string;
   key_info_content: string;
   has_animations: boolean;
 }
@@ -31,10 +31,10 @@ export default function EventForm({ event, onClose }: EventFormProps) {
     sales_closing_date: '',
     status: 'draft',
     cgv_content: '',
-    faq_content: '',
     key_info_content: '',
     has_animations: false,
   });
+  const [faqs, setFaqs] = useState<FAQFormItem[]>([]);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -46,10 +46,10 @@ export default function EventForm({ event, onClose }: EventFormProps) {
         sales_closing_date: event.sales_closing_date ? new Date(event.sales_closing_date).toISOString().substring(0, 16) : '',
         status: event.status,
         cgv_content: event.cgv_content || '',
-        faq_content: event.faq_content || '',
         key_info_content: event.key_info_content || '',
         has_animations: event.has_animations || false,
       });
+      loadFaqs(event.id);
     } else {
       // Reset for new event
       setFormData({
@@ -59,12 +59,21 @@ export default function EventForm({ event, onClose }: EventFormProps) {
         sales_closing_date: '',
         status: 'draft',
         cgv_content: '',
-        faq_content: '',
         key_info_content: '',
         has_animations: false,
       });
+      setFaqs([]);
     }
   }, [event]);
+
+  const loadFaqs = async (eventId: string) => {
+    const { data } = await supabase
+      .from('event_faqs')
+      .select('id, question, answer, position')
+      .eq('event_id', eventId)
+      .order('position');
+    setFaqs((data || []).map(f => ({ id: f.id, question: f.question, answer: f.answer })));
+  };
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     const { name, value, type } = e.target;
@@ -81,11 +90,17 @@ export default function EventForm({ event, onClose }: EventFormProps) {
     e.preventDefault();
     setLoading(true);
 
+    if (faqs.some(f => !f.question.trim() || f.answer.trim().length < 20)) {
+      toast.error('Toutes les questions doivent avoir une réponse valide.');
+      setLoading(false);
+      return;
+    }
+
     const eventData = {
-        ...formData,
-        event_date: new Date(formData.event_date).toISOString(),
-        sales_opening_date: new Date(formData.sales_opening_date).toISOString(),
-        sales_closing_date: new Date(formData.sales_closing_date).toISOString(),
+      ...formData,
+      event_date: new Date(formData.event_date).toISOString(),
+      sales_opening_date: new Date(formData.sales_opening_date).toISOString(),
+      sales_closing_date: new Date(formData.sales_closing_date).toISOString(),
     };
 
     try {
@@ -93,6 +108,8 @@ export default function EventForm({ event, onClose }: EventFormProps) {
       console.log('Submitting eventData:', eventData);
       debugLog('event.id:', event?.id);
       console.log('event.id:', event?.id);
+
+      let eventId = event?.id;
 
       if (event) {
         // Update existing event
@@ -119,12 +136,31 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           const errorMessage = error.message || 'événement introuvable';
           throw new Error(errorMessage);
         }
+        eventId = data.id;
       } else {
         // Create new event
-        const { error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
           .from('events')
-          .insert(eventData);
+          .insert(eventData)
+          .select()
+          .single();
         if (insertError) throw insertError;
+        eventId = inserted.id;
+      }
+
+      if (eventId) {
+        await supabase.from('event_faqs').delete().eq('event_id', eventId);
+        if (faqs.length > 0) {
+          const { error: faqError } = await supabase.from('event_faqs').insert(
+            faqs.map((f, index) => ({
+              event_id: eventId,
+              question: f.question,
+              answer: f.answer,
+              position: index,
+            }))
+          );
+          if (faqError) throw faqError;
+        }
       }
 
       toast.success(`Événement ${event ? 'mis à jour' : 'créé'} avec succès`);
@@ -221,13 +257,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           </div>
 
           <div>
-            <MarkdownEditor
-              id="faq_content"
-              label="Foire Aux Questions (FAQ)"
-              value={formData.faq_content}
-              onChange={(value) => setFormData(prev => ({ ...prev, faq_content: value }))}
-              rows={6}
-            />
+            <FAQEditor value={faqs} onChange={setFaqs} />
           </div>
 
           <div className="flex justify-end items-center p-6 bg-gray-50 border-t border-gray-200">

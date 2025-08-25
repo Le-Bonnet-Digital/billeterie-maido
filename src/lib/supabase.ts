@@ -75,6 +75,29 @@ export type Database = {
           updated_at?: string;
         };
       };
+      event_faqs: {
+        Row: {
+          id: string;
+          event_id: string;
+          question: string;
+          answer: string;
+          position: number;
+        };
+        Insert: {
+          id?: string;
+          event_id: string;
+          question: string;
+          answer: string;
+          position: number;
+        };
+        Update: {
+          id?: string;
+          event_id?: string;
+          question?: string;
+          answer?: string;
+          position?: number;
+        };
+      };
       passes: {
         Row: {
           id: string;

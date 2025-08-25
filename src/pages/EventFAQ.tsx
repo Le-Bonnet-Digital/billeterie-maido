@@ -2,17 +2,17 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
-import MarkdownRenderer from '../components/MarkdownRenderer';
+import FAQAccordion, { FAQItem } from '../components/FAQAccordion';
 
 interface Event {
   id: string;
   name: string;
-  faq_content: string | null;
 }
 
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -25,15 +25,23 @@ export default function EventFAQ() {
     try {
       setLoading(true);
 
-      const { data, error } = await supabase
+      const { data: eventData, error: eventError } = await supabase
         .from('events')
-        .select('id, name, faq_content')
+        .select('id, name')
         .eq('id', eventId)
         .eq('status', 'published')
         .single();
 
-      if (error) throw error;
-      setEvent(data);
+      if (eventError) throw eventError;
+      setEvent(eventData);
+
+      const { data: faqData, error: faqError } = await supabase
+        .from('event_faqs')
+        .select('question, answer, position')
+        .eq('event_id', eventId)
+        .order('position');
+      if (faqError) throw faqError;
+      setFaqs(faqData || []);
     } catch (err) {
       console.error('Erreur chargement FAQ:', err);
     } finally {
@@ -88,10 +96,7 @@ export default function EventFAQ() {
 
       {/* FAQ Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <MarkdownRenderer
-          content={event.faq_content || ''}
-          className="prose prose-blue max-w-none"
-        />
+        <FAQAccordion faqs={faqs} />
       </div>
 
       {/* Contact Section */}
