@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Activity, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
 
 interface ActivityType {
@@ -41,7 +42,7 @@ export default function ActivityManagement() {
   };
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm('Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l\'utilisent.')) return;
+    if (!confirm("Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l'utilisent.")) return;
 
     try {
       const { error } = await supabase
@@ -124,7 +125,10 @@ export default function ActivityManagement() {
                     <div className="text-3xl">{activity.icon}</div>
                     <div>
                       <h3 className="text-lg font-semibold text-gray-900">{activity.name}</h3>
-                      <p className="text-gray-600">{activity.description}</p>
+                      <MarkdownRenderer
+                        content={activity.description}
+                        className="text-gray-600"
+                      />
                     </div>
                   </div>
                   
@@ -238,7 +242,7 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
         <div className="p-6">
           <div className="flex items-center justify-between mb-6">
             <h2 className="text-xl font-semibold text-gray-900">
-              {activity ? 'Modifier l\'Activité' : 'Créer une Activité'}
+              {activity ? "Modifier l'Activité" : 'Créer une Activité'}
             </h2>
             <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
               <X className="h-6 w-6" />

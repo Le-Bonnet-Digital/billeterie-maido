@@ -3,6 +3,7 @@ import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Euro, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
+import MarkdownRenderer from '../../components/MarkdownRenderer';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
 
 interface Pass {
@@ -280,8 +281,11 @@ export default function PassManagement() {
                       <span className="text-2xl font-bold text-blue-600">{pass.price}€</span>
                     </div>
                     
-                    <p className="text-gray-600 mb-2">{pass.description}</p>
-                    
+                    <MarkdownRenderer
+                      content={pass.description}
+                      className="text-gray-600 mb-2"
+                    />
+
                     <div className="flex items-center gap-6 text-sm text-gray-500">
                       <div className="flex items-center gap-1">
                         <Package className="h-4 w-4" />
