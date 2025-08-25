@@ -141,6 +141,7 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
 // Récupérer les articles du panier
 export async function getCartItems(): Promise<CartItem[]> {
   if (!isSupabaseConfigured()) {
+    console.warn('Supabase not configured, returning empty cart');
     return [];
   }
 
@@ -148,7 +149,11 @@ export async function getCartItems(): Promise<CartItem[]> {
     const sessionId = getSessionId();
     
     // Nettoyer les articles expirés
-    await supabase.rpc('cleanup_expired_cart_items');
+    try {
+      await supabase.rpc('cleanup_expired_cart_items');
+    } catch (cleanupError) {
+      console.warn('Could not cleanup expired cart items:', cleanupError);
+    }
     
     const { data, error } = await supabase
       .from('cart_items')
@@ -180,6 +185,11 @@ export async function getCartItems(): Promise<CartItem[]> {
       
     if (error) {
       console.error('Erreur récupération panier:', error);
+      // Si c'est une erreur de connectivité, retourner un tableau vide plutôt que de faire planter l'app
+      if (error.message?.includes('Failed to fetch') || error.message?.includes('fetch')) {
+        console.warn('Network error, returning empty cart');
+        return [];
+      }
       return [];
     }
     

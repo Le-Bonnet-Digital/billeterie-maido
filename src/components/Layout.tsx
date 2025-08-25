@@ -9,8 +9,13 @@ export default function Layout() {
   
   useEffect(() => {
     const updateCartCount = async () => {
-      const items = await getCartItems();
-      setCartCount(items.length);
+      try {
+        const items = await getCartItems();
+        setCartCount(items.length);
+      } catch (error) {
+        console.warn('Could not update cart count:', error);
+        setCartCount(0);
+      }
     };
     
     updateCartCount();
