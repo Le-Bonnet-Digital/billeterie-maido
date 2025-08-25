@@ -109,7 +109,7 @@ export default function EventFAQ() {
         </p>
         <a
           href="mailto:contact@billetevent.com"
-          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md font-medium transition-colors"
+          className="inline-flex items-center bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
         >
           Nous contacter
         </a>

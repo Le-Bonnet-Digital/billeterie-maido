@@ -24,14 +24,14 @@ export default function FAQAccordion({ faqs }: FAQAccordionProps) {
       {faqs.map((faq, index) => (
         <Disclosure key={index}>
           {({ open }) => (
-            <div className="border rounded-lg">
-              <Disclosure.Button className="flex w-full justify-between p-4 text-left text-gray-900 font-medium">
+            <div className="border border-gray-200 rounded-lg bg-white">
+              <Disclosure.Button className="flex items-center w-full justify-between p-4 text-left text-gray-900 font-medium hover:bg-gray-50 transition-colors">
                 <span>{faq.question}</span>
                 <ChevronUp
                   className={`${open ? 'rotate-180 transform' : ''} h-5 w-5 text-blue-600`}
                 />
               </Disclosure.Button>
-              <Disclosure.Panel className="p-4 border-t">
+              <Disclosure.Panel className="p-4 border-t border-gray-200 bg-gray-50 text-gray-600">
                 <MarkdownRenderer content={faq.answer} />
               </Disclosure.Panel>
             </div>
