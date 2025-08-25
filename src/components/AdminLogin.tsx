@@ -12,6 +12,7 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const showDemoInfo = import.meta.env.VITE_SHOW_TEST_CREDENTIALS === 'true';
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -110,16 +111,13 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
             )}
           </button>
         </form>
-
-        <div className="bg-blue-50 rounded-lg p-4 text-center">
-          <p className="text-sm text-blue-800 mb-2">
-            <strong>Compte de test :</strong>
-          </p>
-          <p className="text-sm text-blue-700">
-            Email: admin@test.com<br />
-            Mot de passe: admin123
-          </p>
-        </div>
+        {showDemoInfo && (
+          <div className="bg-blue-50 rounded-lg p-4 text-center">
+            <p className="text-sm text-blue-800">
+              Environnement de démonstration : les identifiants de test sont fournis sur demande.
+            </p>
+          </div>
+        )}
       </div>
     </div>
   );
