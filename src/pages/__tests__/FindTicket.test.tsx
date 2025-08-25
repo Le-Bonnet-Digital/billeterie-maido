@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../test/utils';
+import { toast } from 'react-hot-toast';
 import FindTicket from '../FindTicket';
 
 describe('FindTicket Page', () => {
@@ -18,9 +19,7 @@ describe('FindTicket Page', () => {
     
     // Toast error should be called (mocked in setup)
     await waitFor(() => {
-      expect(vi.mocked(require('react-hot-toast').toast.error)).toHaveBeenCalledWith(
-        'Veuillez saisir votre adresse e-mail'
-      );
+      expect(toast.error).toHaveBeenCalledWith('Veuillez saisir votre adresse e-mail');
     });
   });
 
