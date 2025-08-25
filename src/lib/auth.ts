@@ -1,6 +1,7 @@
 import { supabase } from './supabase';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from './errors';
+import { logger } from './logger';
 
 export interface User {
   id: string;
@@ -42,7 +43,10 @@ export const signInWithEmail = async (email: string, password: string): Promise<
         .single();
 
       if (userError) {
-        console.warn('Utilisateur non trouvé dans la table users, création...');
+        logger.warn('Utilisateur non trouvé dans la table users, création...', {
+          error: userError,
+          query: { table: 'users', action: 'select', userId: data.user.id }
+        });
         return await createUser(data.user.id, data.user.email!, 'client');
       }
 
@@ -55,7 +59,10 @@ export const signInWithEmail = async (email: string, password: string): Promise<
 
     return null;
   } catch (err) {
-    console.error('Erreur connexion:', err);
+    logger.error('Erreur connexion', {
+      error: err,
+      query: { action: 'auth.signInWithPassword', email }
+    });
     toast.error(getErrorMessage(err) || 'Erreur lors de la connexion');
     return null;
   }
@@ -67,7 +74,10 @@ export const signOut = async (): Promise<void> => {
     if (error) throw error;
     toast.success('Déconnexion réussie');
   } catch (err) {
-    console.error('Erreur déconnexion:', err);
+    logger.error('Erreur déconnexion', {
+      error: err,
+      query: { action: 'auth.signOut' }
+    });
     toast.error('Erreur lors de la déconnexion');
   }
 };
@@ -92,7 +102,10 @@ export const getCurrentUser = async (): Promise<User | null> => {
       role: userData.role
     };
   } catch (err) {
-    console.error('Erreur récupération utilisateur:', err);
+    logger.error('Erreur récupération utilisateur', {
+      error: err,
+      query: { table: 'users', action: 'select' }
+    });
     return null;
   }
 };

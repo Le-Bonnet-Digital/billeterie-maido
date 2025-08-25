@@ -4,6 +4,7 @@ import { X, Plus, Edit, Trash2, Clock, MapPin, Users, Eye, EyeOff } from 'lucide
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
+import { logger } from '../../lib/logger';
 
 interface Animation {
   id: string;
@@ -49,7 +50,10 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
       if (error) throw error;
       setAnimations(data || []);
     } catch (err) {
-      console.error('Erreur chargement animations:', err);
+      logger.error('Erreur chargement animations', {
+        error: err,
+        query: { table: 'event_animations', action: 'select', eventId: event.id }
+      });
       toast.error('Erreur lors du chargement des animations');
     } finally {
       setLoading(false);
@@ -66,11 +70,14 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
         .eq('id', animationId);
 
       if (error) throw error;
-      
+
       toast.success('Animation supprimée avec succès');
       loadAnimations();
     } catch (err) {
-      console.error('Erreur suppression animation:', err);
+      logger.error('Erreur suppression animation', {
+        error: err,
+        query: { table: 'event_animations', action: 'delete', id: animationId }
+      });
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -83,11 +90,19 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
         .eq('id', animation.id);
 
       if (error) throw error;
-      
+
       toast.success(`Animation ${!animation.is_active ? 'activée' : 'désactivée'}`);
       loadAnimations();
     } catch (err) {
-      console.error('Erreur changement statut animation:', err);
+      logger.error('Erreur changement statut animation', {
+        error: err,
+        query: {
+          table: 'event_animations',
+          action: 'update',
+          id: animation.id,
+          is_active: !animation.is_active
+        }
+      });
       toast.error('Erreur lors du changement de statut');
     }
   };
@@ -300,10 +315,17 @@ function AnimationForm({ event, animation, onClose }: AnimationFormProps) {
         if (error) throw error;
         toast.success('Animation créée avec succès');
       }
-      
+
       onClose();
     } catch (err) {
-      console.error('Erreur sauvegarde animation:', err);
+      logger.error('Erreur sauvegarde animation', {
+        error: err,
+        query: {
+          table: 'event_animations',
+          action: animation ? 'update' : 'insert',
+          animationId: animation?.id
+        }
+      });
       toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);

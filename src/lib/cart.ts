@@ -2,6 +2,7 @@ import { supabase } from './supabase';
 import { isSupabaseConfigured } from './supabase';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from './errors';
+import { logger } from './logger';
 
 /** Represents a pass returned by Supabase */
 export interface Pass {
@@ -109,14 +110,17 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
       // Mettre à jour la quantité
       const { error } = await supabase
         .from('cart_items')
-        .update({ 
+        .update({
           quantity: existingItem.quantity + quantity,
           reserved_until: new Date(Date.now() + 10 * 60 * 1000).toISOString()
         })
         .eq('id', existingItem.id);
-        
+
       if (error) {
-        console.error('Erreur mise à jour panier:', error);
+        logger.error('Erreur mise à jour panier', {
+          error,
+          query: { table: 'cart_items', action: 'update', id: existingItem.id }
+        });
         toast.error('Erreur lors de la mise à jour du panier');
         return false;
       }
@@ -133,7 +137,10 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
         });
         
       if (error) {
-        console.error('Erreur ajout panier:', error);
+        logger.error('Erreur ajout panier', {
+          error,
+          query: { table: 'cart_items', action: 'insert', passId, eventActivityId, timeSlotId }
+        });
         toast.error('Erreur lors de l\'ajout au panier');
         return false;
       }
@@ -142,7 +149,10 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
     toast.success('Article ajouté au panier');
     return true;
   } catch (err) {
-    console.error('Erreur addToCart:', err);
+    logger.error('Erreur addToCart', {
+      error: err,
+      query: { action: 'addToCart', passId, eventActivityId, timeSlotId }
+    });
     toast.error('Une erreur est survenue');
     return false;
   }
@@ -151,7 +161,7 @@ export async function addToCart(passId: string, eventActivityId?: string, timeSl
 // Récupérer les articles du panier
 export async function getCartItems(): Promise<CartItem[]> {
   if (!isSupabaseConfigured()) {
-    console.warn('Supabase not configured, returning empty cart');
+    logger.warn('Supabase not configured, returning empty cart');
     return [];
   }
 
@@ -162,7 +172,10 @@ export async function getCartItems(): Promise<CartItem[]> {
     try {
       await supabase.rpc('cleanup_expired_cart_items');
     } catch (cleanupError) {
-      console.warn('Could not cleanup expired cart items:', cleanupError);
+      logger.warn('Could not cleanup expired cart items', {
+        error: cleanupError,
+        query: { function: 'cleanup_expired_cart_items' }
+      });
     }
     
     const { data, error } = await supabase
@@ -194,11 +207,14 @@ export async function getCartItems(): Promise<CartItem[]> {
       .gt('reserved_until', new Date().toISOString());
       
     if (error) {
-      console.error('Erreur récupération panier:', error);
+      logger.error('Erreur récupération panier', {
+        error,
+        query: { table: 'cart_items', action: 'select', sessionId }
+      });
       // Si c'est une erreur de connectivité, retourner un tableau vide plutôt que de faire planter l'app
       const errorMessage = getErrorMessage(error);
       if (errorMessage.includes('Failed to fetch') || errorMessage.includes('fetch')) {
-        console.warn('Network error, returning empty cart');
+        logger.warn('Network error, returning empty cart', { error });
         return [];
       }
       return [];
@@ -222,7 +238,7 @@ export async function getCartItems(): Promise<CartItem[]> {
       quantity: item.quantity
     }));
   } catch (err) {
-    console.error('Erreur getCartItems:', err);
+    logger.error('Erreur getCartItems', { error: err });
     return [];
   }
 }
@@ -236,7 +252,10 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
       .eq('id', cartItemId);
       
     if (error) {
-      console.error('Erreur suppression panier:', error);
+      logger.error('Erreur suppression panier', {
+        error,
+        query: { table: 'cart_items', action: 'delete', id: cartItemId }
+      });
       toast.error('Erreur lors de la suppression');
       return false;
     }
@@ -244,7 +263,7 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
     toast.success('Article supprimé du panier');
     return true;
   } catch (err) {
-    console.error('Erreur removeFromCart:', err);
+    logger.error('Erreur removeFromCart', { error: err, query: { id: cartItemId } });
     toast.error('Une erreur est survenue');
     return false;
   }
@@ -261,13 +280,16 @@ export async function clearCart(): Promise<boolean> {
       .eq('session_id', sessionId);
       
     if (error) {
-      console.error('Erreur vidage panier:', error);
+      logger.error('Erreur vidage panier', {
+        error,
+        query: { table: 'cart_items', action: 'clear', sessionId }
+      });
       return false;
     }
     
     return true;
   } catch (err) {
-    console.error('Erreur clearCart:', err);
+    logger.error('Erreur clearCart', { error: err });
     return false;
   }
 }
