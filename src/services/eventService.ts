@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, type DatabaseClient } from '../lib/supabase';
 import { fetchEventStock } from '../lib/eventStock';
 
 export interface Event {
@@ -42,9 +42,19 @@ export interface TimeSlot {
   event_activity: EventActivity;
 }
 
-export async function fetchEvent(eventId: string): Promise<Event | null> {
+interface RawSlot {
+  id: string;
+  slot_time: string;
+  capacity: number;
+  event_activities: EventActivity & { activities: Activity };
+}
+
+export async function fetchEvent(
+  eventId: string,
+  client: DatabaseClient = supabase
+): Promise<Event | null> {
   if (!isSupabaseConfigured()) return null;
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('events')
     .select('id, name, event_date, key_info_content')
     .eq('id', eventId)
@@ -54,21 +64,30 @@ export async function fetchEvent(eventId: string): Promise<Event | null> {
   return data;
 }
 
-export async function fetchPasses(eventId: string): Promise<Pass[]> {
+export async function fetchPasses(
+  eventId: string,
+  client: DatabaseClient = supabase
+): Promise<Pass[]> {
   if (!isSupabaseConfigured()) return [];
-  const { passes } = await fetchEventStock(eventId);
+  const { passes } = await fetchEventStock(eventId, client);
   return passes as Pass[];
 }
 
-export async function fetchEventActivities(eventId: string): Promise<EventActivity[]> {
+export async function fetchEventActivities(
+  eventId: string,
+  client: DatabaseClient = supabase
+): Promise<EventActivity[]> {
   if (!isSupabaseConfigured()) return [];
-  const { eventActivities } = await fetchEventStock(eventId);
+  const { eventActivities } = await fetchEventStock(eventId, client);
   return eventActivities as EventActivity[];
 }
 
-export async function fetchTimeSlotsForActivity(eventActivityId: string): Promise<TimeSlot[]> {
+export async function fetchTimeSlotsForActivity(
+  eventActivityId: string,
+  client: DatabaseClient = supabase
+): Promise<TimeSlot[]> {
   if (!isSupabaseConfigured()) return [];
-  const { data, error } = await supabase
+  const { data, error } = await client
     .from('time_slots')
     .select(
       `
@@ -87,8 +106,8 @@ export async function fetchTimeSlotsForActivity(eventActivityId: string): Promis
   if (error) throw error;
 
   const slotsWithCapacity = await Promise.all(
-    (data || []).map(async (slot: any) => {
-      const { data: capacityData } = await supabase.rpc('get_slot_remaining_capacity', {
+    (data || []).map(async (slot: RawSlot) => {
+      const { data: capacityData } = await client.rpc('get_slot_remaining_capacity', {
         slot_uuid: slot.id,
       });
       return {

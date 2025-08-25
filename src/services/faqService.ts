@@ -1,4 +1,4 @@
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase, isSupabaseConfigured, type DatabaseClient } from '../lib/supabase';
 
 export interface Event {
   id: string;
@@ -11,9 +11,12 @@ export interface FAQItem {
   position?: number;
 }
 
-export async function fetchEventFaq(eventId: string): Promise<{ event: Event | null; faqs: FAQItem[] }> {
+export async function fetchEventFaq(
+  eventId: string,
+  client: DatabaseClient = supabase
+): Promise<{ event: Event | null; faqs: FAQItem[] }> {
   if (!isSupabaseConfigured()) return { event: null, faqs: [] };
-  const { data: eventData, error: eventError } = await supabase
+  const { data: eventData, error: eventError } = await client
     .from('events')
     .select('id, name')
     .eq('id', eventId)
@@ -21,7 +24,7 @@ export async function fetchEventFaq(eventId: string): Promise<{ event: Event | n
     .single();
   if (eventError) throw eventError;
 
-  const { data: faqData, error: faqError } = await supabase
+  const { data: faqData, error: faqError } = await client
     .from('event_faqs')
     .select('question, answer, position')
     .eq('event_id', eventId)

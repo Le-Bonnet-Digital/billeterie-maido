@@ -4,6 +4,11 @@ import { debugLog } from './logger';
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
+export interface DatabaseClient {
+  from: (table: string) => any;
+  rpc: (fn: string, params?: any) => Promise<any>;
+}
+
 // Check if Supabase is properly configured
 export const isSupabaseConfigured = () => {
   return !!supabaseUrl &&
@@ -25,9 +30,9 @@ if (!isSupabaseConfigured()) {
   console.warn(message);
 }
 
-export const supabase = isSupabaseConfigured()
-  ? createClient(supabaseUrl, supabaseAnonKey)
-  : ({} as any);
+export const supabase: DatabaseClient = isSupabaseConfigured()
+  ? (createClient(supabaseUrl, supabaseAnonKey) as unknown as DatabaseClient)
+  : ({} as DatabaseClient);
 
 export type Database = {
   public: {
