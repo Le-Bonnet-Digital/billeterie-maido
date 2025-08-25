@@ -1,45 +1,14 @@
 import { supabase } from './supabase';
-
-export interface Event {
-  id: string;
-  name: string;
-  event_date: string;
-  key_info_content: string;
-}
-
-export interface Pass {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  initial_stock: number | null;
-  remaining_stock?: number;
-}
-
-export interface Activity {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-}
-
-export interface EventActivity {
-  id: string;
-  activity_id: string;
-  stock_limit: number | null;
-  requires_time_slot: boolean;
-  remaining_stock?: number;
-  activity: Activity;
-}
-
-export interface TimeSlot {
-  id: string;
-  event_activity_id: string;
-  slot_time: string;
-  capacity: number;
-  remaining_capacity?: number;
-  event_activity: EventActivity;
-}
+import type {
+  Activity,
+  Event,
+  EventActivity,
+  EventActivityRow,
+  Pass,
+  PassRow,
+  TimeSlot,
+  TimeSlotRow,
+} from './types';
 
 export async function fetchEvent(eventId: string): Promise<Event> {
   const { data, error } = await supabase
@@ -62,7 +31,7 @@ export async function fetchPasses(eventId: string): Promise<Pass[]> {
   if (error) throw error;
 
   const passesWithStock = await Promise.all(
-    (data || []).map(async (pass) => {
+    (data || []).map(async (pass: PassRow): Promise<Pass> => {
       if (pass.initial_stock === null) {
         return { ...pass, remaining_stock: 999999 };
       }
@@ -74,7 +43,7 @@ export async function fetchPasses(eventId: string): Promise<Pass[]> {
     })
   );
 
-  return passesWithStock as Pass[];
+  return passesWithStock;
 }
 
 export async function fetchEventActivities(eventId: string): Promise<EventActivity[]> {
@@ -89,7 +58,7 @@ export async function fetchEventActivities(eventId: string): Promise<EventActivi
   if (error) throw error;
 
   const activitiesWithStock = await Promise.all(
-    (data || []).map(async (eventActivity: any) => {
+    (data || []).map(async (eventActivity: EventActivityRow): Promise<EventActivity> => {
       const { data: stockData } = await supabase
         .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivity.id });
 
@@ -101,7 +70,7 @@ export async function fetchEventActivities(eventId: string): Promise<EventActivi
     })
   );
 
-  return activitiesWithStock as EventActivity[];
+  return activitiesWithStock;
 }
 
 export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[]> {
@@ -123,7 +92,7 @@ export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[
   if (error) throw error;
 
   const slotsWithCapacity = await Promise.all(
-    (data || []).map(async (slot: any) => {
+    (data || []).map(async (slot: TimeSlotRow): Promise<TimeSlot> => {
       const { data: capacityData } = await supabase
         .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
 
@@ -138,5 +107,7 @@ export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[
     })
   );
 
-  return slotsWithCapacity as TimeSlot[];
+  return slotsWithCapacity;
 }
+
+export type { Event, Pass, Activity, EventActivity, TimeSlot } from './types';
