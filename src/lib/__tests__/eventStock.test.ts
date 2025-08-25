@@ -1,24 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
-
-// Mock supabase client
-vi.mock('../supabase', () => {
-  return {
-    supabase: {
-      rpc: vi.fn(),
-    },
-  };
-});
-
-import { supabase } from '../supabase';
+/* eslint-disable @typescript-eslint/no-explicit-any */
+import { describe, it, expect, vi } from 'vitest';
 import { fetchEventStock } from '../eventStock';
 
 describe('fetchEventStock', () => {
-  beforeEach(() => {
-    (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockReset();
-  });
-
   it('retrieves passes and activities with their stock', async () => {
-    (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
+    const rpc = vi.fn().mockResolvedValue({
       data: {
         passes: [{ id: 'p1', name: 'Pass', price: 10, description: '', initial_stock: 10, remaining_stock: 5 }],
         event_activities: [{
@@ -32,19 +18,18 @@ describe('fetchEventStock', () => {
       },
       error: null,
     });
+    const client = { rpc } as any;
 
-    const result = await fetchEventStock('event1');
-    expect(supabase.rpc).toHaveBeenCalledWith('get_event_passes_activities_stock', { event_uuid: 'event1' });
+    const result = await fetchEventStock('event1', client);
+    expect(rpc).toHaveBeenCalledWith('get_event_passes_activities_stock', { event_uuid: 'event1' });
     expect(result.passes[0].remaining_stock).toBe(5);
     expect(result.eventActivities[0].activity.name).toBe('Poney');
   });
 
   it('throws when rpc returns an error', async () => {
-    (supabase.rpc as unknown as ReturnType<typeof vi.fn>).mockResolvedValue({
-      data: null,
-      error: new Error('fail'),
-    });
+    const rpc = vi.fn().mockResolvedValue({ data: null, error: new Error('fail') });
+    const client = { rpc } as any;
 
-    await expect(fetchEventStock('event1')).rejects.toThrow('fail');
+    await expect(fetchEventStock('event1', client)).rejects.toThrow('fail');
   });
 });

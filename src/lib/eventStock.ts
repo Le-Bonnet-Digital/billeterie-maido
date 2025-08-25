@@ -1,4 +1,4 @@
-import { supabase } from './supabase';
+import { supabase, type DatabaseClient } from './supabase';
 
 export interface PassWithStock {
   id: string;
@@ -34,8 +34,11 @@ export interface EventStockResult {
  * Fetch all passes and activities for an event with their remaining stock
  * in a single RPC call.
  */
-export const fetchEventStock = async (eventId: string): Promise<EventStockResult> => {
-  const { data, error } = await supabase.rpc('get_event_passes_activities_stock', {
+export const fetchEventStock = async (
+  eventId: string,
+  client: DatabaseClient = supabase
+): Promise<EventStockResult> => {
+  const { data, error } = await client.rpc('get_event_passes_activities_stock', {
     event_uuid: eventId,
   });
 
