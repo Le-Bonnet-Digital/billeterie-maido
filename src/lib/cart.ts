@@ -39,6 +39,11 @@ export interface CartItem {
 }
 
 // Générer un ID de session unique si pas déjà existant
+/**
+ * Récupère l'identifiant de session du panier depuis le stockage.
+ * En crée un nouveau s'il n'existe pas.
+ * @returns Identifiant de session
+ */
 export function getSessionId(): string {
   let sessionId = safeStorage.getItem('cart_session_id');
   if (!sessionId) {
@@ -48,6 +53,10 @@ export function getSessionId(): string {
   return sessionId;
 }
 
+/**
+ * Vérifie la disponibilité des stocks pour un article donné.
+ * @returns Un message d'erreur ou `null` si tout est disponible
+ */
 export async function validateStock(
   repo: CartRepository,
   passId: string,
@@ -76,6 +85,10 @@ export async function validateStock(
   return null;
 }
 
+/**
+ * Met à jour la quantité d'un article déjà présent dans le panier.
+ * @returns `true` en cas de succès
+ */
 export async function updateExistingItem(
   repo: CartRepository,
   existingItem: { id: string; quantity: number },
@@ -84,6 +97,10 @@ export async function updateExistingItem(
   return repo.updateCartItem(existingItem.id, existingItem.quantity + quantity);
 }
 
+/**
+ * Insère un nouvel article dans le panier.
+ * @returns `true` en cas de succès
+ */
 export async function insertNewItem(
   repo: CartRepository,
   sessionId: string,
@@ -95,11 +112,22 @@ export async function insertNewItem(
   return repo.insertCartItem(sessionId, passId, eventActivityId, timeSlotId, quantity);
 }
 
+/**
+ * Affiche une notification à l'utilisateur.
+ * @param notify Fonction de notification
+ * @param type Type de notification
+ * @param message Message à afficher
+ */
 export function notifyUser(notify: NotifyFn, type: 'success' | 'error', message: string): void {
   notify(type, message);
 }
 
 // Ajouter un article au panier
+/**
+ * Ajoute un article au panier en gérant le stock et les notifications.
+ * @returns `true` si l'opération réussit
+ * @sideeffects Écrit dans le logger et affiche des notifications
+ */
 export async function addToCart(
   passId: string,
   eventActivityId?: string,
@@ -155,6 +183,10 @@ export async function addToCart(
 }
 
 // Récupérer les articles du panier
+/**
+ * Récupère les articles du panier courant.
+ * @returns La liste des articles
+ */
 export async function getCartItems(): Promise<CartItem[]> {
   if (!isSupabaseConfigured()) {
     logger.warn('Supabase not configured, returning empty cart');
@@ -240,6 +272,11 @@ export async function getCartItems(): Promise<CartItem[]> {
 }
 
 // Supprimer un article du panier
+/**
+ * Supprime un article du panier.
+ * @param cartItemId Identifiant de l'article
+ * @returns `true` si la suppression réussit
+ */
 export async function removeFromCart(cartItemId: string): Promise<boolean> {
   try {
     const { error } = await supabase
@@ -266,6 +303,10 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
 }
 
 // Vider le panier
+/**
+ * Vide entièrement le panier.
+ * @returns `true` si l'opération réussit
+ */
 export async function clearCart(): Promise<boolean> {
   try {
     const sessionId = getSessionId();
@@ -291,6 +332,11 @@ export async function clearCart(): Promise<boolean> {
 }
 
 // Calculer le total du panier
+/**
+ * Calcule le montant total du panier.
+ * @param items Articles du panier
+ * @returns Total en euros
+ */
 export function calculateCartTotal(items: CartItem[]): number {
-  return items.reduce((total, item) => total + (item.pass.price * item.quantity), 0);
+  return items.reduce((total, item) => total + item.pass.price * item.quantity, 0);
 }

@@ -5,14 +5,31 @@ import { toast } from 'react-hot-toast';
 const MAX_RETRIES = 3;
 const BASE_DELAY = 500;
 
-function wait(ms: number) {
+/**
+ * Attend pendant le nombre de millisecondes indiqué.
+ * @param ms Durée d'attente en millisecondes
+ * @returns Une promesse résolue après l'attente
+ */
+function wait(ms: number): Promise<void> {
   return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+/**
+ * Indique si le navigateur est connecté à Internet.
+ * @returns `true` si une connexion est disponible, sinon `false`
+ */
 function isOnline(): boolean {
   return typeof navigator === 'undefined' ? true : navigator.onLine;
 }
 
+/**
+ * Exécute une opération Supabase avec une logique de retry et de gestion d'erreurs.
+ * Affiche un toast en cas d'échec et consigne l'erreur dans le logger.
+ * @param operation Fonction effectuant l'appel Supabase
+ * @param defaultValue Valeur retournée en cas d'échec
+ * @param context Contexte pour les logs
+ * @returns Les données retournées par Supabase ou `defaultValue`
+ */
 export async function apiCall<T>(
   operation: () => Promise<{ data: T; error: unknown }>,
   defaultValue: T,
@@ -44,6 +61,9 @@ export async function apiCall<T>(
   return defaultValue;
 }
 
+/**
+ * Client utilitaire pour centraliser les appels Supabase.
+ */
 export const apiClient = {
   from: <T extends string>(table: T) => supabase.from(table),
   call: apiCall,

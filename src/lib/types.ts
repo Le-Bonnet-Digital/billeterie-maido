@@ -1,3 +1,4 @@
+/** Types partagés entre les différentes couches de l'application. */
 export interface Event {
   id: string;
   name: string;

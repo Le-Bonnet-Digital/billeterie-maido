@@ -26,6 +26,19 @@
    ```
 3. Créer un fichier `.env` à la racine et y définir les variables décrites ci-dessus.
 
+## Structure du projet
+
+```
+├── src
+│   ├── components    # Composants React
+│   ├── hooks         # Hooks personnalisés
+│   ├── lib           # Modules utilitaires et accès Supabase
+│   ├── pages         # Pages de l'application
+│   └── services      # Logique métier réutilisable
+├── supabase          # Migrations SQL et configuration Supabase
+└── tests             # Tests unitaires
+```
+
 ## Développement
 
 * Lancer le serveur de développement :
@@ -35,7 +48,7 @@
   ```
 * L'application est disponible sur [http://localhost:5173](http://localhost:5173).
 
-## Tests
+## Tests et Lint
 
 * Exécuter la suite de tests :
 
@@ -46,6 +59,11 @@
 
   ```bash
   npm run test:coverage
+  ```
+* Vérifier la qualité du code avec ESLint :
+
+  ```bash
+  npm run lint
   ```
 
 ## Déploiement
@@ -128,3 +146,8 @@ Ou ajoutez cette variable à votre fichier `.env` :
 ```env
 VITE_SHOW_TEST_CREDENTIALS=true
 ```
+
+## Contribution
+
+Les contributions sont les bienvenues ! Merci de proposer vos améliorations via des pull requests. Avant de soumettre, exécutez
+`npm test` et `npm run lint` et suivez les recommandations décrites dans [CONTRIBUTING.md](./CONTRIBUTING.md).

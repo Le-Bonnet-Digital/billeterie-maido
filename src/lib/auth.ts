@@ -3,6 +3,7 @@ import { toast } from 'react-hot-toast';
 import { getErrorMessage } from './errors';
 import { logger } from './logger';
 
+/** Représente un utilisateur authentifié. */
 export interface User {
   id: string;
   email: string;
@@ -11,6 +12,14 @@ export interface User {
 
 const ALLOWED_ROLES: User['role'][] = ['admin', 'pony_provider', 'archery_provider', 'client'];
 
+/**
+ * Crée un utilisateur dans la table `users` de Supabase.
+ * @param id Identifiant unique de l'utilisateur
+ * @param email Adresse e-mail de l'utilisateur
+ * @param role Rôle attribué à l'utilisateur
+ * @returns L'utilisateur créé
+ * @throws Si le rôle est invalide ou si l'insertion échoue
+ */
 export const createUser = async (id: string, email: string, role: User['role']): Promise<User> => {
   if (!role || !ALLOWED_ROLES.includes(role)) {
     throw new Error('Rôle non autorisé');
@@ -25,6 +34,13 @@ export const createUser = async (id: string, email: string, role: User['role']):
   return { id, email, role };
 };
 
+/**
+ * Authentifie un utilisateur via e-mail/mot de passe et récupère son rôle.
+ * @param email Adresse e-mail
+ * @param password Mot de passe
+ * @returns L'utilisateur connecté ou `null` en cas d'échec
+ * @sideeffects Affiche des toasts et écrit dans le logger
+ */
 export const signInWithEmail = async (email: string, password: string): Promise<User | null> => {
   try {
     const { data, error } = await supabase.auth.signInWithPassword({
@@ -68,6 +84,10 @@ export const signInWithEmail = async (email: string, password: string): Promise<
   }
 };
 
+/**
+ * Déconnecte l'utilisateur courant.
+ * @sideeffects Affiche des toasts et écrit dans le logger
+ */
 export const signOut = async (): Promise<void> => {
   try {
     const { error } = await supabase.auth.signOut();
@@ -82,6 +102,10 @@ export const signOut = async (): Promise<void> => {
   }
 };
 
+/**
+ * Récupère l'utilisateur actuellement authentifié et son rôle.
+ * @returns L'utilisateur courant ou `null`
+ */
 export const getCurrentUser = async (): Promise<User | null> => {
   try {
     const { data: { user } } = await supabase.auth.getUser();

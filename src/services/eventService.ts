@@ -49,6 +49,12 @@ interface RawSlot {
   event_activities: EventActivity & { activities: Activity };
 }
 
+/**
+ * Récupère un événement publié par son identifiant.
+ * @param eventId Identifiant de l'événement
+ * @param client Client Supabase optionnel
+ * @returns L'événement ou `null`
+ */
 export async function fetchEvent(
   eventId: string,
   client: DatabaseClient = supabase
@@ -64,6 +70,11 @@ export async function fetchEvent(
   return data;
 }
 
+/**
+ * Récupère les passes d'un événement.
+ * @param eventId Identifiant de l'événement
+ * @param client Client Supabase optionnel
+ */
 export async function fetchPasses(
   eventId: string,
   client: DatabaseClient = supabase
@@ -73,6 +84,11 @@ export async function fetchPasses(
   return passes as Pass[];
 }
 
+/**
+ * Récupère les activités d'un événement.
+ * @param eventId Identifiant de l'événement
+ * @param client Client Supabase optionnel
+ */
 export async function fetchEventActivities(
   eventId: string,
   client: DatabaseClient = supabase
@@ -82,6 +98,11 @@ export async function fetchEventActivities(
   return eventActivities as EventActivity[];
 }
 
+/**
+ * Récupère les créneaux disponibles pour une activité donnée.
+ * @param eventActivityId Identifiant de l'activité
+ * @param client Client Supabase optionnel
+ */
 export async function fetchTimeSlotsForActivity(
   eventActivityId: string,
   client: DatabaseClient = supabase

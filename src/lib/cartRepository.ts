@@ -1,5 +1,6 @@
 import { supabase, isSupabaseConfigured } from './supabase';
 
+/** Interface décrivant les opérations possibles sur le panier. */
 export interface CartRepository {
   isConfigured(): boolean;
   getPassRemainingStock(passId: string): Promise<number | null>;
@@ -11,30 +12,38 @@ export interface CartRepository {
   insertCartItem(sessionId: string, passId: string, eventActivityId?: string, timeSlotId?: string, quantity?: number): Promise<boolean>;
 }
 
+/**
+ * Implémentation de `CartRepository` basée sur Supabase.
+ */
 export class SupabaseCartRepository implements CartRepository {
   isConfigured(): boolean {
     return isSupabaseConfigured();
   }
 
+  /** @inheritdoc */
   async getPassRemainingStock(passId: string): Promise<number | null> {
     const { data } = await supabase.rpc('get_pass_remaining_stock', { pass_uuid: passId });
     return data as number | null;
   }
 
+  /** @inheritdoc */
   async getEventActivityRemainingStock(eventActivityId: string): Promise<number | null> {
     const { data } = await supabase.rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivityId });
     return data as number | null;
   }
 
+  /** @inheritdoc */
   async getSlotRemainingCapacity(timeSlotId: string): Promise<number | null> {
     const { data } = await supabase.rpc('get_slot_remaining_capacity', { slot_uuid: timeSlotId });
     return data as number | null;
   }
 
+  /** @inheritdoc */
   async cleanupExpiredCartItems(): Promise<void> {
     await supabase.rpc('cleanup_expired_cart_items');
   }
 
+  /** @inheritdoc */
   async findCartItem(sessionId: string, passId: string, eventActivityId?: string, timeSlotId?: string): Promise<{ id: string; quantity: number } | null> {
     let query = supabase
       .from('cart_items')
@@ -53,6 +62,7 @@ export class SupabaseCartRepository implements CartRepository {
     return data as { id: string; quantity: number } | null;
   }
 
+  /** @inheritdoc */
   async updateCartItem(id: string, newQuantity: number): Promise<boolean> {
     const { error } = await supabase
       .from('cart_items')
@@ -64,6 +74,7 @@ export class SupabaseCartRepository implements CartRepository {
     return !error;
   }
 
+  /** @inheritdoc */
   async insertCartItem(sessionId: string, passId: string, eventActivityId?: string, timeSlotId?: string, quantity = 1): Promise<boolean> {
     const { error } = await supabase
       .from('cart_items')

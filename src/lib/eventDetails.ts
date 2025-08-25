@@ -10,6 +10,11 @@ import type {
   TimeSlotRow,
 } from './types';
 
+/**
+ * Récupère les informations d'un événement publié.
+ * @param eventId Identifiant de l'événement
+ * @returns L'événement demandé
+ */
 export async function fetchEvent(eventId: string): Promise<Event> {
   const { data, error } = await supabase
     .from('events')
@@ -22,6 +27,11 @@ export async function fetchEvent(eventId: string): Promise<Event> {
   return data as Event;
 }
 
+/**
+ * Récupère les passes d'un événement avec leur stock restant.
+ * @param eventId Identifiant de l'événement
+ * @returns Liste des passes
+ */
 export async function fetchPasses(eventId: string): Promise<Pass[]> {
   const { data, error } = await supabase
     .from('passes')
@@ -46,6 +56,11 @@ export async function fetchPasses(eventId: string): Promise<Pass[]> {
   return passesWithStock;
 }
 
+/**
+ * Récupère les activités d'un événement avec leur stock restant.
+ * @param eventId Identifiant de l'événement
+ * @returns Liste des activités
+ */
 export async function fetchEventActivities(eventId: string): Promise<EventActivity[]> {
   const { data, error } = await supabase
     .from('event_activities')
@@ -73,6 +88,11 @@ export async function fetchEventActivities(eventId: string): Promise<EventActivi
   return activitiesWithStock;
 }
 
+/**
+ * Récupère les créneaux horaires d'une activité.
+ * @param eventActivityId Identifiant de l'activité
+ * @returns Liste des créneaux
+ */
 export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[]> {
   const { data, error } = await supabase
     .from('time_slots')

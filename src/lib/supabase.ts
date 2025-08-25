@@ -9,15 +9,19 @@ export interface DatabaseClient {
   rpc: (fn: string, params?: any) => Promise<any>;
 }
 
-// Check if Supabase is properly configured
-export const isSupabaseConfigured = () => {
-  return !!supabaseUrl &&
-         !!supabaseAnonKey &&
-         supabaseUrl.includes('.supabase.co');
+/**
+ * Vérifie que les variables d'environnement Supabase sont définies.
+ * @returns `true` si la configuration est valide
+ */
+export const isSupabaseConfigured = (): boolean => {
+  return !!supabaseUrl && !!supabaseAnonKey && supabaseUrl.includes('.supabase.co');
 };
 
-// Helper to ensure Supabase configuration is present
-export const ensureSupabaseConfigured = () => {
+/**
+ * Lance une erreur si la configuration Supabase est absente.
+ * @throws {Error} Si les variables nécessaires ne sont pas définies
+ */
+export const ensureSupabaseConfigured = (): void => {
   if (!isSupabaseConfigured()) {
     throw new Error('Supabase configuration is missing. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY.');
   }
