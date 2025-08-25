@@ -1,0 +1,53 @@
+import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { renderHook, waitFor } from '@testing-library/react';
+import { useEventDetails } from '../useEventDetails';
+import {
+  fetchEvent,
+  fetchPasses,
+  fetchEventActivities,
+  fetchTimeSlots,
+} from '../../lib/eventDetails';
+
+vi.mock('../../lib/eventDetails', () => ({
+  fetchEvent: vi.fn(),
+  fetchPasses: vi.fn(),
+  fetchEventActivities: vi.fn(),
+  fetchTimeSlots: vi.fn(),
+}));
+
+vi.mock('../../lib/supabase', () => ({
+  isSupabaseConfigured: vi.fn(() => true),
+}));
+
+beforeEach(() => {
+  vi.clearAllMocks();
+});
+
+describe('useEventDetails', () => {
+  it('aggregates data from services', async () => {
+    (fetchEvent as any).mockResolvedValue({
+      id: '1',
+      name: 'Event',
+      event_date: '2024-01-01',
+      key_info_content: 'info',
+    });
+    (fetchPasses as any).mockResolvedValue([
+      { id: 'p1', name: 'Pass 1', price: 10, description: 'desc', initial_stock: 10, remaining_stock: 5 },
+    ]);
+    (fetchEventActivities as any).mockResolvedValue([]);
+
+    const { result } = renderHook(() => useEventDetails('1'));
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.event?.name).toBe('Event');
+    expect(result.current.passes).toHaveLength(1);
+  });
+
+  it('handles errors from services', async () => {
+    (fetchEvent as any).mockRejectedValue(new Error('fail'));
+    const { result } = renderHook(() => useEventDetails('1'));
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.error).toBeTruthy();
+  });
+});

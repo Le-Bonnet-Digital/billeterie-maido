@@ -1,191 +1,22 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
-import { supabase, isSupabaseConfigured } from '../lib/supabase';
+import { supabase } from '../lib/supabase';
 import { addToCart } from '../lib/cart';
 import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-
-interface Event {
-  id: string;
-  name: string;
-  event_date: string;
-  key_info_content: string;
-}
-
-interface Pass {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  initial_stock: number | null;
-  remaining_stock?: number;
-}
-
-interface Activity {
-  id: string;
-  name: string;
-  description: string;
-  icon: string;
-}
-
-interface EventActivity {
-  id: string;
-  activity_id: string;
-  stock_limit: number | null;
-  requires_time_slot: boolean;
-  remaining_stock?: number;
-  activity: Activity;
-}
-
-interface TimeSlot {
-  id: string;
-  event_activity_id: string;
-  slot_time: string;
-  capacity: number;
-  remaining_capacity?: number;
-  event_activity: EventActivity;
-}
+import useEventDetails, { Pass, EventActivity, TimeSlot } from '../hooks/useEventDetails';
+import { toast } from 'react-hot-toast';
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
-  const [event, setEvent] = useState<Event | null>(null);
-  const [passes, setPasses] = useState<Pass[]>([]);
-  const [eventActivities, setEventActivities] = useState<EventActivity[]>([]);
-  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
-  const [loading, setLoading] = useState(true);
+  const { event, passes, eventActivities, loading, loadTimeSlotsForActivity, refresh } = useEventDetails(eventId);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [selectedActivities, setSelectedActivities] = useState<{[key: string]: string}>({});
-
-  useEffect(() => {
-    if (eventId) {
-      loadEventData();
-    }
-  }, [eventId]);
-
-  const loadEventData = async () => {
-    // Check if Supabase is configured
-    if (!isSupabaseConfigured()) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      
-      // Charger l'événement
-      const { data: eventData, error: eventError } = await supabase
-        .from('events')
-        .select('id, name, event_date, key_info_content')
-        .eq('id', eventId)
-        .eq('status', 'published')
-        .single();
-
-      if (eventError) throw eventError;
-      setEvent(eventData);
-
-      // Charger les pass
-      const { data: passesData, error: passesError } = await supabase
-        .from('passes')
-        .select('id, name, price, description, initial_stock')
-        .eq('event_id', eventId);
-
-      if (passesError) throw passesError;
-      
-      // Calculer le stock restant pour chaque pass
-      const passesWithStock = await Promise.all(
-        (passesData || []).map(async (pass) => {
-          if (pass.initial_stock === null) {
-            return { ...pass, remaining_stock: 999999 }; // Stock illimité
-          }
-          
-          const { data: stockData } = await supabase
-            .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
-          
-          return { ...pass, remaining_stock: stockData || 0 };
-        })
-      );
-      
-      setPasses(passesWithStock);
-
-      // Charger les activités disponibles pour cet événement
-      const { data: eventActivitiesData, error: activitiesError } = await supabase
-        .from('event_activities')
-        .select(`
-          *,
-          activities (*)
-        `)
-        .eq('event_id', eventId);
-
-      if (activitiesError) throw activitiesError;
-      
-      // Calculer le stock restant pour chaque activité
-      const activitiesWithStock = await Promise.all(
-        (eventActivitiesData || []).map(async (eventActivity) => {
-          const { data: stockData } = await supabase
-            .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivity.id });
-          
-          return { 
-            ...eventActivity, 
-            activity: eventActivity.activities,
-            remaining_stock: stockData || 0 
-          };
-        })
-      );
-      
-      setEventActivities(activitiesWithStock);
-    } catch (err) {
-      console.error('Erreur chargement événement:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const loadTimeSlotsForActivity = async (eventActivityId: string): Promise<TimeSlot[]> => {
-    try {
-      const { data: slotsData, error: slotsError } = await supabase
-        .from('time_slots')
-        .select(`
-          id,
-          slot_time,
-          capacity,
-          event_activities!inner (
-            *,
-            activities (*)
-          )
-        `)
-        .eq('event_activity_id', eventActivityId)
-        .gte('slot_time', new Date().toISOString())
-        .order('slot_time');
-
-      if (slotsError) throw slotsError;
-      
-      // Calculer la capacité restante pour chaque créneau
-      const slotsWithCapacity = await Promise.all(
-        (slotsData || []).map(async (slot) => {
-          const { data: capacityData } = await supabase
-            .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
-          
-          return {
-            ...slot,
-            remaining_capacity: capacityData || 0,
-            event_activity: { 
-              ...slot.event_activities, 
-              activity: slot.event_activities.activities 
-            }
-          };
-        })
-      );
-      
-      return slotsWithCapacity;
-    } catch (err) {
-      console.error('Erreur chargement créneaux pour l\'activité:', err);
-      return [];
-    }
-  };
+  const [selectedTimeSlots, setSelectedTimeSlots] = useState<{[key: string]: string}>({});
 
   const handleAddToCart = (pass: Pass) => {
     setSelectedPass(pass);
@@ -210,7 +41,7 @@ export default function EventDetails() {
     
     setShowPurchaseModal(false);
     setSelectedPass(null);
-    loadEventData(); // Recharger pour mettre à jour les stocks
+    await refresh(); // Recharger pour mettre à jour les stocks
   };
 
   const handleActivitySelection = async (index: number, eventActivityId: string) => {
@@ -219,8 +50,7 @@ export default function EventDetails() {
     // Charger les créneaux pour cette activité si nécessaire
     const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
     if (eventActivity?.requires_time_slot) {
-      const slots = await loadTimeSlotsForActivity(eventActivityId);
-      setTimeSlots(slots);
+      await loadTimeSlotsForActivity(eventActivityId);
     }
   };
 
