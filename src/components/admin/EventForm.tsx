@@ -88,23 +88,36 @@ export default function EventForm({ event, onClose }: EventFormProps) {
     };
 
     try {
-      let error;
+      debugLog('Submitting eventData:', eventData);
+      console.log('Submitting eventData:', eventData);
+      debugLog('event.id:', event?.id);
+      console.log('event.id:', event?.id);
+
       if (event) {
         // Update existing event
-        const { error: updateError } = await supabase
+        const { data, error } = await supabase
           .from('events')
           .update(eventData)
-          .eq('id', event.id);
-        error = updateError;
+          .eq('id', event.id)
+          .select()
+          .single();
+
+        debugLog('Supabase update data:', data);
+        console.log('Supabase update data:', data);
+        debugLog('Supabase update error:', error);
+        console.log('Supabase update error:', error);
+
+        if (error || !data) {
+          const errorMessage = error?.message || 'événement introuvable';
+          throw new Error(errorMessage);
+        }
       } else {
         // Create new event
         const { error: insertError } = await supabase
           .from('events')
           .insert(eventData);
-        error = insertError;
+        if (insertError) throw insertError;
       }
-
-      if (error) throw error;
 
       toast.success(`Événement ${event ? 'mis à jour' : 'créé'} avec succès`);
       onClose();
