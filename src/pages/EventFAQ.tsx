@@ -2,16 +2,18 @@ import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
+import FAQAccordion, { FAQItem } from '../components/FAQAccordion';
 
 interface Event {
   id: string;
   name: string;
-  faq_content: string;
+  faq_content: string | null;
 }
 
 export default function EventFAQ() {
   const { eventId } = useParams<{ eventId: string }>();
   const [event, setEvent] = useState<Event | null>(null);
+  const [faqs, setFaqs] = useState<FAQItem[]>([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -23,7 +25,7 @@ export default function EventFAQ() {
   const loadEventFAQ = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('events')
         .select('id, name, faq_content')
@@ -33,6 +35,16 @@ export default function EventFAQ() {
 
       if (error) throw error;
       setEvent(data);
+      if (data?.faq_content) {
+        try {
+          setFaqs(parseFAQContent(data.faq_content));
+        } catch (parseErr) {
+          console.error('Erreur parsing FAQ:', parseErr);
+          setFaqs([]);
+        }
+      } else {
+        setFaqs([]);
+      }
     } catch (err) {
       console.error('Erreur chargement FAQ:', err);
     } finally {
@@ -40,15 +52,53 @@ export default function EventFAQ() {
     }
   };
 
-  const formatFAQContent = (content: string) => {
-    return content
-      .replace(/### (.*?)$/gm, '<h3 class="text-xl font-bold text-gray-900 mb-4 mt-8">$1</h3>')
-      .replace(/\*\*(.*?)\*\*/g, '<strong class="font-semibold text-gray-900">$1</strong>')
-      .replace(/\*(.*?)\*/g, '<em class="italic">$1</em>')
-      .replace(/^Q\s*:\s*"?(.*?)"?$/gm, '<div class="bg-blue-50 p-4 rounded-lg mb-4"><h4 class="font-semibold text-blue-900 mb-2"><strong>Q :</strong> $1</h4>')
-      .replace(/^R\s*:\s*"?(.*?)"?$/gm, '<p class="text-blue-800"><strong>R :</strong> $1</p></div>')
-      .replace(/\n\n/g, '</p><p class="mb-4">')
-      .replace(/^(?!<|Q\s*:|R\s*:)(.+)$/gm, '<p class="mb-4">$1</p>');
+  const parseFAQContent = (content: string): FAQItem[] => {
+    try {
+      const parsed = JSON.parse(content);
+      if (Array.isArray(parsed)) {
+        return parsed as FAQItem[];
+      }
+    } catch {
+      // ignore and fallback
+    }
+
+    const lines = content.split('\n');
+    const items: FAQItem[] = [];
+    let currentQuestion = '';
+    let currentAnswer: string[] = [];
+
+    const flush = () => {
+      if (currentQuestion) {
+        items.push({
+          question: currentQuestion.trim(),
+          answer: currentAnswer.join('\n').trim()
+        });
+      }
+      currentQuestion = '';
+      currentAnswer = [];
+    };
+
+    for (const line of lines) {
+      const qMatch = line.match(/^Q\s*:\s*"?(.*?)"?$/);
+      if (qMatch) {
+        flush();
+        currentQuestion = qMatch[1];
+        continue;
+      }
+
+      const aMatch = line.match(/^R\s*:\s*"?(.*?)"?$/);
+      if (aMatch) {
+        currentAnswer.push(aMatch[1]);
+        continue;
+      }
+
+      if (currentAnswer.length > 0) {
+        currentAnswer.push(line);
+      }
+    }
+
+    flush();
+    return items;
   };
 
   if (loading) {
@@ -98,12 +148,7 @@ export default function EventFAQ() {
 
       {/* FAQ Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
-        <div 
-          className="prose prose-blue max-w-none"
-          dangerouslySetInnerHTML={{ 
-            __html: formatFAQContent(event.faq_content) 
-          }}
-        />
+        <FAQAccordion faqs={faqs} />
       </div>
 
       {/* Contact Section */}
