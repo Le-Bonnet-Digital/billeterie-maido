@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
 import { debugLog } from '../../lib/logger';
+import MarkdownEditor from './MarkdownEditor';
 
 interface Event {
   id: string;
@@ -200,18 +201,33 @@ export default function EventForm({ event, onClose }: EventFormProps) {
           </div>
 
           <div>
-            <label htmlFor="key_info_content" className="block text-sm font-medium text-gray-700 mb-1">Informations clés</label>
-            <textarea name="key_info_content" id="key_info_content" value={formData.key_info_content} onChange={handleChange} rows={4} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+            <MarkdownEditor
+              id="key_info_content"
+              label="Informations clés"
+              value={formData.key_info_content}
+              onChange={(value) => setFormData(prev => ({ ...prev, key_info_content: value }))}
+              rows={4}
+            />
           </div>
 
           <div>
-            <label htmlFor="cgv_content" className="block text-sm font-medium text-gray-700 mb-1">Conditions Générales de Vente (CGV)</label>
-            <textarea name="cgv_content" id="cgv_content" value={formData.cgv_content} onChange={handleChange} rows={6} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+            <MarkdownEditor
+              id="cgv_content"
+              label="Conditions Générales de Vente (CGV)"
+              value={formData.cgv_content}
+              onChange={(value) => setFormData(prev => ({ ...prev, cgv_content: value }))}
+              rows={6}
+            />
           </div>
 
           <div>
-            <label htmlFor="faq_content" className="block text-sm font-medium text-gray-700 mb-1">Foire Aux Questions (FAQ)</label>
-            <textarea name="faq_content" id="faq_content" value={formData.faq_content} onChange={handleChange} rows={6} className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"></textarea>
+            <MarkdownEditor
+              id="faq_content"
+              label="Foire Aux Questions (FAQ)"
+              value={formData.faq_content}
+              onChange={(value) => setFormData(prev => ({ ...prev, faq_content: value }))}
+              rows={6}
+            />
           </div>
 
           <div className="flex justify-end items-center p-6 bg-gray-50 border-t border-gray-200">
