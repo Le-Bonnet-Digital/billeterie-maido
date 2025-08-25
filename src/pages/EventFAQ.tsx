@@ -7,7 +7,7 @@ import MarkdownRenderer from '../components/MarkdownRenderer';
 interface Event {
   id: string;
   name: string;
-  faq_content: string;
+  faq_content: string | null;
 }
 
 export default function EventFAQ() {
@@ -24,7 +24,7 @@ export default function EventFAQ() {
   const loadEventFAQ = async () => {
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('events')
         .select('id, name, faq_content')
@@ -89,7 +89,7 @@ export default function EventFAQ() {
       {/* FAQ Content */}
       <div className="bg-white rounded-lg shadow-sm p-8">
         <MarkdownRenderer
-          content={event.faq_content}
+          content={event.faq_content || ''}
           className="prose prose-blue max-w-none"
         />
       </div>

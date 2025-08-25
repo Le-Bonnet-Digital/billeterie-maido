@@ -15,7 +15,7 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
 
   try {
     return (
-      <div className={className}>
+      <div className={className || 'prose max-w-none'}>
         <ReactMarkdown remarkPlugins={[remarkGfm]} rehypePlugins={[rehypeSanitize]}>
           {content}
         </ReactMarkdown>
