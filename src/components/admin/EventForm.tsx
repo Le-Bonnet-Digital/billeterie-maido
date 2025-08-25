@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { X } from 'lucide-react';
-import { debugLog } from '../../lib/logger';
+import { logger, debugLog } from '../../lib/logger';
 import MarkdownEditor from './MarkdownEditor';
 import FAQEditor, { FAQFormItem } from './FAQEditor';
 import type { FAQItem } from '../FAQAccordion';
@@ -161,7 +161,7 @@ export default function EventForm({ event, onClose }: EventFormProps) {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : JSON.stringify(err);
       debugLog('Erreur sauvegarde événement:', err);
-      console.error('Erreur sauvegarde événement:', err);
+      logger.error('Erreur sauvegarde événement', { error: err });
       toast.error(`Erreur lors de la sauvegarde de l'événement: ${message}`);
     } finally {
       setLoading(false);

@@ -3,6 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, FileText } from 'lucide-react';
 import MarkdownRenderer from '../components/MarkdownRenderer';
+import { logger } from '../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface Event {
   id: string;
@@ -35,7 +37,8 @@ export default function EventCGV() {
       if (error) throw error;
       setEvent(data);
     } catch (err) {
-      console.error('Erreur chargement CGV:', err);
+      logger.error('Erreur chargement CGV', { error: err });
+      toast.error('Erreur lors du chargement des CGV');
     } finally {
       setLoading(false);
     }

@@ -2,6 +2,8 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import rehypeSanitize from 'rehype-sanitize';
+import { logger } from '../lib/logger';
+import { toast } from 'react-hot-toast';
 
 interface MarkdownRendererProps {
   content?: string;
@@ -22,7 +24,8 @@ export default function MarkdownRenderer({ content, className }: MarkdownRendere
       </div>
     );
   } catch (error) {
-    console.error('Erreur de rendu Markdown:', error);
+    logger.error('Erreur de rendu Markdown', { error });
+    toast.error("Erreur lors de l'affichage du contenu.");
     return <p className={className}>Erreur lors de l'affichage du contenu.</p>;
   }
 }

@@ -5,6 +5,7 @@ import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import TimeSlotsManager from './TimeSlotsManager';
+import { logger } from '../../lib/logger';
 
 interface Activity {
   id: string;
@@ -95,7 +96,7 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
       if (activitiesError) throw activitiesError;
       setAvailableActivities(activitiesData || []);
     } catch (err) {
-      console.error('Erreur chargement données:', err);
+      logger.error('Erreur chargement données', { error: err });
       toast.error('Erreur lors du chargement');
     } finally {
       setLoading(false);
@@ -116,7 +117,7 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
       toast.success('Activité retirée de l\'événement');
       loadData();
     } catch (err) {
-      console.error('Erreur suppression activité:', err);
+      logger.error('Erreur suppression activité', { error: err });
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -321,7 +322,7 @@ function AddActivityModal({ event, availableActivities, existingActivityIds, onC
       toast.success('Activité ajoutée à l\'événement');
       onSave();
     } catch (err) {
-      console.error('Erreur ajout activité:', err);
+      logger.error('Erreur ajout activité', { error: err });
       toast.error('Erreur lors de l\'ajout');
     } finally {
       setSaving(false);

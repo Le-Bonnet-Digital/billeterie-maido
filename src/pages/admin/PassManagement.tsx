@@ -5,6 +5,7 @@ import { toast } from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
+import { logger } from '../../lib/logger';
 
 interface Pass {
   id: string;
@@ -53,7 +54,7 @@ export default function PassManagement() {
       
       // Check if Supabase is properly configured
       if (!isSupabaseConfigured()) {
-        console.error('Supabase is not configured');
+        logger.error('Supabase is not configured');
         toast.error('Configuration Supabase manquante. Veuillez configurer la base de données.');
         setLoading(false);
         return;
@@ -161,7 +162,7 @@ export default function PassManagement() {
       if (eventsError) throw eventsError;
       setEvents(eventsData || []);
     } catch (err) {
-      console.error('Erreur chargement pass:', err);
+      logger.error('Erreur chargement pass', { error: err });
       toast.error('Erreur lors du chargement des pass');
     } finally {
       setLoading(false);
@@ -194,7 +195,7 @@ export default function PassManagement() {
       console.log('Réponse Supabase:', { data, error, count });
       
       if (error) {
-        console.error('Erreur Supabase lors de la suppression:', error);
+        logger.error('Erreur Supabase lors de la suppression', { error });
         throw error;
       }
       
@@ -209,7 +210,7 @@ export default function PassManagement() {
       toast.success('Pass supprimé avec succès');
       await loadData();
     } catch (err) {
-      console.error('Erreur suppression pass:', err);
+      logger.error('Erreur suppression pass', { error: err });
       toast.error(`Erreur lors de la suppression: ${getErrorMessage(err) || 'Erreur inconnue'}`);
     }
   };
@@ -457,7 +458,8 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
       });
       setActivityStocks(stocksMap);
     } catch (err) {
-      console.error('Erreur chargement activités:', err);
+      logger.error('Erreur chargement activités', { error: err });
+      toast.error('Erreur lors du chargement des activités');
     }
   };
 
@@ -533,7 +535,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
       
       onSave();
     } catch (err) {
-      console.error('Erreur sauvegarde pass:', err);
+      logger.error('Erreur sauvegarde pass', { error: err });
       toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);
