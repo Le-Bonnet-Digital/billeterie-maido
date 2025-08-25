@@ -193,7 +193,7 @@ function AnimationsManagementModal({ event, onClose }: AnimationsManagementModal
                         onClick={() => toggleAnimationStatus(animation)}
                         className={`p-2 rounded-md transition-colors ${
                           animation.is_active 
-                            ? 'text-orange-600 hover:text-orange-700 hover:bg-orange-50' 
+                            ? 'text-red-600 hover:text-red-700 hover:bg-red-50' 
                             : 'text-green-600 hover:text-green-700 hover:bg-green-50'
                         }`}
                         title={animation.is_active ? 'Désactiver' : 'Activer'}
