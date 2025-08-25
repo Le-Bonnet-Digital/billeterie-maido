@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Euro, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from '../../lib/errors';
 
 interface Pass {
   id: string;
@@ -207,7 +208,7 @@ export default function PassManagement() {
       await loadData();
     } catch (err) {
       console.error('Erreur suppression pass:', err);
-      toast.error(`Erreur lors de la suppression: ${err.message || 'Erreur inconnue'}`);
+      toast.error(`Erreur lors de la suppression: ${getErrorMessage(err) || 'Erreur inconnue'}`);
     }
   };
 

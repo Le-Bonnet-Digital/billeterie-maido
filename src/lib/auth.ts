@@ -1,5 +1,6 @@
 import { supabase } from './supabase';
 import { toast } from 'react-hot-toast';
+import { getErrorMessage } from './errors';
 
 export interface User {
   id: string;
@@ -52,7 +53,7 @@ export const signInWithEmail = async (email: string, password: string): Promise<
     return null;
   } catch (err) {
     console.error('Erreur connexion:', err);
-    toast.error(err.message || 'Erreur lors de la connexion');
+    toast.error(getErrorMessage(err) || 'Erreur lors de la connexion');
     return null;
   }
 };
