@@ -4,6 +4,7 @@ import { Activity, Plus, Edit, Trash2, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
+import { logger } from '../../lib/logger';
 
 interface ActivityType {
   id: string;
@@ -34,7 +35,7 @@ export default function ActivityManagement() {
       if (error) throw error;
       setActivities(data || []);
     } catch (err) {
-      console.error('Erreur chargement activités:', err);
+      logger.error('Erreur chargement activités', { error: err });
       toast.error('Erreur lors du chargement des activités');
     } finally {
       setLoading(false);
@@ -55,7 +56,7 @@ export default function ActivityManagement() {
       toast.success('Activité supprimée avec succès');
       loadActivities();
     } catch (err) {
-      console.error('Erreur suppression activité:', err);
+      logger.error('Erreur suppression activité', { error: err });
       toast.error('Erreur lors de la suppression');
     }
   };
@@ -227,7 +228,7 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
       
       onSave();
     } catch (err) {
-      console.error('Erreur sauvegarde activité:', err);
+      logger.error('Erreur sauvegarde activité', { error: err });
       toast.error('Erreur lors de la sauvegarde');
     } finally {
       setSaving(false);

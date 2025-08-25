@@ -3,6 +3,7 @@ import { Search, Mail, Shield, CheckCircle } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { sendReservationEmail } from '../lib/sendReservationEmail';
 import { toast } from 'react-hot-toast';
+import { logger } from '../lib/logger';
 
 export default function FindTicket() {
   const [email, setEmail] = useState('');
@@ -47,7 +48,7 @@ export default function FindTicket() {
         toast.error('Aucune réservation trouvée pour cette adresse e-mail');
       }
     } catch (err) {
-      console.error('Erreur recherche billet:', err);
+      logger.error('Erreur recherche billet', { error: err });
       toast.error('Une erreur est survenue lors de la recherche');
     } finally {
       setLoading(false);

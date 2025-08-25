@@ -1,15 +1,14 @@
 import React, { useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
-import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-react';
+import { Calendar, Info, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarkdownRenderer from '../components/MarkdownRenderer';
 import { useEvent, TimeSlot } from '../hooks/useEvent';
 import { fetchTimeSlotsForActivity } from '../services/eventService';
-import type { Pass, EventActivity, Event } from '../services/eventService';
+import type { Pass, EventActivity } from '../services/eventService';
 import { toast } from 'react-hot-toast';
-
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
@@ -18,8 +17,7 @@ export default function EventDetails() {
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
-  const [selectedActivities, setSelectedActivities] = useState<{[key: string]: string}>({});
-
+  const [selectedActivities, setSelectedActivities] = useState<{ [key: string]: string }>({});
 
   const handleAddToCart = (pass: Pass) => {
     setSelectedPass(pass);
@@ -28,27 +26,26 @@ export default function EventDetails() {
     setShowPurchaseModal(true);
   };
 
+  const handlePurchase = async () => {
+    if (!selectedPass) return;
 
-    const handlePurchase = async () => {
-      if (!selectedPass) return;
-
-      for (let i = 0; i < selectedQuantity; i++) {
-        const eventActivityId = selectedActivities[i];
-        const success = await addToCart(selectedPass.id, eventActivityId);
-        if (!success) {
-          toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
-          return;
-        }
+    for (let i = 0; i < selectedQuantity; i++) {
+      const eventActivityId = selectedActivities[i];
+      const success = await addToCart(selectedPass.id, eventActivityId);
+      if (!success) {
+        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
+        return;
       }
+    }
 
-      setShowPurchaseModal(false);
-      setSelectedPass(null);
-      reload();
-    };
+    setShowPurchaseModal(false);
+    setSelectedPass(null);
+    reload();
+  };
+
   const handleActivitySelection = async (index: number, eventActivityId: string) => {
     setSelectedActivities({ ...selectedActivities, [index]: eventActivityId });
-    
-    // Charger les créneaux pour cette activité si nécessaire
+
     const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
     if (eventActivity?.requires_time_slot) {
       const slots = await fetchTimeSlotsForActivity(eventActivityId);
@@ -89,10 +86,9 @@ export default function EventDetails() {
             {format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
           </span>
         </div>
-        
+
         <h1 className="text-3xl font-bold text-gray-900 mb-6">{event.name}</h1>
-        
-        {/* Informations Clés */}
+
         <div className="bg-blue-50 rounded-lg p-6">
           <div className="flex items-start gap-3">
             <Info className="h-6 w-6 text-blue-600 mt-0.5" />
@@ -107,7 +103,7 @@ export default function EventDetails() {
       {/* Passes Section */}
       <div className="bg-white rounded-lg shadow-sm p-8">
         <h2 className="text-2xl font-bold text-gray-900 mb-6">Nos Pass</h2>
-        
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {passes.map((pass) => (
             <div key={pass.id} className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors">
@@ -116,18 +112,17 @@ export default function EventDetails() {
                 <div className="text-right">
                   <div className="text-2xl font-bold text-blue-600">{pass.price}€</div>
                   <div className="text-sm text-gray-500">
-                    {pass.initial_stock === null 
-                    ? 'Stock illimité'
-                    : pass.remaining_stock === 0
-                    ? 'Épuisé'
-                    : `${pass.remaining_stock} restant(s)`
-                  }
+                    {pass.initial_stock === null
+                      ? 'Stock illimité'
+                      : pass.remaining_stock === 0
+                      ? 'Épuisé'
+                      : `${pass.remaining_stock} restant(s)`}
                   </div>
                 </div>
               </div>
-              
+
               <p className="text-gray-600 mb-6">{pass.description}</p>
-              
+
               <button
                 onClick={() => handleAddToCart(pass)}
                 disabled={pass.remaining_stock === 0}
@@ -165,99 +160,22 @@ interface PurchaseModalProps {
   eventActivities: EventActivity[];
   quantity: number;
   onQuantityChange: (quantity: number) => void;
-  selectedActivities: {[key: string]: string};
-  selectedTimeSlots?: {[key: string]: string};
+  selectedActivities: { [key: string]: string };
   onActivitySelection: (index: number, eventActivityId: string) => void;
-  onTimeSlotSelection?: (index: number, eventActivityId: string, timeSlotId: string) => void;
   onPurchase: () => void;
   onClose: () => void;
 }
 
-function PurchaseModal({ 
-  pass, 
-  eventActivities, 
-  quantity, 
-  onQuantityChange, 
-  selectedActivities, 
-  selectedTimeSlots = {},
-  onActivitySelection, 
-  onTimeSlotSelection,
-  onPurchase, 
-  onClose 
+function PurchaseModal({
+  pass,
+  eventActivities,
+  quantity,
+  onQuantityChange,
+  selectedActivities,
+  onActivitySelection,
+  onPurchase,
+  onClose
 }: PurchaseModalProps) {
-  const [availableTimeSlots, setAvailableTimeSlots] = useState<{[key: string]: TimeSlot[]}>({});
-  const [selectedSlots, setSelectedSlots] = useState<{[key: string]: string}>({});
-  
-  
-  const loadTimeSlots = async (eventActivityId: string) => {
-    try {
-      const slots = await fetchTimeSlotsForActivity(eventActivityId);
-      setAvailableTimeSlots(prev => ({
-        ...prev,
-        [eventActivityId]: slots,
-      }));
-    } catch (err) {
-      console.error('Erreur chargement créneaux:', err);
-    }
-  };
-  const handleActivitySelectionWithSlots = async (index: number, eventActivityId: string) => {
-    onActivitySelection(index, eventActivityId);
-    
-    // Charger les créneaux pour cette activité d'événement
-    const eventActivity = eventActivities.find(ea => ea.id === eventActivityId);
-    if (eventActivity?.requires_time_slot) {
-      await loadTimeSlots(eventActivityId);
-    }
-  };
-
-  const handleTimeSlotSelection = (index: number, eventActivityId: string, timeSlotId: string) => {
-    setSelectedSlots(prev => ({
-      ...prev,
-      [`${index}-${eventActivityId}`]: timeSlotId
-    }));
-    
-    if (onTimeSlotSelection) {
-      onTimeSlotSelection(index, eventActivityId, timeSlotId);
-    }
-  };
-
-  const getCapacityColor = (remaining: number, total: number) => {
-    const percentage = (remaining / total) * 100;
-    if (percentage === 0) return 'border-red-300 bg-red-50 text-red-700 cursor-not-allowed';
-    if (percentage <= 25) return 'border-orange-300 bg-orange-50 text-orange-700 hover:bg-orange-100';
-    if (percentage <= 50) return 'border-yellow-300 bg-yellow-50 text-yellow-700 hover:bg-yellow-100';
-    return 'border-green-300 bg-green-50 text-green-700 hover:bg-green-100';
-  };
-
-  const canPurchase = () => {
-    // Vérifier que toutes les activités sont sélectionnées
-    for (let i = 0; i < quantity; i++) {
-      if (!selectedActivities[i]) return false;
-      
-      // Vérifier que les créneaux sont sélectionnés si nécessaire
-      const eventActivity = eventActivities.find(ea => ea.id === selectedActivities[i]);
-      if (eventActivity?.requires_time_slot && !selectedSlots[`${i}-${selectedActivities[i]}`]) {
-        return false;
-      }
-    }
-    return true;
-  };
-
-  const handlePurchaseWithSlots = async () => {
-    // Ajouter chaque pass individuellement au panier avec son créneau
-    for (let i = 0; i < quantity; i++) {
-      const eventActivityId = selectedActivities[i];
-      const timeSlotId = selectedSlots[`${i}-${eventActivityId}`];
-      
-      const success = await addToCart(pass.id, eventActivityId, timeSlotId);
-      if (!success) {
-        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
-        return;
-      }
-    }
-    
-    onPurchase();
-  };
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
@@ -271,13 +189,11 @@ function PurchaseModal({
             </button>
           </div>
         </div>
-        
+
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {/* Sélection de quantité */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Quantité
-            </label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Quantité</label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
@@ -294,7 +210,7 @@ function PurchaseModal({
               </button>
             </div>
           </div>
-          
+
           {/* Sélection d'activités pour chaque pass */}
           <div className="space-y-4">
             {Array.from({ length: quantity }, (_, index) => (
@@ -302,7 +218,7 @@ function PurchaseModal({
                 <h4 className="font-medium text-gray-900 mb-3">
                   Pass #{index + 1} - Choisissez une activité
                 </h4>
-                
+
                 <div className="grid grid-cols-1 gap-3">
                   {eventActivities.map((eventActivity) => (
                     <div
@@ -314,7 +230,7 @@ function PurchaseModal({
                       }`}
                     >
                       <button
-                        onClick={() => handleActivitySelectionWithSlots(index, eventActivity.id)}
+                        onClick={() => onActivitySelection(index, eventActivity.id)}
                         className="w-full p-3 text-left"
                       >
                         <div className="flex items-center justify-between">
@@ -326,45 +242,12 @@ function PurchaseModal({
                             </div>
                           </div>
                           <div className="text-sm text-gray-500">
-                            {eventActivity.stock_limit === null 
-                              ? 'Illimité' 
-                              : `${eventActivity.remaining_stock} restant(s)`
-                            }
+                            {eventActivity.stock_limit === null
+                              ? 'Illimité'
+                              : `${eventActivity.remaining_stock} restant(s)`}
                           </div>
                         </div>
                       </button>
-                      
-                      {/* Sélection de créneaux si nécessaire */}
-                      {selectedActivities[index] === eventActivity.id && eventActivity.requires_time_slot && (
-                        <div className="border-t border-gray-200 p-3">
-                          <div className="text-sm font-medium text-gray-700 mb-2">
-                            Choisissez un créneau :
-                          </div>
-                          <div className="grid grid-cols-2 gap-2 max-h-32 overflow-y-auto">
-                            {availableTimeSlots[eventActivity.id]?.map((slot) => (
-                              <button
-                                key={slot.id}
-                                onClick={() => handleTimeSlotSelection(index, eventActivity.id, slot.id)}
-                                disabled={slot.remaining_capacity === 0}
-                                className={`p-2 text-xs border rounded transition-colors ${
-                                  selectedSlots[`${index}-${eventActivity.id}`] === slot.id
-                                    ? 'border-blue-500 bg-blue-100 text-blue-700'
-                                    : slot.remaining_capacity === 0
-                                    ? 'border-red-200 bg-red-50 text-red-400 cursor-not-allowed'
-                                    : 'border-gray-200 hover:border-gray-300'
-                                }`}
-                              >
-                                <div className="font-medium">
-                                  {format(new Date(slot.slot_time), 'HH:mm')}
-                                </div>
-                                <div className="text-gray-600">
-                                  {slot.remaining_capacity}/{slot.capacity}
-                                </div>
-                              </button>
-                            ))}
-                          </div>
-                        </div>
-                      )}
                     </div>
                   ))}
                 </div>
@@ -372,14 +255,12 @@ function PurchaseModal({
             ))}
           </div>
         </div>
-        
+
         <div className="p-6 border-t border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">
-              Total: {(pass.price * quantity).toFixed(2)}€
-            </div>
+            <div className="text-lg font-semibold">Total: {(pass.price * quantity).toFixed(2)}€</div>
           </div>
-          
+
           <div className="flex gap-3">
             <button
               onClick={onClose}
@@ -389,7 +270,7 @@ function PurchaseModal({
             </button>
             <button
               onClick={onPurchase}
-              disabled={!canPurchase()}
+              disabled={quantity === 0 || Object.keys(selectedActivities).length < quantity}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
             >
               Ajouter au Panier

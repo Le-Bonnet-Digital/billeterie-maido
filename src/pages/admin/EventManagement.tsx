@@ -8,7 +8,7 @@ import EventForm from '../../components/admin/EventForm';
 import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
-import { debugLog } from '../../lib/logger';
+import { logger, debugLog } from '../../lib/logger';
 import type { FAQItem } from '../../components/FAQAccordion';
 
 interface Event {
@@ -77,7 +77,7 @@ export default function EventManagement() {
       debugLog('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
       setEvents(eventsWithFaqs);
     } catch (err) {
-      console.error('Erreur chargement événements:', err);
+      logger.error('Erreur chargement événements', { error: err });
       toast.error('Erreur lors du chargement des événements');
     } finally {
       setLoading(false);
@@ -98,7 +98,7 @@ export default function EventManagement() {
       toast.success('Événement supprimé avec succès');
       loadEvents();
     } catch (err) {
-      console.error('Erreur suppression événement:', err);
+      logger.error('Erreur suppression événement', { error: err });
       toast.error('Erreur lors de la suppression');
     }
   };
