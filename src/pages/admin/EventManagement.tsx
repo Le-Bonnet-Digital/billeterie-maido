@@ -533,6 +533,41 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     }
   };
 
+  // Fonction pour recharger spécifiquement une activité d'événement
+  const reloadEventActivity = async (eventActivityId: string) => {
+    try {
+      const { data: eventActivityData, error } = await supabase
+        .from('event_activities')
+        .select(`
+          *,
+          activities (*),
+          time_slots (
+            id,
+            slot_time,
+            capacity
+          )
+        `)
+        .eq('id', eventActivityId)
+        .single();
+
+      if (error) throw error;
+
+      const updatedEventActivity = {
+        ...eventActivityData,
+        activity: eventActivityData.activities,
+        time_slots: eventActivityData.time_slots || []
+      };
+
+      // Mettre à jour l'état local
+      setEventActivities(prev => 
+        prev.map(ea => 
+          ea.id === eventActivityId ? updatedEventActivity : ea
+        )
+      );
+    } catch (err) {
+      console.error('Erreur rechargement activité:', err);
+    }
+  };
   const handleToggleActivity = async (activity: Activity) => {
     const existingEventActivity = eventActivities.find(ea => ea.activity_id === activity.id);
     
@@ -601,7 +636,9 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
     } else {
       toast.success('Activité mise à jour');
     }
-    loadData();
+    
+    // Recharger spécifiquement cette activité pour récupérer le stock mis à jour
+    await reloadEventActivity(eventActivity.id);
   };
 
   const handleFormChange = (activityId: string, field: keyof ActivityFormData, value: string | boolean) => {
@@ -674,7 +711,7 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                         <TimeSlotsButton
                           eventActivity={eventActivity}
                           event={event}
-                          onUpdate={loadData}
+                          onUpdate={() => reloadEventActivity(eventActivity.id)}
                         />
                       )}
                     </div>
@@ -684,7 +721,7 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t border-gray-200">
                       <div className={formData.requires_time_slot ? 'opacity-50' : ''}>
                         <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Stock limite {formData.requires_time_slot ? '(calculé automatiquement)' : ''}
+                          Stock limite {formData.requires_time_slot ? `(calculé automatiquement: ${eventActivity.stock_limit || 0})` : ''}
                         </label>
                         <input
                           type="number"
@@ -692,13 +729,13 @@ function EventActivitiesModal({ event, onClose }: EventActivitiesModalProps) {
                           value={formData.stock_limit}
                           onChange={(e) => handleFormChange(activity.id, 'stock_limit', e.target.value)}
                           onBlur={() => handleUpdateEventActivity(activity.id)}
-                          placeholder={formData.requires_time_slot ? "Auto" : "Illimité"}
+                          placeholder={formData.requires_time_slot ? `Auto (${eventActivity.stock_limit || 0})` : "Illimité"}
                           disabled={formData.requires_time_slot}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                         />
                         {formData.requires_time_slot && (
                           <p className="text-xs text-blue-600 mt-1">
-                            Le stock est calculé automatiquement selon la capacité totale des créneaux
+                            Le stock est calculé automatiquement selon la capacité totale des créneaux ({eventActivity.stock_limit || 0} places)
                           </p>
                         )}
                       </div>
@@ -814,6 +851,11 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       const capacity = slotsWithCapacity.reduce((sum, s) => sum + s.remaining_capacity, 0);
       setStats({ total, available, capacity });
       setTimeSlotsCount(total);
+      
+      // Déclencher la mise à jour du parent après modification des créneaux
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (err) {
       console.error('Erreur chargement créneaux:', err);
       toast.error('Erreur lors du chargement des créneaux');
@@ -878,6 +920,13 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       toast.success(`${slots.length} créneaux créés avec succès`);
       await loadTimeSlots();
       await loadTimeSlotsCount();
+      
+      // Attendre un peu pour que les triggers SQL se terminent
+      setTimeout(() => {
+        if (onUpdate) {
+          onUpdate();
+        }
+      }, 500);
     } catch (err) {
       console.error('Erreur création template:', err);
       toast.error('Erreur lors de la création des créneaux');
@@ -926,6 +975,13 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       await loadTimeSlots();
       await loadTimeSlotsCount();
       setShowCustomForm(false);
+      
+      // Attendre un peu pour que les triggers SQL se terminent
+      setTimeout(() => {
+        if (onUpdate) {
+          onUpdate();
+        }
+      }, 500);
     } catch (err) {
       console.error('Erreur création personnalisée:', err);
       toast.error('Erreur lors de la création des créneaux');
@@ -948,6 +1004,11 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       toast.success('Créneau supprimé');
       await loadTimeSlots();
       await loadTimeSlotsCount();
+      
+      // Déclencher la mise à jour du parent
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (err) {
       console.error('Erreur suppression:', err);
       toast.error('Erreur lors de la suppression');
@@ -968,6 +1029,11 @@ function TimeSlotsButton({ eventActivity, event, onUpdate }: TimeSlotsButtonProp
       toast.success('Tous les créneaux ont été supprimés');
       await loadTimeSlots();
       await loadTimeSlotsCount();
+      
+      // Déclencher la mise à jour du parent
+      if (onUpdate) {
+        onUpdate();
+      }
     } catch (err) {
       console.error('Erreur suppression en masse:', err);
       toast.error('Erreur lors de la suppression');
