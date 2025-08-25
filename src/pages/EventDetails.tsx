@@ -5,6 +5,7 @@ import { addToCart } from '../lib/cart';
 import { Calendar, Users, Euro, Info, Clock, Target, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 interface Event {
   id: string;
@@ -265,7 +266,7 @@ export default function EventDetails() {
             <Info className="h-6 w-6 text-blue-600 mt-0.5" />
             <div>
               <h2 className="font-semibold text-blue-900 mb-2">Informations Clés</h2>
-              <p className="text-blue-800 whitespace-pre-line">{event.key_info_content}</p>
+              <MarkdownRenderer className="text-blue-800" content={event.key_info_content} />
             </div>
           </div>
         </div>
