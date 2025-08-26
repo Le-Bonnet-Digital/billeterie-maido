@@ -1,0 +1,5 @@
+# CODEOWNERS
+* @billeterie-maido/maintainers
+src/ @billeterie-maido/frontend
+supabase/ @billeterie-maido/backend
+.github/ @billeterie-maido/devops
