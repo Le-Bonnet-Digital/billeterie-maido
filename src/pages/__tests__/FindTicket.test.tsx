@@ -14,7 +14,11 @@ describe('FindTicket Page', () => {
 
   it('should show error when email is empty', async () => {
     render(<FindTicket />);
-    
+
+    fireEvent.click(
+      screen.getByRole('button', { name: /je ne suis pas un robot/i })
+    );
+
     fireEvent.click(screen.getByText(/rechercher mes billets/i));
     
     // Toast error should be called (mocked in setup)
