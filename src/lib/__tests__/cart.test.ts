@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getSessionId,
@@ -14,6 +15,7 @@ import {
 import type { CartItem, Pass } from '../cart';
 import type { CartRepository } from '../cartRepository';
 import { safeStorage } from '../storage';
+import { logger } from '../logger';
 
 // Mock localStorage
 const mockLocalStorage = {
@@ -108,6 +110,24 @@ describe('Cart Functions', () => {
       expect(result).toBe(true);
       expect(repo.insertCartItem).toHaveBeenCalled();
       expect(notify).toHaveBeenCalledWith('success', 'Article ajouté au panier');
+    });
+
+    it('should return false for invalid quantity', async () => {
+      const repo = createRepo();
+      const notify = vi.fn();
+      const result = await addToCart('pass-id', undefined, undefined, 0, repo, notify);
+      expect(result).toBe(false);
+      expect(notify).toHaveBeenCalledWith('error', 'La quantité doit être un entier positif');
+    });
+
+    it('should handle repository errors gracefully', async () => {
+      const repo = createRepo({ insertCartItem: vi.fn().mockRejectedValue(new Error('fail')) });
+      const notify = vi.fn();
+      const spy = vi.spyOn(logger, 'error').mockImplementation(() => {});
+      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
+      expect(result).toBe(false);
+      expect(notify).toHaveBeenCalledWith('error', 'Une erreur est survenue');
+      expect(spy).toHaveBeenCalled();
     });
   });
 

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signInWithEmail, signOut } from '../auth';
 import { supabase } from '../supabase';
@@ -9,15 +10,6 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 // Mock supabase
-type SupabaseMock = {
-  auth: {
-    signInWithPassword: any,
-    signOut: any,
-    getUser: any
-  },
-  from: any
-};
-
 const insertMock = vi.fn().mockResolvedValue({ error: null });
 const singleMock = vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null });
 const eqMock = vi.fn().mockReturnValue({ single: singleMock });

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Ticket, Plus, Edit, Trash2, Euro, Package, X } from 'lucide-react';
+import { Ticket, Plus, Edit, Trash2, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getErrorMessage } from '../../lib/errors';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
@@ -29,6 +29,20 @@ interface EventActivity {
     id: string;
     name: string;
     icon: string;
+  };
+}
+
+interface PassActivity {
+  id: string;
+  event_activity_id: string;
+  event_activities: {
+    id: string;
+    activity_id: string;
+    activities: {
+      id: string;
+      name: string;
+      icon: string;
+    };
   };
 }
 
@@ -100,7 +114,7 @@ export default function PassManagement() {
           if (pass.pass_activities && pass.pass_activities.length > 0) {
             // Pour chaque activité du pass, récupérer le stock limite (maintenant synchronisé avec les créneaux)
             const activityStocks = await Promise.all(
-              pass.pass_activities.map(async (pa: any) => {
+              pass.pass_activities.map(async (pa: PassActivity) => {
                 const { data: eventActivityData } = await supabase
                   .from('event_activities')
                   .select('stock_limit')
@@ -124,7 +138,7 @@ export default function PassManagement() {
               event: pass.events, 
               remaining_stock: calculatedMaxStock || 999999,
               calculated_max_stock: calculatedMaxStock,
-              event_activities: (pass.pass_activities || []).map((pa: any) => ({
+              event_activities: (pass.pass_activities || []).map((pa: PassActivity) => ({
                 id: pa.event_activities.id,
                 activity_id: pa.event_activities.activity_id,
                 activity: pa.event_activities.activities
@@ -142,7 +156,7 @@ export default function PassManagement() {
             event: pass.events, 
             remaining_stock: actualStock,
             calculated_max_stock: calculatedMaxStock,
-            event_activities: (pass.pass_activities || []).map((pa: any) => ({
+            event_activities: (pass.pass_activities || []).map((pa: PassActivity) => ({
               id: pa.event_activities.id,
               activity_id: pa.event_activities.activity_id,
               activity: pa.event_activities.activities
@@ -173,7 +187,7 @@ export default function PassManagement() {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ? Cette action est irréversible.')) return;
 
     try {
-      console.log('Tentative de suppression du pass:', passId);
+      logger.info('Tentative de suppression du pass', { passId });
       
       // Essayer d'abord de supprimer les réservations liées
       const { error: reservationsError } = await supabase
@@ -182,7 +196,7 @@ export default function PassManagement() {
         .eq('pass_id', passId);
       
       if (reservationsError) {
-        console.warn('Erreur suppression réservations:', reservationsError);
+        logger.warn('Erreur suppression réservations', { error: reservationsError });
       }
       
       // Puis supprimer le pass
@@ -192,7 +206,7 @@ export default function PassManagement() {
         .eq('id', passId)
         .select();
 
-      console.log('Réponse Supabase:', { data, error, count });
+      logger.debug('Réponse Supabase', { data, error, count });
       
       if (error) {
         logger.error('Erreur Supabase lors de la suppression', { error });
@@ -200,12 +214,12 @@ export default function PassManagement() {
       }
       
       if (!data || data.length === 0) {
-        console.warn('Aucune ligne supprimée - le pass n\'existe peut-être pas');
+        logger.warn('Aucune ligne supprimée - le pass n\'existe peut-être pas');
         toast.error('Pass introuvable ou déjà supprimé');
         return;
       }
       
-      console.log('Pass supprimé avec succès:', data);
+      logger.info('Pass supprimé avec succès', { data });
       
       toast.success('Pass supprimé avec succès');
       await loadData();

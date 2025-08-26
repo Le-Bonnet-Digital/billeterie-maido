@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Settings as SettingsIcon, Save, User, Mail, Shield, Database, Globe, Bell } from 'lucide-react';
+import { Save, User, Shield, Database, Globe, Bell } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { getCurrentUser } from '../../lib/auth';
 import type { User as AuthUser } from '../../lib/auth';

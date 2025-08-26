@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../test/utils';
 import { toast } from 'react-hot-toast';
 import FindTicket from '../FindTicket';

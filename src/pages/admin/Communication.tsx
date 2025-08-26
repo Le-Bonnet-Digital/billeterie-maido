@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Mail, Send, Users, Calendar, FileText, X } from 'lucide-react';
+import { Mail, Send, Users, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
 

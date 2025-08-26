@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Calendar, Clock, Users, Filter, Eye, BarChart3, AlertCircle } from 'lucide-react';
 import { format, startOfDay, endOfDay, eachHourOfInterval, isSameHour } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
 
@@ -168,7 +167,7 @@ export default function TimeSlotManagement() {
     }
     acc[activityKey].slots.push(slot);
     return acc;
-  }, {} as Record<string, { activity: any; slots: TimeSlotWithDetails[] }>);
+  }, {} as Record<string, { activity: TimeSlotWithDetails['event_activity']['activity']; slots: TimeSlotWithDetails[] }>);
 
   const renderDashboardView = () => (
     <div className="space-y-6">

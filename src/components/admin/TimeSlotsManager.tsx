@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../../lib/supabase';
-import { X, Plus, Trash2, Clock, Users, Calendar } from 'lucide-react';
+import { X, Plus, Trash2, Clock, Users } from 'lucide-react';
 import { format, addMinutes, startOfDay } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';

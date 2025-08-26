@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
-import { Calendar, Plus, Edit, Trash2, Settings, X, MapPin, Clock } from 'lucide-react';
+import { Calendar, Plus, Edit, Trash2, Settings } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
@@ -8,7 +8,7 @@ import EventForm from '../../components/admin/EventForm';
 import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
-import { logger } from '../../lib/logger';
+import { logger, debugLog } from '../../lib/logger';
 import type { FAQItem } from '../../components/FAQAccordion';
 
 interface Event {
@@ -34,23 +34,13 @@ export default function EventManagement() {
   const [showAnimationsModal, setShowAnimationsModal] = useState<Event | null>(null);
   const [showActivitiesModal, setShowActivitiesModal] = useState<Event | null>(null);
 
-  const debug = (message: string, context?: unknown) => {
-    if (import.meta.env.VITE_DEBUG === 'true' && import.meta.env.MODE !== 'production') {
-      if (context !== undefined) {
-        console.log(message, context);
-      } else {
-        console.log(message);
-      }
-    }
-  };
-
   useEffect(() => {
-    debug('🔧 EventManagement mounted');
+    debugLog('🔧 EventManagement mounted');
     loadEvents();
   }, []);
 
   const loadEvents = async () => {
-    debug('🔧 EventManagement loadEvents called');
+    debugLog('🔧 EventManagement loadEvents called');
     if (!isSupabaseConfigured()) {
       toast.error('Configuration Supabase manquante');
       setLoading(false);
@@ -84,7 +74,7 @@ export default function EventManagement() {
           .sort((a, b) => a.position - b.position)
           .map(({ question, answer }) => ({ question, answer })),
       }));
-      debug('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
+      debugLog('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations }))); 
       setEvents(eventsWithFaqs);
     } catch (err) {
       logger.error('Erreur chargement événements', { error: err });
@@ -144,7 +134,7 @@ export default function EventManagement() {
     );
   }
 
-  debug('🔧 EventManagement rendering with modals:', {
+  debugLog('🔧 EventManagement rendering with modals:', {
     showCreateModal,
     editingEvent: editingEvent?.id,
     showAnimationsModal: showAnimationsModal?.id,
@@ -160,7 +150,7 @@ export default function EventManagement() {
         </div>
         <button 
           onClick={() => {
-            debug('🔧 EventManagement opening create modal');
+            debugLog('🔧 EventManagement opening create modal');
             setShowCreateModal(true);
           }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"

@@ -6,17 +6,26 @@ import { getCartItems, removeFromCart, calculateCartTotal, type CartItem } from 
 import { supabase } from '../lib/supabase';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckSquare, Square } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { logger } from '../lib/logger';
 import { safeStorage } from '../lib/storage';
+
+interface ConfirmationData {
+  reservationNumber: string;
+  email: string;
+  eventName: string;
+  passName: string;
+  price: number;
+  timeSlot: { slot_time: string } | null;
+  activityName?: string;
+}
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
   const [showConfirmation, setShowConfirmation] = useState(false);
-  const [confirmationData, setConfirmationData] = useState<any>(null);
+  const [confirmationData, setConfirmationData] = useState<ConfirmationData | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
 

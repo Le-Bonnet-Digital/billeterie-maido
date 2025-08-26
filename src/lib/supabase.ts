@@ -5,8 +5,8 @@ const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
 const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export interface DatabaseClient {
-  from: (table: string) => any;
-  rpc: (fn: string, params?: any) => Promise<any>;
+  from: (table: string) => unknown;
+  rpc: (fn: string, params?: unknown) => Promise<unknown>;
 }
 
 /**
