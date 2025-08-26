@@ -65,6 +65,13 @@ Les clés API, jetons et autres secrets doivent être fournis via des variables 
   ```bash
   npm test
   ```
+* Exécuter les tests UI/UX et accessibilité :
+
+  ```bash
+  npm run test:ui
+  ```
+
+  Chaque modification visuelle doit mettre à jour ces tests.
 * Générer le rapport de couverture :
 
   ```bash

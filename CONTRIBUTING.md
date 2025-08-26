@@ -12,8 +12,10 @@ Pour proposer une amélioration ou corriger un bug, veuillez suivre les étapes 
 3. Assurez-vous que le code passe les tests et le lint :
    ```bash
    npm test
+   npm run test:ui
    npm run lint
    ```
 4. Soumettez une pull request en décrivant clairement les changements apportés.
 
 Merci de respecter la structure de code et d'ajouter des tests lorsque cela est pertinent.
+Tout changement visuel doit être accompagné d'une mise à jour des tests UI/UX et d'accessibilité (`npm run test:ui`).
