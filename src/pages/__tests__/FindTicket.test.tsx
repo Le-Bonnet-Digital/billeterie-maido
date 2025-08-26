@@ -19,12 +19,13 @@ describe('FindTicket Page', () => {
       screen.getByRole('button', { name: /je ne suis pas un robot/i })
     );
 
-    fireEvent.click(screen.getByText(/rechercher mes billets/i));
-    
+    const form = screen.getByText(/rechercher mes billets/i).closest('form');
+    fireEvent.submit(form!);
+
     // Toast error should be called (mocked in setup)
-    await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Veuillez saisir votre adresse e-mail');
-    });
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Veuillez saisir votre adresse e-mail')
+    );
   });
 
   it('should render security information', () => {
