@@ -41,6 +41,7 @@ interface MockBuilder {
   select: ReturnType<typeof vi.fn>;
   eq: ReturnType<typeof vi.fn>;
   gte: ReturnType<typeof vi.fn>;
+  gt: ReturnType<typeof vi.fn>;
   lte: ReturnType<typeof vi.fn>;
   limit: ReturnType<typeof vi.fn>;
   order: ReturnType<typeof vi.fn>;
@@ -56,6 +57,7 @@ const createMockQueryBuilder = (): MockBuilder => {
     select: vi.fn(() => mockBuilder),
     eq: vi.fn(() => mockBuilder),
     gte: vi.fn(() => mockBuilder),
+    gt: vi.fn(() => mockBuilder),
     lte: vi.fn(() => mockBuilder),
     limit: vi.fn(() => mockBuilder),
     order: vi.fn(() => mockBuilder),
