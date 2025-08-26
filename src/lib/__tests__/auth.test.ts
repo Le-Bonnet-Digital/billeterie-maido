@@ -9,11 +9,14 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 // Mock supabase
-const insertMock = vi.fn().mockResolvedValue({ error: null });
-const singleMock = vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null });
-const eqMock = vi.fn().mockReturnValue({ single: singleMock });
-const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
-const fromMock = vi.fn().mockReturnValue({ select: selectMock, insert: insertMock });
+const { insertMock, singleMock, fromMock } = vi.hoisted(() => {
+  const insertMock = vi.fn().mockResolvedValue({ error: null });
+  const singleMock = vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null });
+  const eqMock = vi.fn().mockReturnValue({ single: singleMock });
+  const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
+  const fromMock = vi.fn().mockReturnValue({ select: selectMock, insert: insertMock });
+  return { insertMock, singleMock, fromMock };
+});
 
 vi.mock('../supabase', () => ({
   supabase: {
