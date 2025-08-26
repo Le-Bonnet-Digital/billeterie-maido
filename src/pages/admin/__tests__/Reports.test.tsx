@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '../../../test/utils';
+import { render, screen } from '../../../test/utils';
 import Reports from '../Reports';
 
 // Mock the supabase calls to return resolved data immediately  
@@ -25,21 +25,13 @@ vi.mock('../../../lib/supabase', async () => {
 });
 
 describe('Reports', () => {
-  it('should render reports content', async () => {
+  it('shows filters and export action', async () => {
     render(<Reports />);
-    
-    // Wait for loading to complete
-    await waitFor(() => {
-      expect(document.body).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
 
-  it('should not be stuck in loading state', async () => {
-    render(<Reports />);
-    
-    await waitFor(() => {
-      // Should not show loading spinner after data loads
-      expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
-    }, { timeout: 3000 });
+    expect(
+      await screen.findByText(/Rapports et Analyses/i)
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Exporter/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/Date de début/i)).toBeInTheDocument();
   });
 });

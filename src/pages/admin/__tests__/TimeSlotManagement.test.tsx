@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '../../../test/utils';
+import { render, screen } from '../../../test/utils';
 import TimeSlotManagement from '../TimeSlotManagement';
 
 // Mock the supabase calls to return resolved data immediately  
@@ -23,21 +23,14 @@ vi.mock('../../../lib/supabase', async () => {
 });
 
 describe('TimeSlotManagement', () => {
-  it('should render time slot management content', async () => {
+  it('informs user when no event is selected', async () => {
     render(<TimeSlotManagement />);
-    
-    // Wait for loading to complete
-    await waitFor(() => {
-      expect(document.body).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
 
-  it('should not be stuck in loading state', async () => {
-    render(<TimeSlotManagement />);
-    
-    await waitFor(() => {
-      // Should not show loading spinner after data loads
-      expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
-    }, { timeout: 3000 });
+    expect(
+      await screen.findByText(/Planning des Créneaux/i)
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Sélectionnez un événement et une date/i)
+    ).toBeInTheDocument();
   });
 });

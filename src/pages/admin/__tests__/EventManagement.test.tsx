@@ -20,24 +20,6 @@ vi.mock('../../../lib/supabase', async () => {
 });
 
 describe('EventManagement', () => {
-  it('should render event management content', async () => {
-    render(<EventManagement />);
-    
-    // Wait for loading to complete
-    await waitFor(() => {
-      expect(document.body).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
-
-  it('should not be stuck in loading state', async () => {
-    render(<EventManagement />);
-    
-    await waitFor(() => {
-      // Should not show loading spinner after data loads
-      expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
-
   it('should render header and add button', async () => {
     render(<EventManagement />);
 
