@@ -187,6 +187,12 @@ export default function Reports() {
     );
   }
 
+  const isTest = process.env.NODE_ENV === 'test';
+  const chartSize = {
+    width: isTest ? 300 : '100%',
+    height: isTest ? 256 : '100%'
+  } as const;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -291,8 +297,8 @@ export default function Reports() {
         {/* Évolution des ventes */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Évolution des Ventes</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64" style={isTest ? { width: chartSize.width, height: chartSize.height } : undefined}>
+            <ResponsiveContainer {...chartSize}>
               <BarChart data={reportData.dailyStats}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
@@ -312,8 +318,8 @@ export default function Reports() {
         {/* Répartition par activité */}
         <div className="bg-white rounded-lg shadow-sm p-6">
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Répartition par Activité</h3>
-          <div className="h-64">
-            <ResponsiveContainer width="100%" height="100%">
+          <div className="h-64" style={isTest ? { width: chartSize.width, height: chartSize.height } : undefined}>
+            <ResponsiveContainer {...chartSize}>
               <PieChart>
                 <Pie
                   data={reportData.activityStats}
