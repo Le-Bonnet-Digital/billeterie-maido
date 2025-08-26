@@ -13,6 +13,10 @@ Ce document définit les règles à suivre pour contribuer au projet. **Chaque c
 - Pousser des commits atomiques et logiques.
 - Ouvrir une Pull Request dès qu'une contribution est prête à être revue.
 
+## Hooks Git
+- `pre-commit` : `npm run lint && npm test && lint-staged`
+- `commit-msg` : `npx commitlint --edit "$1"`
+
 ## Qualité & Style
 - Respecter les configurations ESLint et TypeScript existantes.
 - Lancer `npm run lint` et `npm test` avant de soumettre des changements.
