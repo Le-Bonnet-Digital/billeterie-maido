@@ -54,7 +54,9 @@ describe('EventManagement', () => {
     const button = await screen.findByRole('button', { name: /nouvel événement/i });
     await user.click(button);
 
-    expect(await screen.findByText(/nouvel événement/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByRole('heading', { name: /nouvel événement/i })).toBeInTheDocument();
+    });
   });
 
   it('should not output debug logs in production mode', async () => {

@@ -8,7 +8,7 @@ import EventForm from '../../components/admin/EventForm';
 import AnimationsManager from '../../components/admin/AnimationsManager';
 import EventActivitiesManager from '../../components/admin/EventActivitiesManager';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
-import { logger, debugLog } from '../../lib/logger';
+import { logger } from '../../lib/logger';
 import type { FAQItem } from '../../components/FAQAccordion';
 
 interface Event {
@@ -34,13 +34,23 @@ export default function EventManagement() {
   const [showAnimationsModal, setShowAnimationsModal] = useState<Event | null>(null);
   const [showActivitiesModal, setShowActivitiesModal] = useState<Event | null>(null);
 
+  const debug = (message: string, context?: unknown) => {
+    if (import.meta.env.VITE_DEBUG === 'true' && import.meta.env.MODE !== 'production') {
+      if (context !== undefined) {
+        console.log(message, context);
+      } else {
+        console.log(message);
+      }
+    }
+  };
+
   useEffect(() => {
-    debugLog('🔧 EventManagement mounted');
+    debug('🔧 EventManagement mounted');
     loadEvents();
   }, []);
 
   const loadEvents = async () => {
-    debugLog('🔧 EventManagement loadEvents called');
+    debug('🔧 EventManagement loadEvents called');
     if (!isSupabaseConfigured()) {
       toast.error('Configuration Supabase manquante');
       setLoading(false);
@@ -74,7 +84,7 @@ export default function EventManagement() {
           .sort((a, b) => a.position - b.position)
           .map(({ question, answer }) => ({ question, answer })),
       }));
-      debugLog('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
+      debug('🔧 EventManagement Events loaded with has_animations:', eventsWithFaqs.map(e => ({ id: e.id, name: e.name, has_animations: e.has_animations })));
       setEvents(eventsWithFaqs);
     } catch (err) {
       logger.error('Erreur chargement événements', { error: err });
@@ -120,7 +130,7 @@ export default function EventManagement() {
   };
 
   const handleFormClose = () => {
-    debugLog('🔧 EventManagement handleFormClose called');
+    debug('🔧 EventManagement handleFormClose called');
     setShowCreateModal(false);
     setEditingEvent(null);
     loadEvents(); // Recharger après fermeture
@@ -134,7 +144,7 @@ export default function EventManagement() {
     );
   }
 
-  debugLog('🔧 EventManagement rendering with modals:', {
+  debug('🔧 EventManagement rendering with modals:', {
     showCreateModal,
     editingEvent: editingEvent?.id,
     showAnimationsModal: showAnimationsModal?.id,
@@ -150,7 +160,7 @@ export default function EventManagement() {
         </div>
         <button 
           onClick={() => {
-            debugLog('🔧 EventManagement opening create modal');
+            debug('🔧 EventManagement opening create modal');
             setShowCreateModal(true);
           }}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
@@ -201,7 +211,7 @@ export default function EventManagement() {
             </p>
             <button
               onClick={() => {
-                debugLog('🔧 EventManagement opening create modal from empty state');
+                debug('🔧 EventManagement opening create modal from empty state');
                 setShowCreateModal(true);
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -240,7 +250,7 @@ export default function EventManagement() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => {
-                        debugLog('🔧 EventManagement opening activities modal for:', event.id);
+                        debug('🔧 EventManagement opening activities modal for:', event.id);
                         setShowActivitiesModal(event);
                       }}
                       className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
@@ -252,7 +262,7 @@ export default function EventManagement() {
                     {event.has_animations && (
                       <button
                         onClick={() => {
-                          debugLog('🔧 EventManagement opening animations modal for:', event.id);
+                          debug('🔧 EventManagement opening animations modal for:', event.id);
                           setShowAnimationsModal(event);
                         }}
                         className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
@@ -264,7 +274,7 @@ export default function EventManagement() {
                     
                     <button
                       onClick={() => {
-                        debugLog('🔧 EventManagement opening edit modal for:', event.id);
+                        debug('🔧 EventManagement opening edit modal for:', event.id);
                         setEditingEvent(event);
                       }}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
