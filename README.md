@@ -28,6 +28,14 @@
    ```
 3. Créer un fichier `.env` à la racine et y définir les variables décrites ci-dessus.
 
+## Gestion des variables sensibles
+
+Les clés API, jetons et autres secrets doivent être fournis via des variables d'environnement et ne doivent jamais être commités dans le dépôt.
+
+- Le fichier `.env` est ignoré par Git et ne doit être utilisé qu'en développement local.
+- En production, configurez les variables d'environnement directement dans votre plateforme d'hébergement.
+- Le hook de pré-commit exécute [`git-secrets`](https://github.com/awslabs/git-secrets) pour éviter les fuites accidentelles. Installez l'outil puis lancez `git secrets --install` avant de contribuer.
+
 ## Structure du projet
 
 ```
