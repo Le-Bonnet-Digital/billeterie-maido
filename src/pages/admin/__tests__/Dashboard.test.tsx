@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '../../../test/utils';
+import { render, screen } from '../../../test/utils';
 import AdminDashboard from '../Dashboard';
 
 // Mock the supabase calls to return resolved data immediately  
@@ -22,22 +22,14 @@ vi.mock('../../../lib/supabase', async () => {
 });
 
 describe('AdminDashboard', () => {
-  it('should render dashboard content', async () => {
+  it('displays statistics and quick links', async () => {
     render(<AdminDashboard />);
-    
-    // Wait for loading to complete and check for any content
-    await waitFor(() => {
-      // The component should render something, even if it's just the loading state initially
-      expect(document.body).toBeInTheDocument();
-    }, { timeout: 3000 });
-  });
 
-  it('should not be stuck in loading state', async () => {
-    render(<AdminDashboard />);
-    
-    await waitFor(() => {
-      // Should not show loading spinner after data loads
-      expect(screen.queryByText(/chargement/i)).not.toBeInTheDocument();
-    }, { timeout: 3000 });
+    // Verify main heading and a quick action link
+    expect(await screen.findByText(/Tableau de Bord/i)).toBeInTheDocument();
+    expect(screen.getByText(/Événements Total/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /Créer un Événement/i })
+    ).toBeInTheDocument();
   });
 });
