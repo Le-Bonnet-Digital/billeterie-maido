@@ -5,9 +5,6 @@ const env =
   typeof process !== 'undefined' && process.env
     ? (process.env as Record<string, string | undefined>)
     : (import.meta.env as Record<string, string | undefined>);
-const supabaseUrl = env.VITE_SUPABASE_URL;
-const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
-
 export interface DatabaseClient {
   from: (table: string) => unknown;
   rpc: (fn: string, params?: unknown) => Promise<unknown>;
@@ -18,8 +15,13 @@ export interface DatabaseClient {
  * @returns `true` si la configuration est valide
  */
 export const isSupabaseConfigured = (): boolean => {
-  return !!supabaseUrl && !!supabaseAnonKey && supabaseUrl.includes('.supabase.co');
+  const url = env.VITE_SUPABASE_URL;
+  const anonKey = env.VITE_SUPABASE_ANON_KEY;
+  return !!url && !!anonKey && url.includes('.supabase.co');
 };
+
+const supabaseUrl = env.VITE_SUPABASE_URL;
+const supabaseAnonKey = env.VITE_SUPABASE_ANON_KEY;
 
 /**
  * Lance une erreur si la configuration Supabase est absente.
