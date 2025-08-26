@@ -9,6 +9,7 @@ describe('Supabase Configuration', () => {
     process.env.VITE_SUPABASE_ANON_KEY = 'test-key';
 
     vi.resetModules();
+    vi.doUnmock('../supabase');
     const { isSupabaseConfigured } = await import('../supabase');
 
     expect(isSupabaseConfigured()).toBe(true);
@@ -19,6 +20,7 @@ describe('Supabase Configuration', () => {
     process.env.VITE_SUPABASE_ANON_KEY = '';
 
     vi.resetModules();
+    vi.doUnmock('../supabase');
     const { isSupabaseConfigured } = await import('../supabase');
 
     expect(isSupabaseConfigured()).toBe(false);
