@@ -10,7 +10,10 @@ vi.mock('../../../lib/supabase', async () => {
     supabase: {
       from: vi.fn(() => ({
         select: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ data: [], error: null }))
+          order: vi.fn(() => Promise.resolve({ data: [], error: null })),
+          eq: vi.fn(() => ({
+            order: vi.fn(() => Promise.resolve({ data: [], error: null }))
+          }))
         }))
       })),
       rpc: vi.fn(() => Promise.resolve({ data: 0, error: null }))
