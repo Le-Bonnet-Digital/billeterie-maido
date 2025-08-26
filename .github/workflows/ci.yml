@@ -18,9 +18,10 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm test
+      - name: Run UI tests
+        run: npm run test:ui
       - run: npm run build
       - name: Audit dependencies
         run: npm audit --production
       - name: Static analysis with Semgrep
         run: npx semgrep --config=auto
-      - run: npm run test:ui
