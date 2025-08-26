@@ -14,13 +14,17 @@ describe('Layout Component', () => {
     expect(
       screen.getByRole('link', { name: /BilletEvent/i })
     ).toBeInTheDocument();
-    expect(screen.getAllByText(/événements/i)[0]).toBeInTheDocument();
-    expect(screen.getAllByText('Retrouver mon Billet')[0]).toBeInTheDocument();
+
+    const eventLinks = screen.getAllByText(/événements/i);
+    expect(eventLinks.length).toBeGreaterThan(0);
+
+    const findTicketLinks = screen.getAllByText('Retrouver mon Billet');
+    expect(findTicketLinks.length).toBeGreaterThan(0);
   });
 
   it('should render admin link', () => {
     render(<Layout />);
-    
+
     expect(screen.getByText('Admin')).toBeInTheDocument();
   });
 });
