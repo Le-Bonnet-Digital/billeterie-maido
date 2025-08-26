@@ -81,7 +81,7 @@ export default function FindTicket() {
       {!found ? (
         /* Formulaire de recherche */
         <div className="bg-white rounded-lg shadow-sm p-8">
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleSubmit} noValidate>
             <div className="mb-6">
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
                 Adresse e-mail
