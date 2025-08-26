@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import '@testing-library/jest-dom';
 import { vi, expect } from 'vitest';
 import React from 'react';
@@ -38,33 +37,41 @@ Object.defineProperty(window, 'BroadcastChannel', {
 });
 
 // Mock Supabase with proper method chaining
-const createMockQueryBuilder = () => {
-  const mockBuilder: any = {
+interface MockBuilder {
+  select: ReturnType<typeof vi.fn>;
+  eq: ReturnType<typeof vi.fn>;
+  gte: ReturnType<typeof vi.fn>;
+  lte: ReturnType<typeof vi.fn>;
+  limit: ReturnType<typeof vi.fn>;
+  order: ReturnType<typeof vi.fn>;
+  single: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
+  insert: ReturnType<typeof vi.fn>;
+  update: ReturnType<typeof vi.fn>;
+  then: ReturnType<typeof vi.fn>;
+}
+
+const createMockQueryBuilder = (): MockBuilder => {
+  const mockBuilder: MockBuilder = {
     select: vi.fn(() => mockBuilder),
     eq: vi.fn(() => mockBuilder),
     gte: vi.fn(() => mockBuilder),
     lte: vi.fn(() => mockBuilder),
     limit: vi.fn(() => mockBuilder),
     order: vi.fn(() => mockBuilder),
-    single: vi.fn(() => Promise.resolve({ data: { id: '1', name: 'Test Event' }, error: null })),
+    single: vi.fn(() =>
+      Promise.resolve({ data: { id: '1', name: 'Test Event' }, error: null }),
+    ),
     delete: vi.fn(() => mockBuilder),
     insert: vi.fn(() => mockBuilder),
     update: vi.fn(() => mockBuilder),
-    then: vi.fn((callback) => {
+    then: vi.fn((callback?: (arg: { data: unknown[]; error: null }) => unknown) => {
       if (callback) {
         return callback({ data: [], error: null });
       }
       return Promise.resolve({ data: [], error: null });
     }),
   };
-
-  // Make it thenable so it can be awaited
-  mockBuilder.then = vi.fn((callback) => {
-    if (callback) {
-      return callback({ data: [], error: null });
-    }
-    return Promise.resolve({ data: [], error: null });
-  });
 
   return mockBuilder;
 };
@@ -94,7 +101,8 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => vi.fn(),
     useParams: () => ({ eventId: 'test-event-id' }),
     useLocation: () => ({ pathname: '/' }),
-    Link: ({ children, to, ...props }: any) => React.createElement('a', { href: to, ...props }, children),
+    Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) =>
+      React.createElement('a', { href: to, ...props }, children),
     Outlet: () => React.createElement('div', null, 'Outlet'),
   };
 });
@@ -136,4 +144,4 @@ class ResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-(window as any).ResizeObserver = ResizeObserver;
+Object.defineProperty(window, 'ResizeObserver', { value: ResizeObserver, configurable: true });

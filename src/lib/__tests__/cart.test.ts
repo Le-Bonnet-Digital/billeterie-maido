@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getSessionId,
@@ -64,8 +63,8 @@ describe('Cart Functions', () => {
 
     it('should fall back to memory when localStorage is unavailable', () => {
       safeStorage.removeItem('cart_session_id');
-      const original = (window as any).localStorage;
-      delete (window as any).localStorage;
+      const original = window.localStorage;
+      delete (window as unknown as { localStorage?: Storage }).localStorage;
 
       const sessionId1 = getSessionId();
       const sessionId2 = getSessionId();
@@ -191,7 +190,9 @@ describe('Cart Functions', () => {
           eq: vi.fn().mockResolvedValue({ error: null }),
         })),
       };
-      vi.mocked(supabase.from).mockReturnValue(builder as any);
+      vi.mocked(supabase.from).mockReturnValue(
+        builder as unknown as ReturnType<typeof supabase.from>
+      );
 
       const result = await removeFromCart('item-id');
       expect(result).toBe(true);
@@ -206,7 +207,9 @@ describe('Cart Functions', () => {
           eq: vi.fn().mockResolvedValue({ error: null }),
         })),
       };
-      vi.mocked(supabase.from).mockReturnValue(builder as any);
+      vi.mocked(supabase.from).mockReturnValue(
+        builder as unknown as ReturnType<typeof supabase.from>
+      );
       mockLocalStorage.getItem.mockReturnValue('session-123');
 
       const result = await clearCart();
