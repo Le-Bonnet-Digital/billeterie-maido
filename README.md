@@ -1,5 +1,7 @@
 # Billeterie Maïdo
 
+[![CI](https://github.com/OWNER/billeterie-maido/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/billeterie-maido/actions/workflows/ci.yml)
+
 ## Prérequis
 
 * [Node.js](https://nodejs.org/) version 18 ou supérieure
