@@ -63,8 +63,9 @@ export default function Layout() {
             
             {/* Actions */}
             <div className="flex items-center space-x-4">
-              <Link 
-                to="/cart" 
+              <Link
+                to="/cart"
+                aria-label="Panier"
                 className="relative p-2 text-gray-400 hover:text-gray-500 transition-colors group"
               >
                 <ShoppingCart className="h-6 w-6 group-hover:text-blue-600 transition-colors" />
