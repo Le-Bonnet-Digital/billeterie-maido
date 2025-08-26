@@ -74,6 +74,7 @@ export default function Layout() {
                     {cartCount}
                   </span>
                 )}
+                <span className="sr-only">Panier</span>
               </Link>
               
               <Link 

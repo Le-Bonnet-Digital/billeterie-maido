@@ -14,8 +14,10 @@ describe('Layout Component', () => {
     expect(
       screen.getByRole('link', { name: /BilletEvent/i })
     ).toBeInTheDocument();
+
     const eventLinks = screen.getAllByText(/événements/i);
     expect(eventLinks.length).toBeGreaterThan(0);
+
     const findTicketLinks = screen.getAllByText('Retrouver mon Billet');
     expect(findTicketLinks.length).toBeGreaterThan(0);
   });
