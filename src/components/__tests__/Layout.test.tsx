@@ -10,8 +10,10 @@ vi.mock('../../lib/cart', () => ({
 describe('Layout Component', () => {
   it('should render header with logo and navigation', () => {
     render(<Layout />);
-    
-    expect(screen.getByText('BilletEvent')).toBeInTheDocument();
+
+    expect(
+      screen.getByRole('link', { name: /BilletEvent/i })
+    ).toBeInTheDocument();
     expect(screen.getByText(/événements/i)).toBeInTheDocument();
     expect(screen.getByText('Retrouver mon Billet')).toBeInTheDocument();
   });

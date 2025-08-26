@@ -8,7 +8,9 @@ describe('App Component', () => {
     const { container } = render(<App />);
 
     // Should render the layout with header
-    expect(screen.getByText('BilletEvent')).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /BilletEvent/i })
+    ).toBeInTheDocument();
 
     // Ensure no accessibility violations
     const results = await axe(container);
