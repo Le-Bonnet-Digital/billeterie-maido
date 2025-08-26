@@ -1,14 +1,17 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { fetchEvent, fetchTimeSlotsForActivity, fetchPasses, fetchEventActivities } from '../eventService';
+import type { DatabaseClient } from '../../lib/supabase';
 
-const from = vi.fn((table: string) => {
+const from = vi.fn((table: string): Record<string, unknown> => {
   if (table === 'events') {
     return {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({ data: { id: '1', name: 'Event', event_date: '2024-01-01', key_info_content: 'Info' }, error: null }),
-    } as any;
+      single: vi.fn().mockResolvedValue({
+        data: { id: '1', name: 'Event', event_date: '2024-01-01', key_info_content: 'Info' },
+        error: null,
+      }),
+    };
   }
   if (table === 'time_slots') {
     return {
@@ -33,12 +36,12 @@ const from = vi.fn((table: string) => {
           error: null,
         }),
       }),
-    } as any;
+    };
   }
-  return {} as any;
+  return {};
 });
 
-const rpc = vi.fn((fn: string) => {
+const rpc = vi.fn((fn: string): Promise<unknown> => {
   if (fn === 'get_slot_remaining_capacity') {
     return Promise.resolve({ data: 5 });
   }
@@ -71,7 +74,7 @@ const rpc = vi.fn((fn: string) => {
   return Promise.resolve({ data: null });
 });
 
-const client = { from, rpc } as any;
+const client = { from, rpc } as unknown as DatabaseClient;
 
 beforeEach(() => {
   from.mockClear();

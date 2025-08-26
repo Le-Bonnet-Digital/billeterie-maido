@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { signInWithEmail, signOut } from '../auth';
 import { supabase } from '../supabase';
@@ -30,8 +29,8 @@ vi.mock('../supabase', () => ({
 // Ensure mocks reset before each test
 beforeEach(() => {
   vi.clearAllMocks();
-  (supabase.auth as any).signInWithPassword = vi.fn();
-  (supabase.auth as any).signOut = vi.fn();
+  vi.mocked(supabase.auth.signInWithPassword).mockReset();
+  vi.mocked(supabase.auth.signOut).mockReset();
   singleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
   insertMock.mockResolvedValue({ error: null });
 });
@@ -39,7 +38,7 @@ beforeEach(() => {
 describe('signInWithEmail', () => {
   it('should return user with admin role when found in DB', async () => {
     const user = { id: 'user-1', email: 'test@example.com' };
-    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
       data: { user },
       error: null
     });
@@ -51,7 +50,7 @@ describe('signInWithEmail', () => {
   it('should assign client role when user does not exist', async () => {
     singleMock.mockResolvedValue({ data: null, error: { message: 'No user' } });
 
-    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
       data: { user: { id: 'user-2', email: 'client@example.com' } },
       error: null
     });
@@ -67,7 +66,7 @@ describe('signInWithEmail', () => {
   });
 
   it('should return null and show error on failure', async () => {
-    (supabase.auth.signInWithPassword as any).mockResolvedValue({
+    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
       data: { user: null },
       error: new Error('Invalid credentials')
     });
@@ -80,13 +79,13 @@ describe('signInWithEmail', () => {
 
 describe('signOut', () => {
   it('should show success when sign out succeeds', async () => {
-    (supabase.auth.signOut as any).mockResolvedValue({ error: null });
+    vi.mocked(supabase.auth.signOut).mockResolvedValue({ error: null });
     await signOut();
     expect(toast.success).toHaveBeenCalledWith('Déconnexion réussie');
   });
 
   it('should show error when sign out fails', async () => {
-    (supabase.auth.signOut as any).mockResolvedValue({ error: new Error('fail') });
+    vi.mocked(supabase.auth.signOut).mockResolvedValue({ error: new Error('fail') });
     await signOut();
     expect(toast.error).toHaveBeenCalledWith('Erreur lors de la déconnexion');
   });

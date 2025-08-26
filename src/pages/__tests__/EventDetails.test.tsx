@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '../../test/utils';
 import EventDetails from '../EventDetails';
@@ -13,7 +12,7 @@ vi.mock('react-router-dom', async () => {
 
 describe('EventDetails Page', () => {
   it('should render event information when loaded', () => {
-    (useEventDetails as unknown as any).mockReturnValue({
+    vi.mocked(useEventDetails).mockReturnValue({
       event: {
         id: 'test-event-id',
         name: 'Test Event',
@@ -35,7 +34,7 @@ describe('EventDetails Page', () => {
   });
 
   it('should show loading state when loading', () => {
-    (useEventDetails as unknown as any).mockReturnValue({
+    vi.mocked(useEventDetails).mockReturnValue({
       event: null,
       passes: [],
       eventActivities: [],
@@ -51,7 +50,7 @@ describe('EventDetails Page', () => {
   });
 
   it('should render passes section', () => {
-    (useEventDetails as unknown as any).mockReturnValue({
+    vi.mocked(useEventDetails).mockReturnValue({
       event: {
         id: 'test-event-id',
         name: 'Test Event',

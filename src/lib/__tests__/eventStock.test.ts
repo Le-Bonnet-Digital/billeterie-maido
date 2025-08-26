@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { describe, it, expect, vi } from 'vitest';
 import { fetchEventStock } from '../eventStock';
+import type { DatabaseClient } from '../supabase';
 
 describe('fetchEventStock', () => {
   it('retrieves passes and activities with their stock', async () => {
@@ -18,7 +18,7 @@ describe('fetchEventStock', () => {
       },
       error: null,
     });
-    const client = { rpc } as any;
+    const client = { rpc } as unknown as DatabaseClient;
 
     const result = await fetchEventStock('event1', client);
     expect(rpc).toHaveBeenCalledWith('get_event_passes_activities_stock', { event_uuid: 'event1' });
@@ -28,7 +28,7 @@ describe('fetchEventStock', () => {
 
   it('throws when rpc returns an error', async () => {
     const rpc = vi.fn().mockResolvedValue({ data: null, error: new Error('fail') });
-    const client = { rpc } as any;
+    const client = { rpc } as unknown as DatabaseClient;
 
     await expect(fetchEventStock('event1', client)).rejects.toThrow('fail');
   });
