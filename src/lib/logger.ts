@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 /** Contexte additionnel pour les logs. */
 export type LogContext = Record<string, unknown>;
 
@@ -20,7 +19,8 @@ function output(level: 'debug' | 'info' | 'warn' | 'error', message: string, con
     return;
   }
   const ctx = context ? ` | ${formatContext(context)}` : '';
-  const fn = level === 'debug' ? console.log : console[level];
+  // eslint-disable-next-line no-console
+  const fn = level === 'debug' ? console.debug : console[level];
   fn(`${message}${ctx}`);
 }
 
