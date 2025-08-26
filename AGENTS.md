@@ -33,5 +33,5 @@ Ce document définit les règles à suivre pour contribuer au projet. **Chaque c
 ## Definition of Done
 - Les tests et le lint passent (`npm test`, `npm run lint`).
 - La fonctionnalité est documentée et testée.
-- La Pull Request est relue et approuvée.
+- La Pull Request est relue et reçoit au moins une approbation.
 - Pas de TODO ou de code mort restant.
