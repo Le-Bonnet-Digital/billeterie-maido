@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Calendar, MapPin, Clock } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import MarkdownRenderer from '../components/MarkdownRenderer';
 
 interface EventCardProps {
   event: {
@@ -47,9 +48,10 @@ export default function EventCard({ event }: EventCardProps) {
           {event.name}
         </h3>
         
-        <p className="text-gray-600 text-sm mb-4 line-clamp-3">
-          {event.key_info_content}
-        </p>
+        <MarkdownRenderer
+          content={event.key_info_content}
+          className="text-gray-600 text-sm mb-4 line-clamp-3"
+        />
         
         {/* Status */}
         <div className="flex items-center justify-between mb-4">

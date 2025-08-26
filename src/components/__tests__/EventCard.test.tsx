@@ -14,9 +14,20 @@ const mockEvent = {
 describe('EventCard Component', () => {
   it('should render event information correctly', () => {
     render(<EventCard event={mockEvent} />);
-    
+
     expect(screen.getByText('Test Event')).toBeInTheDocument();
     expect(screen.getByText('Test event information')).toBeInTheDocument();
+  });
+
+  it('renders markdown content without raw syntax', () => {
+    const markdownEvent = {
+      ...mockEvent,
+      key_info_content: '**Information** importante'
+    };
+
+    render(<EventCard event={markdownEvent} />);
+    expect(screen.getByText('Information', { selector: 'strong' })).toBeInTheDocument();
+    expect(screen.queryByText('**Information** importante')).toBeNull();
   });
 
   it('should render action buttons', () => {
