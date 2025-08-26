@@ -21,6 +21,10 @@ Ce document définit les règles à suivre pour contribuer au projet. **Chaque c
 - Respecter les configurations ESLint et TypeScript existantes.
 - Lancer `npm run lint` et `npm test` avant de soumettre des changements.
 - Préférer un code lisible, typé et sans warnings.
+- TypeScript doit utiliser le mode `strict`.
+- Valider les entrées et gérer les erreurs avec des tests unitaires.
+- `console.log` est interdit (utiliser le logger ou `console.warn`/`console.error`).
+- L'usage de `any` est interdit sans justification explicite.
 
 ## Sécurité
 - Ne jamais exposer de secrets, mots de passe ou clés d'API dans le dépôt.

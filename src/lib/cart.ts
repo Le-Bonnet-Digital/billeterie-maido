@@ -136,6 +136,10 @@ export async function addToCart(
   repo: CartRepository = new SupabaseCartRepository(),
   notify: NotifyFn = toastNotify,
 ): Promise<boolean> {
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    notifyUser(notify, 'error', 'La quantité doit être un entier positif');
+    return false;
+  }
   if (!repo.isConfigured()) {
     notifyUser(notify, 'error', 'Configuration requise. Veuillez connecter Supabase.');
     return false;

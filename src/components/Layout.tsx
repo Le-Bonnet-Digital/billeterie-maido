@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
-import { ShoppingCart, Calendar, HelpCircle, Search } from 'lucide-react';
+import { ShoppingCart, Calendar } from 'lucide-react';
 import { getCartItems } from '../lib/cart';
 
 export default function Layout() {

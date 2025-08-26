@@ -1,6 +1,5 @@
 import { supabase } from './supabase';
 import type {
-  Activity,
   Event,
   EventActivity,
   EventActivityRow,

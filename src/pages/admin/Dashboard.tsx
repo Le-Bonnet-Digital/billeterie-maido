@@ -12,6 +12,12 @@ interface DashboardStats {
   activeEvents: number;
 }
 
+interface ReservationWithPass {
+  passes: {
+    price: number;
+  };
+}
+
 export default function AdminDashboard() {
   const [stats, setStats] = useState<DashboardStats>({
     totalEvents: 0,
@@ -49,7 +55,7 @@ export default function AdminDashboard() {
       // Calculer le chiffre d'affaires (approximatif)
       const { data: reservations, error: revenueError } = await supabase
         .from('reservations')
-        .select(`
+        .select<ReservationWithPass>(`
           passes!inner (
             price
           )
@@ -59,8 +65,7 @@ export default function AdminDashboard() {
       let revenue = 0;
       if (!revenueError && reservations) {
         revenue = reservations.reduce((total, reservation) => {
-          const pass = reservation.passes as any;
-          return total + (pass?.price || 0);
+          return total + (reservation.passes?.price || 0);
         }, 0);
       }
 

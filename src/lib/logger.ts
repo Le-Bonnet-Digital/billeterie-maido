@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /** Contexte additionnel pour les logs. */
 export type LogContext = Record<string, unknown>;
 

@@ -1,8 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Users, Search, Download, Filter, Mail } from 'lucide-react';
+import { Users, Search, Download, Mail } from 'lucide-react';
 import { format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
 

@@ -5,14 +5,12 @@ import {
   fetchEvent,
   fetchPasses,
   fetchEventActivities,
-  fetchTimeSlots,
 } from '../../lib/eventDetails';
 
 vi.mock('../../lib/eventDetails', () => ({
   fetchEvent: vi.fn(),
   fetchPasses: vi.fn(),
   fetchEventActivities: vi.fn(),
-  fetchTimeSlots: vi.fn(),
 }));
 
 vi.mock('../../lib/supabase', () => ({

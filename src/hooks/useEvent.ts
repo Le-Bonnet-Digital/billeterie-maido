@@ -7,7 +7,6 @@ import {
   Event,
   Pass,
   EventActivity,
-  TimeSlot,
 } from '../services/eventService';
 
 export function useEvent(eventId?: string) {
