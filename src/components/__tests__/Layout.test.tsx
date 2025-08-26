@@ -14,8 +14,8 @@ describe('Layout Component', () => {
     expect(
       screen.getByRole('link', { name: /BilletEvent/i })
     ).toBeInTheDocument();
-    expect(screen.getByText(/événements/i)).toBeInTheDocument();
-    expect(screen.getByText('Retrouver mon Billet')).toBeInTheDocument();
+    expect(screen.getAllByText(/événements/i)[0]).toBeInTheDocument();
+    expect(screen.getAllByText('Retrouver mon Billet')[0]).toBeInTheDocument();
   });
 
   it('should render admin link', () => {
