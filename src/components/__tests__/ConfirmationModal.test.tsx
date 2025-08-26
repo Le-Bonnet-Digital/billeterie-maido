@@ -30,21 +30,21 @@ describe('ConfirmationModal Component', () => {
     expect(screen.getByText('Test Event')).toBeInTheDocument();
     expect(screen.getByText('Test Pass')).toBeInTheDocument();
     expect(screen.getByText('25€')).toBeInTheDocument();
-    expect(screen.getByText('test@example.com')).toBeInTheDocument();
+    expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
   });
 
-  it('should render time slot information when provided', () => {
-    const propsWithTimeSlot = {
+  it('should render activity information when provided', () => {
+    const propsWithDetails = {
       ...mockProps,
       timeSlot: {
-        activity: 'poney',
         slot_time: '2024-01-01T10:00:00Z'
-      }
+      },
+      activityName: 'Poney'
     };
-    
-    render(<ConfirmationModal {...propsWithTimeSlot} />);
-    
-    expect(screen.getByText('Poney')).toBeInTheDocument();
+
+    render(<ConfirmationModal {...propsWithDetails} />);
+
+    expect(screen.getByText(/Poney/i)).toBeInTheDocument();
   });
 
   it('should call onClose when close button is clicked', () => {
@@ -62,3 +62,4 @@ describe('ConfirmationModal Component', () => {
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
 });
+
