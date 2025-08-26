@@ -1,6 +1,8 @@
 # Guide de contribution
 
-Merci de votre intérêt pour le projet **Billeterie Maïdo**. Pour proposer une amélioration ou corriger un bug, veuillez suivre les étapes suivantes :
+Merci de votre intérêt pour le projet **Billeterie Maïdo**. Avant toute contribution, veuillez lire `AGENTS.md` pour connaître les règles du projet.
+
+Pour proposer une amélioration ou corriger un bug, veuillez suivre les étapes suivantes :
 
 1. **Forkez** le dépôt et créez une branche pour votre contribution.
 2. Installez les dépendances :
