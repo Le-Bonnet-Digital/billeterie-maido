@@ -1,9 +1,6 @@
 import { createClient } from '@supabase/supabase-js';
 import { debugLog } from './logger';
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
-
 export interface DatabaseClient {
   from: (table: string) => unknown;
   rpc: (fn: string, params?: unknown) => Promise<unknown>;
@@ -14,6 +11,10 @@ export interface DatabaseClient {
  * @returns `true` si la configuration est valide
  */
 export const isSupabaseConfigured = (): boolean => {
+  const env = process.env as Record<string, string | undefined>;
+  const supabaseUrl = env['VITE_SUPABASE_URL'] ?? import.meta.env.VITE_SUPABASE_URL;
+  const supabaseAnonKey = env['VITE_SUPABASE_ANON_KEY'] ?? import.meta.env.VITE_SUPABASE_ANON_KEY;
+
   return !!supabaseUrl && !!supabaseAnonKey && supabaseUrl.includes('.supabase.co');
 };
 
@@ -33,6 +34,9 @@ if (!isSupabaseConfigured()) {
   debugLog(message);
   console.warn(message);
 }
+
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY;
 
 export const supabase: DatabaseClient = isSupabaseConfigured()
   ? (createClient(supabaseUrl, supabaseAnonKey) as unknown as DatabaseClient)

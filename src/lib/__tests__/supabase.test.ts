@@ -1,35 +1,41 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 
-// Mock environment variables using vi.hoisted
-const mockEnv = vi.hoisted(() => ({
-  VITE_SUPABASE_URL: '',
-  VITE_SUPABASE_ANON_KEY: '',
-}));
-
-vi.mock('~/.vite/import-meta-env', () => ({
-  default: mockEnv,
-}));
-
-// Import after mocking
-const { isSupabaseConfigured } = await import('../supabase');
+const originalUrl = process.env.VITE_SUPABASE_URL;
+const originalKey = process.env.VITE_SUPABASE_ANON_KEY;
 
 describe('Supabase Configuration', () => {
-  beforeEach(() => {
-    // Reset mocks before each test
-    vi.clearAllMocks();
-  });
+  it('should return true when Supabase is properly configured', async () => {
+    process.env.VITE_SUPABASE_URL = 'https://test.supabase.co';
+    process.env.VITE_SUPABASE_ANON_KEY = 'test-key';
 
-  it('should return true when Supabase is properly configured', () => {
-    mockEnv.VITE_SUPABASE_URL = 'https://test.supabase.co';
-    mockEnv.VITE_SUPABASE_ANON_KEY = 'test-key';
-    
+    vi.resetModules();
+    const { isSupabaseConfigured } = await import('../supabase');
+
     expect(isSupabaseConfigured()).toBe(true);
   });
 
-  it('should return false when Supabase is not configured', () => {
-    mockEnv.VITE_SUPABASE_URL = '';
-    mockEnv.VITE_SUPABASE_ANON_KEY = '';
-    
+  it('should return false when Supabase is not configured', async () => {
+    process.env.VITE_SUPABASE_URL = '';
+    process.env.VITE_SUPABASE_ANON_KEY = '';
+
+    vi.resetModules();
+    const { isSupabaseConfigured } = await import('../supabase');
+
     expect(isSupabaseConfigured()).toBe(false);
   });
 });
+
+afterAll(() => {
+  if (originalUrl !== undefined) {
+    process.env.VITE_SUPABASE_URL = originalUrl;
+  } else {
+    delete process.env.VITE_SUPABASE_URL;
+  }
+
+  if (originalKey !== undefined) {
+    process.env.VITE_SUPABASE_ANON_KEY = originalKey;
+  } else {
+    delete process.env.VITE_SUPABASE_ANON_KEY;
+  }
+});
+
