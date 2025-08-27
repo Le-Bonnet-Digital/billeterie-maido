@@ -120,7 +120,7 @@ export default function EventManagement() {
   };
 
   const handleFormClose = () => {
-    debug('🔧 EventManagement handleFormClose called');
+    debugLog('🔧 EventManagement handleFormClose called');
     setShowCreateModal(false);
     setEditingEvent(null);
     loadEvents(); // Recharger après fermeture
@@ -201,7 +201,7 @@ export default function EventManagement() {
             </p>
             <button
               onClick={() => {
-                debug('🔧 EventManagement opening create modal from empty state');
+                debugLog('🔧 EventManagement opening create modal from empty state');
                 setShowCreateModal(true);
               }}
               className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors"
@@ -240,7 +240,7 @@ export default function EventManagement() {
                   <div className="flex items-center gap-2 ml-4">
                     <button
                       onClick={() => {
-                        debug('🔧 EventManagement opening activities modal for:', event.id);
+                        debugLog('🔧 EventManagement opening activities modal for:', event.id);
                         setShowActivitiesModal(event);
                       }}
                       className="p-2 text-green-600 hover:text-green-700 hover:bg-green-50 rounded-md transition-colors"
@@ -252,7 +252,7 @@ export default function EventManagement() {
                     {event.has_animations && (
                       <button
                         onClick={() => {
-                          debug('🔧 EventManagement opening animations modal for:', event.id);
+                          debugLog('🔧 EventManagement opening animations modal for:', event.id);
                           setShowAnimationsModal(event);
                         }}
                         className="p-2 text-purple-600 hover:text-purple-700 hover:bg-purple-50 rounded-md transition-colors"
@@ -264,7 +264,7 @@ export default function EventManagement() {
                     
                     <button
                       onClick={() => {
-                        debug('🔧 EventManagement opening edit modal for:', event.id);
+                        debugLog('🔧 EventManagement opening edit modal for:', event.id);
                         setEditingEvent(event);
                       }}
                       className="p-2 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
