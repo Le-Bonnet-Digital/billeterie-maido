@@ -1,7 +1,12 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen } from '../../../test/utils';
 import Communication from '../Communication';
+
+vi.stubEnv('VITE_TEST_DELAY_MS', '0');
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('Communication', () => {
   it('opens template modal from header button', async () => {
