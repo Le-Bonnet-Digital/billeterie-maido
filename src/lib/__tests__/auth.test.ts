@@ -1,95 +1,166 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { signInWithEmail, signOut } from '../auth';
-import { supabase } from '../supabase';
+import { createUser, signInWithEmail, signOut, getCurrentUser, type User } from '../auth';
 import { toast } from 'react-hot-toast';
+import { logger } from '../logger';
 
 // Mock toast
 vi.mock('react-hot-toast', () => ({
   toast: { error: vi.fn(), success: vi.fn() }
 }));
 
+// Mock logger
+const loggerMock = vi.hoisted(() => ({ warn: vi.fn(), error: vi.fn() }));
+vi.mock('../logger', () => ({ logger: loggerMock }));
+
 // Mock supabase
-const { insertMock, singleMock, fromMock } = vi.hoisted(() => {
-  const insertMock = vi.fn().mockResolvedValue({ error: null });
-  const singleMock = vi.fn().mockResolvedValue({ data: { role: 'admin' }, error: null });
+const {
+  insertMock,
+  singleMock,
+  fromMock,
+  signInWithPasswordMock,
+  signOutMock,
+  getUserMock
+} = vi.hoisted(() => {
+  const insertMock = vi.fn();
+  const singleMock = vi.fn();
   const eqMock = vi.fn().mockReturnValue({ single: singleMock });
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
-  const fromMock = vi.fn().mockReturnValue({ select: selectMock, insert: insertMock });
-  return { insertMock, singleMock, fromMock };
+  const fromMock = vi.fn().mockReturnValue({ insert: insertMock, select: selectMock });
+  const signInWithPasswordMock = vi.fn();
+  const signOutMock = vi.fn();
+  const getUserMock = vi.fn();
+  return {
+    insertMock,
+    singleMock,
+    fromMock,
+    signInWithPasswordMock,
+    signOutMock,
+    getUserMock
+  };
 });
 
 vi.mock('../supabase', () => ({
   supabase: {
     auth: {
-      signInWithPassword: vi.fn(),
-      signOut: vi.fn(),
-      getUser: vi.fn()
+      signInWithPassword: signInWithPasswordMock,
+      signOut: signOutMock,
+      getUser: getUserMock
     },
     from: fromMock
   }
 }));
 
-// Ensure mocks reset before each test
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.mocked(supabase.auth.signInWithPassword).mockReset();
-  vi.mocked(supabase.auth.signOut).mockReset();
-  singleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
+  insertMock.mockReset();
+  singleMock.mockReset();
+  signInWithPasswordMock.mockReset();
+  signOutMock.mockReset();
+  getUserMock.mockReset();
+  loggerMock.warn.mockReset();
+  loggerMock.error.mockReset();
+
   insertMock.mockResolvedValue({ error: null });
+  singleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
+});
+
+describe('createUser', () => {
+  it('refuse les rôles non autorisés', async () => {
+    await expect(
+      createUser('1', 'a@b.com', 'hacker' as unknown as User['role'])
+    ).rejects.toThrow('Rôle non autorisé');
+    expect(fromMock).not.toHaveBeenCalled();
+  });
 });
 
 describe('signInWithEmail', () => {
-  it('should return user with admin role when found in DB', async () => {
-    const user = { id: 'user-1', email: 'test@example.com' };
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: { user },
+  it('réussit avec un utilisateur existant', async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { user: { id: '1', email: 'admin@test.com' } },
       error: null
     });
 
-    const result = await signInWithEmail('test@example.com', 'password');
-    expect(result).toEqual({ id: 'user-1', email: 'test@example.com', role: 'admin' });
+    const result = await signInWithEmail('admin@test.com', 'pass');
+
+    expect(result).toEqual({ id: '1', email: 'admin@test.com', role: 'admin' });
   });
 
-  it('should assign client role when user does not exist', async () => {
+  it('crée un utilisateur inexistant', async () => {
+    signInWithPasswordMock.mockResolvedValue({
+      data: { user: { id: '2', email: 'client@test.com' } },
+      error: null
+    });
     singleMock.mockResolvedValue({ data: null, error: { message: 'No user' } });
 
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
-      data: { user: { id: 'user-2', email: 'client@example.com' } },
-      error: null
-    });
+    const result = await signInWithEmail('client@test.com', 'pass');
 
-    const result = await signInWithEmail('client@example.com', 'password');
-
-    expect(result?.role).toBe('client');
-    expect(insertMock).toHaveBeenCalledWith({
-      id: 'user-2',
-      email: 'client@example.com',
-      role: 'client'
-    });
+    expect(result).toEqual({ id: '2', email: 'client@test.com', role: 'client' });
+    expect(insertMock).toHaveBeenCalledWith({ id: '2', email: 'client@test.com', role: 'client' });
+    expect(logger.warn).toHaveBeenCalled();
   });
 
-  it('should return null and show error on failure', async () => {
-    vi.mocked(supabase.auth.signInWithPassword).mockResolvedValue({
+  it('gère les erreurs de connexion', async () => {
+    signInWithPasswordMock.mockResolvedValue({
       data: { user: null },
-      error: new Error('Invalid credentials')
+      error: new Error('bad')
     });
 
-    const result = await signInWithEmail('test@example.com', 'wrong');
+    const result = await signInWithEmail('bad@test.com', 'wrong');
+
     expect(result).toBeNull();
     expect(toast.error).toHaveBeenCalled();
+    expect(logger.error).toHaveBeenCalled();
   });
 });
 
 describe('signOut', () => {
-  it('should show success when sign out succeeds', async () => {
-    vi.mocked(supabase.auth.signOut).mockResolvedValue({ error: null });
+  it('succès', async () => {
+    signOutMock.mockResolvedValue({ error: null });
     await signOut();
     expect(toast.success).toHaveBeenCalledWith('Déconnexion réussie');
   });
 
-  it('should show error when sign out fails', async () => {
-    vi.mocked(supabase.auth.signOut).mockResolvedValue({ error: new Error('fail') });
+  it('échec', async () => {
+    signOutMock.mockResolvedValue({ error: new Error('fail') });
     await signOut();
     expect(toast.error).toHaveBeenCalledWith('Erreur lors de la déconnexion');
+    expect(logger.error).toHaveBeenCalled();
   });
 });
+
+describe('getCurrentUser', () => {
+  it("retourne l'utilisateur courant", async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: '1', email: 'u@test.com' } } });
+
+    const result = await getCurrentUser();
+
+    expect(result).toEqual({ id: '1', email: 'u@test.com', role: 'admin' });
+  });
+
+  it('retourne null quand aucun utilisateur', async () => {
+    getUserMock.mockResolvedValue({ data: { user: null } });
+
+    const result = await getCurrentUser();
+
+    expect(result).toBeNull();
+  });
+
+  it('retourne null quand la requête de rôle échoue', async () => {
+    getUserMock.mockResolvedValue({ data: { user: { id: '1', email: 'u@test.com' } } });
+    singleMock.mockResolvedValue({ data: null, error: { message: 'fail' } });
+
+    const result = await getCurrentUser();
+
+    expect(result).toBeNull();
+  });
+
+  it('retourne null et log en cas d’erreur', async () => {
+    getUserMock.mockRejectedValue(new Error('network'));
+
+    const result = await getCurrentUser();
+
+    expect(result).toBeNull();
+    expect(logger.error).toHaveBeenCalled();
+  });
+});
+
