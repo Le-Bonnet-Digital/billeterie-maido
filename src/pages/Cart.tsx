@@ -4,6 +4,7 @@ import ConfirmationModal from '../components/ConfirmationModal';
 import CheckoutForm, { type CustomerData } from '../components/CheckoutForm';
 import { getCartItems, removeFromCart, calculateCartTotal, type CartItem } from '../lib/cart';
 import { supabase } from '../lib/supabase';
+import { wait } from '../lib/wait';
 import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckSquare, Square } from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
@@ -72,10 +73,11 @@ export default function Cart() {
     
     try {
       // Simuler le processus de paiement
-      toast.loading('Traitement du paiement...', { duration: 3000 });
-      
-      // Attendre 3 secondes pour simuler le paiement
-      await new Promise(resolve => setTimeout(resolve, 3000));
+      const paymentDelay = 3000;
+      toast.loading('Traitement du paiement...', { duration: paymentDelay });
+
+      // Attendre pour simuler le paiement
+      await wait(paymentDelay);
       
       // Créer les réservations pour chaque article du panier
       const reservations = [];

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest';
+import { describe, it, expect, vi, afterAll } from 'vitest';
 import { render, screen, waitFor } from '../../test/utils';
 import Cart from '../Cart';
 
@@ -8,6 +8,11 @@ vi.mock('../../lib/cart', () => ({
   removeFromCart: vi.fn(() => Promise.resolve(true)),
   calculateCartTotal: vi.fn(() => 0),
 }));
+
+vi.stubEnv('VITE_TEST_DELAY_MS', '0');
+afterAll(() => {
+  vi.unstubAllEnvs();
+});
 
 describe('Cart Page', () => {
   it('should render empty cart message when no items', async () => {

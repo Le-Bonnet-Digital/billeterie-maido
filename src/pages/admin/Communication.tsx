@@ -3,6 +3,7 @@ import { supabase } from '../../lib/supabase';
 import { Mail, Send, Users, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
+import { wait } from '../../lib/wait';
 
 interface Event {
   id: string;
@@ -150,7 +151,8 @@ L'équipe BilletEvent`
       setSending(true);
       
       // Simuler l'envoi d'email
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const sendDelay = 2000;
+      await wait(sendDelay);
       
       toast.success(`Email envoyé à ${recipientCount} destinataire(s)`);
       
