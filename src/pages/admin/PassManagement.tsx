@@ -427,15 +427,23 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
 
   useEffect(() => {
     // Initialiser les activités sélectionnées après le chargement du pass
+    let timeoutId: ReturnType<typeof setTimeout>;
+
     if (pass?.event_activities && availableActivities.length > 0) {
       const passActivityIds = pass.event_activities.map(ea => ea.id);
       setSelectedActivities(passActivityIds);
-      
+
       // Calculer le stock initial après avoir défini les activités sélectionnées
-      setTimeout(() => {
+      timeoutId = setTimeout(() => {
         updateCalculatedStock();
       }, 0);
     }
+
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
   }, [pass, availableActivities]);
 
   const loadEventActivities = async () => {
