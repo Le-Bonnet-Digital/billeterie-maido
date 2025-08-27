@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { apiCall } from '../apiClient';
 import { logger } from '../logger';
 
@@ -10,21 +10,35 @@ describe('apiCall', () => {
     vi.clearAllMocks();
   });
 
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
   it('retries on failure and eventually succeeds', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
     const op = vi
       .fn()
       .mockResolvedValueOnce({ data: null, error: new Error('fail') })
       .mockResolvedValueOnce({ data: 'ok', error: null });
 
-    const result = await apiCall(() => op(), 'def', 'test');
+    const resultPromise = apiCall(() => op(), 'def', 'test');
+    await vi.runAllTimersAsync();
+    vi.runAllTimers();
+    const result = await resultPromise;
     expect(op).toHaveBeenCalledTimes(2);
     expect(result).toBe('ok');
   });
 
   it('returns default value after retries', async () => {
+    vi.useFakeTimers();
+    vi.setSystemTime(0);
     const op = vi.fn().mockResolvedValue({ data: null, error: new Error('fail') });
     const spy = vi.spyOn(logger, 'error');
-    const result = await apiCall(() => op(), 'def', 'test');
+    const resultPromise = apiCall(() => op(), 'def', 'test');
+    await vi.runAllTimersAsync();
+    vi.runAllTimers();
+    const result = await resultPromise;
     expect(op).toHaveBeenCalledTimes(3);
     expect(result).toBe('def');
     expect(spy).toHaveBeenCalled();
