@@ -3,7 +3,6 @@ import {
   fetchEvent,
   fetchPasses,
   fetchEventActivities,
-  fetchTimeSlotsForActivity,
   Event,
   Pass,
   EventActivity,
@@ -42,8 +41,5 @@ export function useEvent(eventId?: string) {
     eventActivities,
     loading,
     reload: load,
-    fetchTimeSlotsForActivity,
   };
 }
-
-export type { TimeSlot } from '../services/eventService';
