@@ -34,22 +34,6 @@ export interface EventActivity {
   activity: Activity;
 }
 
-export interface TimeSlot {
-  id: string;
-  event_activity_id: string;
-  slot_time: string;
-  capacity: number;
-  remaining_capacity?: number;
-  event_activity: EventActivity;
-}
-
-interface RawSlot {
-  id: string;
-  slot_time: string;
-  capacity: number;
-  event_activities: EventActivity & { activities: Activity };
-}
-
 /**
  * Récupère un événement publié par son identifiant.
  * @param eventId Identifiant de l'événement
@@ -97,50 +81,4 @@ export async function fetchEventActivities(
   if (!isSupabaseConfigured()) return [];
   const { eventActivities } = await fetchEventStock(eventId, client);
   return eventActivities as EventActivity[];
-}
-
-/**
- * Récupère les créneaux disponibles pour une activité donnée.
- * @param eventActivityId Identifiant de l'activité
- * @param client Client Supabase optionnel
- */
-export async function fetchTimeSlotsForActivity(
-  eventActivityId: string,
-  client: DatabaseClient = supabase
-): Promise<TimeSlot[]> {
-  if (!isSupabaseConfigured()) return [];
-  const { data, error } = await client
-    .from('time_slots')
-    .select(
-      `
-      id,
-      slot_time,
-      capacity,
-      event_activities!inner (
-        *,
-        activities (*)
-      )
-    `
-    )
-    .eq('event_activity_id', eventActivityId)
-    .gte('slot_time', new Date().toISOString())
-    .order('slot_time');
-  if (error) throw error;
-
-  const slotsWithCapacity = await Promise.all(
-    (data || []).map(async (slot: RawSlot) => {
-      const { data: capacityData } = await client.rpc('get_slot_remaining_capacity', {
-        slot_uuid: slot.id,
-      });
-      return {
-        ...slot,
-        remaining_capacity: capacityData || 0,
-        event_activity: {
-          ...slot.event_activities,
-          activity: slot.event_activities.activities,
-        },
-      };
-    })
-  );
-  return slotsWithCapacity;
 }

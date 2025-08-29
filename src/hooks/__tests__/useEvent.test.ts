@@ -11,7 +11,6 @@ vi.mock('../../services/eventService', () => ({
   fetchEvent: vi.fn(),
   fetchPasses: vi.fn(),
   fetchEventActivities: vi.fn(),
-  fetchTimeSlotsForActivity: vi.fn(),
 }));
 
 beforeEach(() => {

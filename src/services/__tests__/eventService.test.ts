@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { fetchEvent, fetchTimeSlotsForActivity, fetchPasses, fetchEventActivities } from '../eventService';
+import { fetchEvent, fetchPasses, fetchEventActivities } from '../eventService';
 import type { DatabaseClient } from '../../lib/supabase';
 
 const from = vi.fn((table: string): Record<string, unknown> => {
@@ -13,38 +13,10 @@ const from = vi.fn((table: string): Record<string, unknown> => {
       }),
     };
   }
-  if (table === 'time_slots') {
-    return {
-      select: vi.fn().mockReturnValue({
-        eq: vi.fn().mockReturnThis(),
-        gte: vi.fn().mockReturnThis(),
-        order: vi.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'slot1',
-              slot_time: '2024-01-01T10:00:00Z',
-              capacity: 10,
-              event_activities: {
-                id: 'ea1',
-                activity_id: 'a1',
-                stock_limit: null,
-                requires_time_slot: true,
-                activities: { id: 'a1', name: 'Act', description: 'Desc', icon: '🎯' },
-              },
-            },
-          ],
-          error: null,
-        }),
-      }),
-    };
-  }
   return {};
 });
 
 const rpc = vi.fn((fn: string): Promise<unknown> => {
-  if (fn === 'get_slot_remaining_capacity') {
-    return Promise.resolve({ data: 5 });
-  }
   if (fn === 'get_event_passes_activities_stock') {
     return Promise.resolve({
       data: {
@@ -85,12 +57,6 @@ describe('eventService', () => {
   it('fetchEvent returns event data', async () => {
     const event = await fetchEvent('1', client);
     expect(event?.name).toBe('Event');
-  });
-
-  it('fetchTimeSlotsForActivity returns slots with remaining capacity', async () => {
-    const slots = await fetchTimeSlotsForActivity('ea1', client);
-    expect(slots[0].remaining_capacity).toBe(5);
-    expect(slots[0].event_activity.activity.name).toBe('Act');
   });
 
   it('fetchPasses uses grouped RPC to return remaining stock', async () => {
