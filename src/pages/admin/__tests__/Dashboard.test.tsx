@@ -32,4 +32,19 @@ describe('AdminDashboard', () => {
       screen.getByRole('link', { name: /Créer un Événement/i })
     ).toBeInTheDocument();
   });
+
+  it('renders without console warnings', async () => {
+    const warnSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+
+    render(<AdminDashboard />);
+
+    await screen.findByText(/Tableau de Bord/i);
+
+    expect(warnSpy).not.toHaveBeenCalled();
+    expect(errorSpy).not.toHaveBeenCalled();
+
+    warnSpy.mockRestore();
+    errorSpy.mockRestore();
+  });
 });
