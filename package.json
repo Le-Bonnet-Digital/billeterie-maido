@@ -8,8 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "npx vitest",
-    "test:ui": "npx vitest run",
+    "test": "npx vitest run",
+    "test:ui": "npx vitest --ui",
     "test:coverage": "npx vitest --coverage",
     "prepare": "husky"
   },
