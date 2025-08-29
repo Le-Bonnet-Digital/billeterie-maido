@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen, waitFor } from '../../../test/utils';
+import { render, screen, waitFor, act } from '../../../test/utils';
 import EventManagement from '../EventManagement';
 
 // Mock the supabase calls to return resolved data immediately  
@@ -34,10 +34,14 @@ describe('EventManagement', () => {
     render(<EventManagement />);
 
     const button = await screen.findByRole('button', { name: /nouvel événement/i });
-    await user.click(button);
+    await act(async () => {
+      await user.click(button);
+    });
 
     await waitFor(() => {
-      expect(screen.getByRole('heading', { name: /nouvel événement/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('heading', { name: /nouvel événement/i })
+      ).toBeInTheDocument();
     });
   });
 

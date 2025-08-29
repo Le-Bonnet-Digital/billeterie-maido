@@ -5,7 +5,12 @@ import { MemoryRouter } from 'react-router-dom';
 // Custom render function with providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
   return (
-    <MemoryRouter>
+    <MemoryRouter
+      future={{
+        v7_startTransition: true,
+        v7_relativeSplatPath: true,
+      }}
+    >
       {children}
     </MemoryRouter>
   );
