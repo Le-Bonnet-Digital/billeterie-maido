@@ -115,12 +115,17 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="animations-manager-title"
+        >
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <h2 id="animations-manager-title" className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                   🎭 Animations - {event.name}
                 </h2>
                 <p className="text-gray-600">
@@ -333,19 +338,24 @@ function AnimationForm({ event, animation, onClose }: AnimationFormProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
-              {animation ? 'Modifier l\'Animation' : 'Créer une Animation'}
-            </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+      <div
+        className="bg-white rounded-lg max-w-md w-full flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="animation-form-title"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 id="animation-form-title" className="text-lg font-semibold text-gray-900">
+              {animation ? "Modifier l'Animation" : 'Créer une Animation'}
+          </h3>
+          <button onClick={onClose} aria-label="Fermer le modal" className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Nom de l'animation *
@@ -462,7 +472,6 @@ function AnimationForm({ event, animation, onClose }: AnimationFormProps) {
               </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
   );

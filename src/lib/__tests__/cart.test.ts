@@ -160,7 +160,7 @@ describe('Cart Functions', () => {
       const repo = createRepo({ insertCartItem });
       const success = await insertNewItem(repo, 'sess', 'pass', undefined, undefined, 1);
       expect(success).toBe(true);
-      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', undefined, undefined, 1);
+      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', undefined, undefined, 1, undefined, undefined);
     });
   });
 

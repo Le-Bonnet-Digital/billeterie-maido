@@ -1,14 +1,15 @@
-import { createClient } from '@supabase/supabase-js';
+import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import { debugLog } from './logger';
 
 const env =
   typeof process !== 'undefined' && process.env
     ? (process.env as Record<string, string | undefined>)
     : (import.meta.env as Record<string, string | undefined>);
-export interface DatabaseClient {
-  from: (table: string) => unknown;
-  rpc: (fn: string, params?: unknown) => Promise<unknown>;
-}
+// We rely on the official Supabase client type to ensure
+// query builder methods are correctly typed across the app.
+// When env is not configured, we still export a value cast to this type
+// to keep call sites type-safe and avoid `unknown` chaining.
+export type DatabaseClient = SupabaseClient;
 
 /**
  * Vérifie que les variables d'environnement Supabase sont définies.
@@ -41,8 +42,8 @@ if (!isSupabaseConfigured()) {
 }
 
 export const supabase: DatabaseClient = isSupabaseConfigured()
-  ? (createClient(supabaseUrl, supabaseAnonKey) as unknown as DatabaseClient)
-  : ({} as DatabaseClient);
+  ? createClient(supabaseUrl as string, supabaseAnonKey as string)
+  : ({} as unknown as DatabaseClient);
 
 export type Database = {
   public: {
@@ -113,29 +114,32 @@ export type Database = {
       passes: {
         Row: {
           id: string;
-          event_id: string;
+          event_id: string | null;
           name: string;
           price: number;
           description: string;
           initial_stock: number | null;
+          is_park?: boolean;
           created_at: string;
         };
         Insert: {
           id?: string;
-          event_id: string;
+          event_id?: string | null;
           name: string;
           price: number;
           description?: string;
           initial_stock?: number | null;
+          is_park?: boolean;
           created_at?: string;
         };
         Update: {
           id?: string;
-          event_id?: string;
+          event_id?: string | null;
           name?: string;
           price?: number;
           description?: string;
           initial_stock?: number | null;
+          is_park?: boolean;
         };
       };
       time_slots: {
@@ -192,28 +196,68 @@ export type Database = {
         Row: {
           id: string;
           session_id: string;
-          pass_id: string;
+          pass_id: string | null;
           time_slot_id: string | null;
           quantity: number;
           reserved_until: string;
+          attendee_first_name: string | null;
+          attendee_last_name: string | null;
+          attendee_birth_year: number | null;
+          access_conditions_ack: boolean | null;
+          product_type: 'event_pass' | 'activity_variant' | null;
+          product_id: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           session_id: string;
-          pass_id: string;
+          pass_id?: string | null;
           time_slot_id?: string | null;
           quantity?: number;
           reserved_until?: string;
+          attendee_first_name?: string | null;
+          attendee_last_name?: string | null;
+          attendee_birth_year?: number | null;
+          access_conditions_ack?: boolean | null;
+          product_type?: 'event_pass' | 'activity_variant' | null;
+          product_id?: string | null;
           created_at?: string;
         };
         Update: {
           id?: string;
           session_id?: string;
-          pass_id?: string;
+          pass_id?: string | null;
           time_slot_id?: string | null;
           quantity?: number;
           reserved_until?: string;
+          attendee_first_name?: string | null;
+          attendee_last_name?: string | null;
+          attendee_birth_year?: number | null;
+          access_conditions_ack?: boolean | null;
+          product_type?: 'event_pass' | 'activity_variant' | null;
+          product_id?: string | null;
+        };
+      };
+      park_time_slots: {
+        Row: {
+          id: string;
+          activity_id: string;
+          slot_time: string;
+          capacity: number;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          activity_id: string;
+          slot_time: string;
+          capacity?: number;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          activity_id?: string;
+          slot_time?: string;
+          capacity?: number;
         };
       };
       users: {
@@ -233,6 +277,37 @@ export type Database = {
           id?: string;
           email?: string;
           role?: 'admin' | 'pony_provider' | 'archery_provider' | 'client';
+        };
+      };
+      activity_variants: {
+        Row: {
+          id: string;
+          activity_id: string;
+          name: string;
+          price: number;
+          is_active: boolean;
+          sort_order: number;
+          variant_stock: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          activity_id: string;
+          name: string;
+          price: number;
+          is_active?: boolean;
+          sort_order?: number;
+          variant_stock?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          activity_id?: string;
+          name?: string;
+          price?: number;
+          is_active?: boolean;
+          sort_order?: number;
+          variant_stock?: number | null;
         };
       };
     };
@@ -290,6 +365,31 @@ export type Database = {
             };
           }[];
         };
+      };
+      get_activity_variant_remaining_stock: {
+        Args: { variant_uuid: string };
+        Returns: number;
+      };
+      get_parc_activities_with_variants: {
+        Args: Record<PropertyKey, never>;
+        Returns: {
+          id: string;
+          name: string;
+          description: string;
+          parc_description?: string | null;
+          icon: string;
+          category: string;
+          requires_time_slot: boolean;
+          variants: {
+            id: string;
+            name: string;
+            price: number;
+            sort_order: number;
+            remaining_stock: number;
+            image_url?: string | null;
+          }[];
+          image_url?: string | null;
+        }[];
       };
     };
   };

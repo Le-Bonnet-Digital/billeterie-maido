@@ -115,13 +115,13 @@ describe('SupabaseCartRepository', () => {
       vi.mocked(supabase.from).mockReturnValue({ insert } as never);
       const result = await repo.insertCartItem('sess', 'pass', undefined, undefined, 2);
       expect(result).toBe(true);
-      expect(insert).toHaveBeenCalledWith({
+      expect(insert).toHaveBeenCalledWith(expect.objectContaining({
         session_id: 'sess',
         pass_id: 'pass',
         event_activity_id: undefined,
         time_slot_id: undefined,
         quantity: 2,
-      });
+      }));
     });
 
     it('returns false on insert error', async () => {

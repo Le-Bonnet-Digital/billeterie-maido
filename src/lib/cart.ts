@@ -36,6 +36,12 @@ export interface CartItem {
   eventActivity?: EventActivity;
   timeSlot?: TimeSlot;
   quantity: number;
+  attendee?: {
+    firstName?: string;
+    lastName?: string;
+    birthYear?: number;
+    conditionsAck?: boolean;
+  };
 }
 
 // Générer un ID de session unique si pas déjà existant
@@ -104,12 +110,14 @@ export async function updateExistingItem(
 export async function insertNewItem(
   repo: CartRepository,
   sessionId: string,
-  passId: string,
+  passId: string | null,
   eventActivityId: string | undefined,
   timeSlotId: string | undefined,
   quantity: number,
+  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
+  product?: { type?: 'event_pass' | 'activity_variant'; id?: string },
 ): Promise<boolean> {
-  return repo.insertCartItem(sessionId, passId, eventActivityId, timeSlotId, quantity);
+  return repo.insertCartItem(sessionId, passId, eventActivityId, timeSlotId, quantity, attendee, product);
 }
 
 /**
@@ -135,6 +143,7 @@ export async function addToCart(
   quantity = 1,
   repo: CartRepository = new SupabaseCartRepository(),
   notify: NotifyFn = toastNotify,
+  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
 ): Promise<boolean> {
   if (!Number.isInteger(quantity) || quantity <= 0) {
     notifyUser(notify, 'error', 'La quantité doit être un entier positif');
@@ -156,7 +165,9 @@ export async function addToCart(
 
     await repo.cleanupExpiredCartItems();
 
-    const existingItem = await repo.findCartItem(sessionId, passId, eventActivityId, timeSlotId);
+    // Si des informations d'attestation/participant sont fournies, on évite d'agréger
+    // afin de conserver les infos par billet. Dans ce cas, on insère une ligne par billet.
+    const existingItem = attendee ? null : await repo.findCartItem(sessionId, passId, eventActivityId, timeSlotId);
 
     let success = false;
     if (existingItem) {
@@ -165,7 +176,7 @@ export async function addToCart(
         notifyUser(notify, 'error', 'Erreur lors de la mise à jour du panier');
       }
     } else {
-      success = await insertNewItem(repo, sessionId, passId, eventActivityId, timeSlotId, quantity);
+      success = await insertNewItem(repo, sessionId, passId, eventActivityId, timeSlotId, quantity, attendee, { type: 'event_pass', id: passId });
       if (!success) {
         notifyUser(notify, 'error', "Erreur lors de l'ajout au panier");
       }
@@ -210,34 +221,52 @@ export async function getCartItems(): Promise<CartItem[]> {
       });
     }
     
-    const { data, error } = await supabase
-      .from('cart_items')
-      .select(`
+    const baseQuery = () =>
+      supabase
+        .from('cart_items')
+        .select(`
         id,
         quantity,
-        event_activity_id,
-        passes:pass_id (
-          id,
-          name,
-          price,
-          description
-        ),
-        event_activities:event_activity_id (
-          id,
-          activities (
-            id,
-            name,
-            icon
-          )
-        ),
-        time_slots:time_slot_id (
-          id,
-          slot_time
-        )
+        attendee_first_name,
+        attendee_last_name,
+        attendee_birth_year,
+        access_conditions_ack,
+        product_type,
+        product_id,
+        pass_id,
+        time_slot_id
       `)
-      .eq('session_id', sessionId)
-      .gt('reserved_until', new Date().toISOString());
-      
+        .eq('session_id', sessionId)
+        .gt('reserved_until', new Date().toISOString());
+
+    // 1st attempt: with attendee fields
+    type CartRow = CartItemFromDB & { product_type?: 'event_pass' | 'activity_variant' | null; product_id?: string | null };
+    type QueryResult<T> = { data: T[] | null; error: unknown | null };
+    let res = (await baseQuery()) as QueryResult<CartRow>;
+
+    // Fallback if DB not migrated yet OR any server error (reduce 500 noise)
+    if (res?.error) {
+      const simpleQuery = () =>
+        supabase
+          .from('cart_items')
+          .select(`
+          id,
+          quantity,
+          product_type,
+          product_id,
+          pass_id,
+          time_slot_id
+        `)
+          .eq('session_id', sessionId)
+          .gt('reserved_until', new Date().toISOString());
+      try {
+        res = (await simpleQuery()) as QueryResult<CartRow>;
+      } catch {
+        void 0; // keep original error handling below
+      }
+    }
+
+    const { data, error } = res;
     if (error) {
       logger.error('Erreur récupération panier', {
         error,
@@ -255,20 +284,109 @@ export async function getCartItems(): Promise<CartItem[]> {
     interface CartItemFromDB {
       id: string;
       quantity: number;
-      passes: Pass;
-      event_activities: EventActivity | null;
-      time_slots: TimeSlot | null;
+      pass_id?: string | null;
+      time_slot_id?: string | null;
+      attendee_first_name?: string | null;
+      attendee_last_name?: string | null;
+      attendee_birth_year?: number | null;
+      access_conditions_ack?: boolean | null;
     }
 
-    const typedData: CartItemFromDB[] = data || [];
+    const typedData: CartRow[] = (data || []) as CartRow[];
 
-    return typedData.map(item => ({
-      id: item.id,
-      pass: item.passes,
-      eventActivity: item.event_activities ?? undefined,
-      timeSlot: item.time_slots ?? undefined,
-      quantity: item.quantity
-    }));
+    // Preload related entities without using PostgREST embeddings (avoid FK dependency)
+    const passIds = Array.from(new Set(
+      typedData
+        .filter((i) => i.product_type !== 'activity_variant' && !!i.pass_id)
+        .map((i) => i.pass_id as string)
+    ));
+    const passesById: Record<string, Pass> = {};
+    if (passIds.length > 0) {
+      try {
+        const { data: passes } = await supabase
+          .from('passes')
+          .select('id, name, price, description')
+          .in('id', passIds);
+        (passes || []).forEach((p) => {
+          passesById[p.id] = { id: p.id, name: p.name, price: p.price, description: p.description };
+        });
+      } catch {
+        void 0;
+      }
+    }
+
+    const slotIds = Array.from(new Set(
+      typedData
+        .filter((i) => !!i.time_slot_id)
+        .map((i) => i.time_slot_id as string)
+    ));
+    const slotsById: Record<string, TimeSlot> = {};
+    if (slotIds.length > 0) {
+      try {
+        const { data: slots } = await supabase
+          .from('time_slots')
+          .select('id, slot_time')
+          .in('id', slotIds);
+        (slots || []).forEach((s) => {
+          slotsById[s.id] = { id: s.id, slot_time: s.slot_time };
+        });
+      } catch {
+        void 0;
+      }
+    }
+
+    // For activity variants, load minimal info to display in cart
+    const missingVariantIds = typedData
+      .filter(i => i.product_type === 'activity_variant' && !!i.product_id)
+      .map(i => i.product_id as string);
+    const variantsById: Record<string, { id: string; name: string; price: number; description: string }> = {};
+    if (missingVariantIds.length > 0) {
+      try {
+        const { data: variants } = await supabase
+          .from('activity_variants')
+          .select('id, name, price, activity_id')
+          .in('id', missingVariantIds);
+        // Fetch activity descriptions for better display (optional)
+        const actIds = Array.from(new Set((variants || []).map((v: { activity_id: string }) => v.activity_id)));
+        const actsById: Record<string, { description?: string }> = {};
+        if (actIds.length > 0) {
+          const { data: acts } = await supabase
+            .from('activities')
+            .select('id, parc_description')
+            .in('id', actIds);
+          (acts || []).forEach((a: { id: string; parc_description: string | null }) => { actsById[a.id] = { description: a.parc_description || '' }; });
+        }
+        (variants || []).forEach((v: { id: string; name: string; price: number; activity_id: string }) => {
+          variantsById[v.id] = { id: v.id, name: v.name, price: v.price, description: actsById[v.activity_id]?.description || '' };
+        });
+      } catch {
+        void 0;
+      }
+    }
+
+    return typedData.map(item => {
+      let pass: Pass | undefined;
+      if (item.product_type === 'activity_variant') {
+        const v = variantsById[item.product_id as string];
+        if (v) pass = { id: v.id, name: v.name, price: v.price, description: v.description || '' } as Pass;
+      } else if (item.pass_id) {
+        const p = passesById[item.pass_id];
+        if (p) pass = p;
+      }
+      return {
+        id: item.id,
+        pass: pass as Pass, // expected by consumers
+        eventActivity: undefined,
+        timeSlot: item.time_slot_id ? slotsById[item.time_slot_id] : undefined,
+        quantity: item.quantity,
+        attendee: {
+          firstName: item.attendee_first_name ?? undefined,
+          lastName: item.attendee_last_name ?? undefined,
+          birthYear: item.attendee_birth_year ?? undefined,
+          conditionsAck: item.access_conditions_ack ?? undefined,
+        }
+      } as CartItem;
+    });
   } catch (err) {
     logger.error('Erreur getCartItems', { error: err });
     return [];
@@ -343,4 +461,54 @@ export async function clearCart(): Promise<boolean> {
  */
 export function calculateCartTotal(items: CartItem[]): number {
   return items.reduce((total, item) => total + item.pass.price * item.quantity, 0);
+}
+
+// Add a park offer to cart
+// Removed deprecated park_offer flow
+
+// Add an activity variant to cart (Parc activity-first model)
+export async function addActivityVariantToCart(
+  variantId: string,
+  quantity = 1,
+  repo: CartRepository = new SupabaseCartRepository(),
+  notify: NotifyFn = toastNotify,
+  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
+): Promise<boolean> {
+  if (!Number.isInteger(quantity) || quantity <= 0) {
+    notifyUser(notify, 'error', 'La quantité doit être un entier positif');
+    return false;
+  }
+  if (!repo.isConfigured()) {
+    notifyUser(notify, 'error', 'Configuration requise. Veuillez connecter Supabase.');
+    return false;
+  }
+
+  try {
+    const sessionId = getSessionId();
+    const remaining = await repo.getActivityVariantRemainingStock(variantId);
+    if (remaining !== null && remaining < quantity) {
+      notifyUser(notify, 'error', 'Stock insuffisant pour cette variante');
+      return false;
+    }
+
+    await repo.cleanupExpiredCartItems();
+
+    const success = await insertNewItem(
+      repo,
+      sessionId,
+      null,
+      undefined,
+      undefined,
+      quantity,
+      attendee,
+      { type: 'activity_variant', id: variantId }
+    );
+
+    if (success) notifyUser(notify, 'success', 'Variante ajoutée au panier');
+    return success;
+  } catch (err) {
+    logger.error('Erreur addActivityVariantToCart', { error: err, query: { action: 'addActivityVariantToCart', variantId } });
+    notifyUser(notify, 'error', 'Une erreur est survenue');
+    return false;
+  }
 }

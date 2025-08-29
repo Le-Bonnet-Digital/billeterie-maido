@@ -1,0 +1,65 @@
+// Supabase Edge Function: request-reservation-email
+// - Input: { email: string }
+// - Behavior: If a paid reservation exists for the email, trigger the
+//             `send-reservation-email` function and return success.
+// - Security: Uses service role; no direct DB access from client needed.
+
+// deno-lint-ignore-file no-explicit-any
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+
+const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+const serviceRoleKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+
+const supabase = createClient(supabaseUrl, serviceRoleKey);
+
+function isValidEmail(email: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+}
+
+serve(async (req: Request) => {
+  try {
+    if (req.method !== 'POST') {
+      return new Response(JSON.stringify({ error: 'Method not allowed' }), { status: 405 });
+    }
+
+    const { email } = await req.json() as { email?: string };
+
+    if (!email || !isValidEmail(email)) {
+      return new Response(JSON.stringify({ error: 'Invalid email' }), { status: 400 });
+    }
+
+    // Look up latest paid reservation for this email
+    const { data, error } = await supabase
+      .from('reservations')
+      .select('id, created_at')
+      .eq('client_email', email)
+      .eq('payment_status', 'paid')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (error) {
+      return new Response(JSON.stringify({ error: error.message }), { status: 500 });
+    }
+
+    if (!data || data.length === 0) {
+      return new Response(JSON.stringify({ found: false }), { status: 200 });
+    }
+
+    const reservationId = data[0].id as string;
+
+    // Trigger the existing function that sends the email
+    const { error: sendError } = await supabase.functions.invoke('send-reservation-email', {
+      body: { email, reservationId }
+    });
+
+    if (sendError) {
+      return new Response(JSON.stringify({ error: sendError.message }), { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ found: true, sent: true }), { status: 200 });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : 'Unknown error';
+    return new Response(JSON.stringify({ error: message }), { status: 500 });
+  }
+});

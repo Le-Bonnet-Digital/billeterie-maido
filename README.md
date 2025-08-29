@@ -120,8 +120,68 @@ Les clés API, jetons et autres secrets doivent être fournis via des variables 
 
   ```env
   VITE_SUPABASE_URL="https://votre-projet.supabase.co"
-  VITE_SUPABASE_ANON_KEY="votre_clef_anon"
-  ```
+VITE_SUPABASE_ANON_KEY="votre_clef_anon"
+```
+
+## Rôles et Accès
+
+- Rôles supportés: `admin`, `pony_provider`, `archery_provider`, `luge_provider`, `atlm_collaborator`, `client`.
+- Lien "Admin" masqué pour tous sauf les `admin` (le garde `/admin` redirige vers une page de connexion Administrateur).
+- Gestion des rôles depuis `/admin/users` (réservé aux `admin`).
+- Espace prestataires accessible via `/provider` avec sous-pages:
+  - `/provider/pony` (validation poney)
+  - `/provider/archery` (validation tir à l'arc)
+  - `/provider/luge` (remise bracelet luge)
+
+## Scan / Validation
+
+- Le scan utilise le numéro de réservation encodé dans le QR (les lecteurs se comportent comme un clavier).
+- Les validations sont enregistrées dans la table `reservation_validations` (migration incluse), avec activité: `poney`, `tir_arc`, `luge_bracelet`.
+
+## Profil Utilisateur
+
+- Page `/profile` (si connecté) pour consulter ses réservations dans le respect RGPD.
+- Pour retrouver un billet sans compte, utiliser `/find-ticket` (renvoi par email).
+
+### Billets du Parc (par Activités + Variantes)
+
+Les billets du parc sont gérés dans un domaine dédié, indépendant des événements:
+
+- `activities` (existant): champs côté parc ajoutés (activation, description, catégorie, ordre, besoin de créneau).
+- `activity_variants`: variantes/forfaits par activité (nom, prix, stock, ordre, actif).
+- `park_time_slots`: créneaux pour une activité (capacité par créneau).
+
+Migrations principales: `supabase/migrations/*_activity_variants.sql`, `*_cart_items_product*.sql`.
+
+RPC disponibles:
+- `get_parc_activities_with_variants()` → liste des activités parc avec variantes + stock restant.
+- `get_activity_variant_remaining_stock(variant_uuid)` → stock restant d’une variante.
+
+Frontend:
+- La section “Billets du Parc” lit `get_parc_activities_with_variants()` et affiche les variantes actives par activité.
+
+Administration:
+- “Admin → Offres Parc” pour créer/activer/ordonner les offres et lier des activités (avec option “créneau requis” + stock par activité).
+
+### Panier et informations participant
+
+Le panier supporte des informations par billet (participant) optionnelles, utiles pour les passes nécessitant un créneau ou une vérification d’accès.
+
+- Colonnes: `attendee_first_name`, `attendee_last_name`, `attendee_birth_year`, `access_conditions_ack` ajoutées à `cart_items`.
+- Si la base n’est pas migrée, le front rétrograde automatiquement la requête (fallback) pour rester fonctionnel.
+- Appliquer la migration SQL via Supabase CLI ou l’éditeur SQL:
+
+```sql
+ALTER TABLE cart_items
+  ADD COLUMN IF NOT EXISTS attendee_first_name text,
+  ADD COLUMN IF NOT EXISTS attendee_last_name text,
+  ADD COLUMN IF NOT EXISTS attendee_birth_year integer,
+  ADD COLUMN IF NOT EXISTS access_conditions_ack boolean DEFAULT false;
+```
+
+### Page d’accueil et événements
+
+La page d’accueil affiche d’abord les « Événements en cours » (ventes ouvertes) avec date, statut, extrait d’informations clés, et liens « Voir les Billets », « FAQ », « CGV ». Le « Prochain événement publié » est mis en avant dans le bandeau.
 
 ### Promouvoir un utilisateur en admin
 

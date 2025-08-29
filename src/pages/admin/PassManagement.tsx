@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -25,6 +25,7 @@ interface Pass {
 interface EventActivity {
   id: string;
   activity_id: string;
+  stock_limit: number | null;
   activity: {
     id: string;
     name: string;
@@ -83,6 +84,7 @@ export default function PassManagement() {
           price,
           description,
           initial_stock,
+          
           pass_activities (
             id,
             event_activity_id,
@@ -106,8 +108,18 @@ export default function PassManagement() {
       if (passesError) throw passesError;
 
       // Calculer le stock restant pour chaque pass
+      type PassRow = {
+        id: string;
+        name: string;
+        price: number;
+        description: string;
+        initial_stock: number | null;
+        pass_activities?: PassActivity[];
+        events: { id: string; name: string };
+      };
+
       const passesWithStock = await Promise.all(
-        (passesData || []).map(async (pass) => {
+        ((passesData || []) as unknown as PassRow[]).map(async (pass: PassRow) => {
           // Calculer le stock maximum basé sur les activités liées (maintenant synchronisé automatiquement)
           let calculatedMaxStock = null;
           
@@ -133,17 +145,22 @@ export default function PassManagement() {
           }
           
           if (pass.initial_stock === null) {
-            return { 
-              ...pass, 
-              event: pass.events, 
+            const shaped: Pass = {
+              id: pass.id,
+              name: pass.name,
+              price: pass.price,
+              description: pass.description,
+              initial_stock: pass.initial_stock,
+              event: pass.events,
               remaining_stock: calculatedMaxStock || 999999,
-              calculated_max_stock: calculatedMaxStock,
+              calculated_max_stock: calculatedMaxStock ?? undefined,
               event_activities: (pass.pass_activities || []).map((pa: PassActivity) => ({
                 id: pa.event_activities.id,
                 activity_id: pa.event_activities.activity_id,
                 activity: pa.event_activities.activities
               }))
             };
+            return shaped;
           }
           
           const { data: stockData } = await supabase
@@ -151,17 +168,22 @@ export default function PassManagement() {
           
           const actualStock = calculatedMaxStock ? Math.min(stockData || 0, calculatedMaxStock) : stockData || 0;
           
-          return { 
-            ...pass, 
-            event: pass.events, 
+          const shaped: Pass = {
+            id: pass.id,
+            name: pass.name,
+            price: pass.price,
+            description: pass.description,
+            initial_stock: pass.initial_stock,
+            event: pass.events,
             remaining_stock: actualStock,
-            calculated_max_stock: calculatedMaxStock,
+            calculated_max_stock: calculatedMaxStock ?? undefined,
             event_activities: (pass.pass_activities || []).map((pa: PassActivity) => ({
               id: pa.event_activities.id,
               activity_id: pa.event_activities.activity_id,
               activity: pa.event_activities.activities
             }))
           };
+          return shaped;
         })
       );
       
@@ -396,11 +418,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   });
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    updateCalculatedStock();
-  }, [selectedActivities, activityStocks]);
-
-  const updateCalculatedStock = () => {
+  const updateCalculatedStock = useCallback(() => {
     if (selectedActivities.length === 0) {
       setCalculatedMaxStock(null);
       setFormData(prev => ({ ...prev, initial_stock: null }));
@@ -417,13 +435,11 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     } else {
       setFormData(prev => ({ ...prev, initial_stock: null }));
     }
-  };
+  }, [selectedActivities, activityStocks]);
 
-  useEffect(() => {
-    if (formData.event_id) {
-      loadEventActivities();
-    }
-  }, [formData.event_id]);
+  
+
+  // will run after loadEventActivities is defined
 
   useEffect(() => {
     // Initialiser les activités sélectionnées après le chargement du pass
@@ -444,9 +460,9 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
         clearTimeout(timeoutId);
       }
     };
-  }, [pass, availableActivities]);
+  }, [pass, availableActivities, updateCalculatedStock]);
 
-  const loadEventActivities = async () => {
+  const loadEventActivities = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('event_activities')
@@ -464,18 +480,25 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
 
       if (error) throw error;
       
-      const activities = (data || []).map(ea => ({
+      type RawEventActivity = {
+        id: string;
+        activity_id: string;
+        stock_limit: number | null;
+        activities: { id: string; name: string; icon: string };
+      };
+
+      const activities: EventActivity[] = ((data || []) as RawEventActivity[]).map((ea: RawEventActivity) => ({
         id: ea.id,
         activity_id: ea.activity_id,
         stock_limit: ea.stock_limit,
-        activity: ea.activities
+        activity: ea.activities,
       }));
       
       setAvailableActivities(activities);
       
       // Créer un mapping des stocks par activité (maintenant synchronisé automatiquement)
       const stocksMap: {[key: string]: number | null} = {};
-      activities.forEach(ea => {
+      activities.forEach((ea: EventActivity) => {
         stocksMap[ea.id] = ea.stock_limit;
       });
       setActivityStocks(stocksMap);
@@ -483,7 +506,13 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
       logger.error('Erreur chargement activités', { error: err });
       toast.error('Erreur lors du chargement des activités');
     }
-  };
+  }, [formData.event_id]);
+
+  useEffect(() => {
+    if (formData.event_id) {
+      loadEventActivities();
+    }
+  }, [formData.event_id, loadEventActivities]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -565,19 +594,24 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-xl font-semibold text-gray-900">
-              {pass ? 'Modifier le Pass' : 'Créer un Pass'}
-            </h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-6 w-6" />
-            </button>
-          </div>
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div
+        className="bg-white rounded-lg max-w-md w-full flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="pass-modal-title"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h2 id="pass-modal-title" className="text-xl font-semibold text-gray-900">
+            {pass ? 'Modifier le Pass' : 'Créer un Pass'}
+          </h2>
+          <button onClick={onClose} aria-label="Fermer le modal" className="text-gray-400 hover:text-gray-600">
+            <X className="h-6 w-6" />
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
                 Événement *
@@ -719,7 +753,6 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
               </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
   );

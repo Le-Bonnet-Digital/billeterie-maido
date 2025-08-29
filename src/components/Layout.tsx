@@ -1,11 +1,15 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { ShoppingCart, Calendar } from 'lucide-react';
 import { getCartItems } from '../lib/cart';
+import { getCurrentUser } from '../lib/auth';
 
 export default function Layout() {
   const location = useLocation();
   const [cartCount, setCartCount] = useState(0);
+  const brandName = useMemo(() => (import.meta.env.VITE_BRAND_NAME ?? ''), []);
+  const [isAdmin, setIsAdmin] = useState<boolean>(false);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   
   useEffect(() => {
     const updateCartCount = async () => {
@@ -24,6 +28,21 @@ export default function Layout() {
     const interval = setInterval(updateCartCount, 5000);
     return () => clearInterval(interval);
   }, []);
+
+  useEffect(() => {
+    const checkAdmin = async () => {
+      try {
+        const user = await getCurrentUser();
+        const isUser = !!user;
+        setIsAdmin(isUser && user!.role === 'admin');
+        setIsLoggedIn(isUser);
+      } catch {
+        setIsAdmin(false);
+        setIsLoggedIn(false);
+      }
+    };
+    checkAdmin();
+  }, []);
   
   return (
     <div className="min-h-screen bg-gray-50">
@@ -32,9 +51,11 @@ export default function Layout() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between h-16">
             {/* Logo */}
-            <Link to="/" className="flex items-center space-x-2">
+            <Link to="/" className="flex items-center space-x-2" aria-label={brandName ? undefined : 'Accueil'}>
               <Calendar className="h-8 w-8 text-blue-600" />
-              <span className="text-xl font-bold text-gray-900">BilletEvent</span>
+              <span className="text-xl font-bold text-gray-900">
+                {brandName}
+              </span>
             </Link>
             
             {/* Navigation */}
@@ -47,7 +68,7 @@ export default function Layout() {
                     : 'text-gray-500 hover:text-gray-700'
                 }`}
               >
-                Événements
+                Billetterie
               </Link>
               <Link 
                 to="/find-ticket" 
@@ -63,6 +84,14 @@ export default function Layout() {
             
             {/* Actions */}
             <div className="flex items-center space-x-4">
+              {isLoggedIn && (
+                <Link
+                  to="/profile"
+                  className="text-sm text-gray-600 hover:text-gray-900"
+                >
+                  Profil
+                </Link>
+              )}
               <Link
                 to="/cart"
                 aria-label="Panier"
@@ -77,12 +106,14 @@ export default function Layout() {
                 <span className="sr-only">Panier</span>
               </Link>
               
-              <Link 
-                to="/admin" 
-                className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
-              >
-                Admin
-              </Link>
+              {isAdmin && (
+                <Link 
+                  to="/admin" 
+                  className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-md text-sm font-medium transition-colors"
+                >
+                  Admin
+                </Link>
+              )}
             </div>
           </div>
         </div>
@@ -100,11 +131,10 @@ export default function Layout() {
             <div className="col-span-1 md:col-span-2">
               <div className="flex items-center space-x-2 mb-4">
                 <Calendar className="h-8 w-8 text-blue-400" />
-                <span className="text-xl font-bold">BilletEvent</span>
+                <span className="text-xl font-bold">{brandName}</span>
               </div>
               <p className="text-gray-300 max-w-md">
-                Votre plateforme de billetterie événementielle. 
-                Organisez et vendez vos billets en toute simplicité.
+                Billetterie officielle du Parc de la Luge. Achetez vos billets en ligne en toute simplicité.
               </p>
             </div>
             
@@ -115,7 +145,7 @@ export default function Layout() {
               <ul className="space-y-2">
                 <li>
                   <Link to="/" className="text-gray-300 hover:text-white transition-colors">
-                    Événements
+                    Billetterie
                   </Link>
                 </li>
                 <li>
@@ -152,7 +182,8 @@ export default function Layout() {
           
           <div className="border-t border-gray-800 pt-8 mt-8">
             <p className="text-gray-400 text-sm text-center">
-              © 2025 BilletEvent. Tous droits réservés.
+              © 2025 {(brandName || import.meta.env.VITE_BRAND_NAME || '').trim()}.
+              {' '}Tous droits réservés.
             </p>
           </div>
         </div>
@@ -160,3 +191,4 @@ export default function Layout() {
     </div>
   );
 }
+

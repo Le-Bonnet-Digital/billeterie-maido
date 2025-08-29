@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Search, Mail, Shield, CheckCircle } from 'lucide-react';
-import { supabase } from '../lib/supabase';
-import { sendReservationEmail } from '../lib/sendReservationEmail';
+import { requestReservationEmail } from '../lib/requestReservationEmail';
 import { toast } from 'react-hot-toast';
 import { logger } from '../lib/logger';
 
@@ -27,21 +26,11 @@ export default function FindTicket() {
     try {
       setLoading(true);
       
-      // Rechercher les réservations pour cet e-mail
-      const { data, error } = await supabase
-        .from('reservations')
-        .select('id, reservation_number, created_at')
-        .eq('client_email', email)
-        .eq('payment_status', 'paid')
-        .limit(1);
+      // Demander au serveur d'envoyer l'e-mail (sans exposer la table)
+      const res = await requestReservationEmail({ email });
+      if (!res) throw new Error('Service indisponible');
 
-      if (error) throw error;
-
-      if (data && data.length > 0) {
-        await sendReservationEmail({
-          email,
-          reservationId: data[0].id,
-        });
+      if (res.found && res.sent) {
         setFound(true);
         toast.success('E-mail de confirmation renvoyé !');
       } else {

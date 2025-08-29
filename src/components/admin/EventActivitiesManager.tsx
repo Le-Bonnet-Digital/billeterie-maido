@@ -129,7 +129,7 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
         <div className="bg-white rounded-lg p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-green-600 mx-auto"></div>
         </div>
@@ -139,12 +139,17 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+        <div
+          className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="event-activities-title"
+        >
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <h2 id="event-activities-title" className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                   <Settings className="h-6 w-6 text-green-600" />
                   Activités - {event.name}
                 </h2>
@@ -330,19 +335,25 @@ function AddActivityModal({ event, availableActivities, existingActivityIds, onC
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+      <div
+        className="bg-white rounded-lg max-w-md w-full flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="add-activity-title"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 id="add-activity-title" className="text-lg font-semibold text-gray-900">
               Ajouter une Activité
-            </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          </h3>
+          <button onClick={onClose} aria-label="Fermer le modal" className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          {availableOptions.length === 0 ? (
+        {availableOptions.length === 0 ? (
+          <div className="p-6">
             <div className="text-center py-8">
               <Target className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <p className="text-gray-600">
@@ -355,12 +366,13 @@ function AddActivityModal({ event, availableActivities, existingActivityIds, onC
                 Fermer
               </button>
             </div>
-          ) : (
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Activité *
-                </label>
+          </div>
+        ) : (
+          <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Activité *
+              </label>
                 <select
                   value={selectedActivityId}
                   onChange={(e) => setSelectedActivityId(e.target.value)}
@@ -429,7 +441,6 @@ function AddActivityModal({ event, availableActivities, existingActivityIds, onC
               </div>
             </form>
           )}
-        </div>
       </div>
     </div>
   );

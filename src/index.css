@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+/* Minimal line-clamp utilities without plugin */
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+.line-clamp-3 {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Aspect ratio helpers for images (no plugin needed) */
+.aspect-16-9 {
+  aspect-ratio: 16 / 9;
+}
+.aspect-3-1 {
+  aspect-ratio: 3 / 1;
+}
+
+/* Utility to ensure images fill their frame consistently */
+.img-cover {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}

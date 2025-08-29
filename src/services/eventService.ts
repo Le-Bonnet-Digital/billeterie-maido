@@ -15,6 +15,7 @@ export interface Pass {
   description: string;
   initial_stock: number | null;
   remaining_stock?: number;
+  pass_type?: 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney';
 }
 
 export interface Activity {

@@ -295,11 +295,16 @@ L'équipe BilletEvent`
 
       {/* Modal des modèles */}
       {showTemplateModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+          <div
+            className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="email-templates-title"
+          >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 className="text-xl font-semibold text-gray-900">Modèles d'Email</h2>
+                <h2 id="email-templates-title" className="text-xl font-semibold text-gray-900">Modèles d'Email</h2>
                 <button onClick={() => setShowTemplateModal(false)} className="text-gray-400 hover:text-gray-600">
                   <X className="h-6 w-6" />
                 </button>
