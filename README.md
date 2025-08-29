@@ -133,6 +133,15 @@ VITE_SUPABASE_ANON_KEY="votre_clef_anon"
   - `/provider/archery` (validation tir à l'arc)
   - `/provider/luge` (remise bracelet luge)
 
+### Gestion des utilisateurs
+
+L'interface d'administration `/admin/users` offre des outils pour rechercher et modifier les comptes :
+
+- **Filtres** : par adresse email (recherche partielle) et par rôle.
+- **Actions groupées** : mise à jour du rôle et suppression de plusieurs utilisateurs sélectionnés.
+
+Cette page utilise Supabase pour interroger la table `users` (`select`, `eq`, `ilike`) et appliquer les modifications (`update`/`delete` avec `in`). Les politiques RLS de Supabase garantissent que seules les personnes ayant le rôle `admin` peuvent consulter ou modifier les autres comptes.
+
 ## Scan / Validation
 
 - Le scan utilise le numéro de réservation encodé dans le QR (les lecteurs se comportent comme un clavier).
