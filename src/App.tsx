@@ -13,6 +13,7 @@ import EventFAQ from './pages/EventFAQ';
 import EventCGV from './pages/EventCGV';
 import Cart from './pages/Cart';
 import FindTicket from './pages/FindTicket';
+import Profile from './pages/Profile';
 
 // Admin Pages
 import AdminDashboard from './pages/admin/Dashboard';
@@ -25,6 +26,13 @@ import Reports from './pages/admin/Reports';
 import Communication from './pages/admin/Communication';
 import Settings from './pages/admin/Settings';
 import FlowManagement from './pages/admin/FlowManagement';
+import ActivityVariantsManagement from './pages/admin/ActivityVariantsManagement';
+import UserManagement from './pages/admin/UserManagement';
+import ProviderLayout from './pages/provider/ProviderLayout';
+import PonyValidation from './pages/provider/PonyValidation';
+import ArcheryValidation from './pages/provider/ArcheryValidation';
+import LugeValidation from './pages/provider/LugeValidation';
+import ProviderStats from './pages/provider/Stats';
 
 export default function App() {
   return (
@@ -39,12 +47,15 @@ export default function App() {
             <Route path="event/:eventId/cgv" element={<EventCGV />} />
             <Route path="cart" element={<Cart />} />
             <Route path="find-ticket" element={<FindTicket />} />
+            <Route path="profile" element={<Profile />} />
           </Route>
 
           {/* Admin Routes */}
           <Route path="/admin" element={<AdminLayout />}>
             <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<UserManagement />} />
             <Route path="events" element={<EventManagement />} />
+            <Route path="activity-variants" element={<ActivityVariantsManagement />} />
             <Route path="activities" element={<ActivityManagement />} />
             <Route path="passes" element={<PassManagement />} />
             <Route path="time-slots" element={<TimeSlotManagement />} />
@@ -53,6 +64,14 @@ export default function App() {
             <Route path="reports" element={<Reports />} />
             <Route path="communication" element={<Communication />} />
             <Route path="settings" element={<Settings />} />
+          </Route>
+
+          {/* Provider Routes */}
+          <Route path="/provider" element={<ProviderLayout />}>
+            <Route path="pony" element={<PonyValidation />} />
+            <Route path="archery" element={<ArcheryValidation />} />
+            <Route path="luge" element={<LugeValidation />} />
+            <Route path="stats" element={<ProviderStats />} />
           </Route>
         </Routes>
 

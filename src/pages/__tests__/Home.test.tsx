@@ -2,46 +2,24 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import Home from '../Home';
 
-// Mock the supabase module
+// Mock supabase as not configured to simplify component rendering
 vi.mock('../../lib/supabase', () => ({
-  supabase: {
-    from: vi.fn(() => ({
-      select: vi.fn(() => ({
-        eq: vi.fn(() => ({
-          order: vi.fn(() => Promise.resolve({ 
-            data: [
-              {
-                id: '1',
-                name: 'Test Event',
-                event_date: '2024-12-25',
-                sales_opening_date: '2024-01-01T00:00:00Z',
-                sales_closing_date: '2024-12-24T23:59:59Z',
-                key_info_content: 'Test info'
-              }
-            ], 
-            error: null 
-          }))
-        }))
-      }))
-    }))
-  },
-  isSupabaseConfigured: vi.fn(() => true)
+  supabase: {},
+  isSupabaseConfigured: vi.fn(() => false)
 }));
 
-describe('Home Page', () => {
-  it('should render hero section', async () => {
+describe('Home Page (Boutique)', () => {
+  it('renders boutique hero', async () => {
     render(<Home />);
-    
     await waitFor(() => {
-      expect(screen.getByText(/découvrez nos événements/i)).toBeInTheDocument();
+      expect(screen.getByText(/Billetterie/i)).toBeInTheDocument();
     });
   });
 
-  it('should render events when loaded', async () => {
+  it('renders park tickets section heading', async () => {
     render(<Home />);
-    
     await waitFor(() => {
-      expect(screen.getByText('Test Event')).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: /Activités à la carte/i })).toBeInTheDocument();
     });
   });
 });

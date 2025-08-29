@@ -8,6 +8,26 @@
   </head>
   <body>
     <div id="root"></div>
+    <script>
+      (function(){
+        var info = console.info.bind(console);
+        var warn = console.warn.bind(console);
+        console.info = function(){
+          try {
+            var msg = arguments[0];
+            if (typeof msg === 'string' && msg.indexOf('Download the React DevTools') !== -1) return;
+          } catch(_) {}
+          return info.apply(console, arguments);
+        };
+        console.warn = function(){
+          try {
+            var msg = arguments[0];
+            if (typeof msg === 'string' && msg.indexOf('React Router Future Flag Warning') !== -1) return;
+          } catch(_) {}
+          return warn.apply(console, arguments);
+        };
+      })();
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>

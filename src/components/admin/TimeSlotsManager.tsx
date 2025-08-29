@@ -101,7 +101,7 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
 
   if (loading) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
         <div className="bg-white rounded-lg p-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
         </div>
@@ -111,12 +111,17 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
 
   return (
     <>
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60]">
-        <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden">
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[60] overflow-y-auto">
+        <div
+          className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-hidden"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="time-slots-title"
+        >
           <div className="p-6 border-b border-gray-200">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+                <h2 id="time-slots-title" className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                   <span className="text-2xl">{eventActivity.activity.icon}</span>
                   Créneaux - {eventActivity.activity.name}
                 </h2>
@@ -299,19 +304,24 @@ function CreateTimeSlotsForm({ eventActivity, event, onClose }: CreateTimeSlotsF
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70]">
-      <div className="bg-white rounded-lg max-w-md w-full">
-        <div className="p-6">
-          <div className="flex items-center justify-between mb-6">
-            <h3 className="text-lg font-semibold text-gray-900">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-[70] overflow-y-auto">
+      <div
+        className="bg-white rounded-lg max-w-md w-full flex flex-col"
+        style={{ maxHeight: '90vh' }}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="create-slots-title"
+      >
+        <div className="p-6 border-b border-gray-200 flex items-center justify-between">
+          <h3 id="create-slots-title" className="text-lg font-semibold text-gray-900">
               Créer des Créneaux
-            </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
-              <X className="h-5 w-5" />
-            </button>
-          </div>
+          </h3>
+          <button onClick={onClose} aria-label="Fermer le modal" className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+        <form onSubmit={handleSubmit} className="space-y-4 p-6 overflow-y-auto">
             <div className="grid grid-cols-2 gap-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -418,7 +428,6 @@ function CreateTimeSlotsForm({ eventActivity, event, onClose }: CreateTimeSlotsF
               </button>
             </div>
           </form>
-        </div>
       </div>
     </div>
   );

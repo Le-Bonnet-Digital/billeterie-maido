@@ -7,6 +7,8 @@ export interface PassWithStock {
   description: string;
   initial_stock: number | null;
   remaining_stock: number;
+  pass_type?: 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney';
+  guaranteed_runs?: number | null;
 }
 
 export interface ActivityDetails {

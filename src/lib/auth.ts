@@ -7,10 +7,17 @@ import { logger } from './logger';
 export interface User {
   id: string;
   email: string;
-  role: 'admin' | 'pony_provider' | 'archery_provider' | 'client';
+  role: 'admin' | 'pony_provider' | 'archery_provider' | 'luge_provider' | 'atlm_collaborator' | 'client';
 }
 
-const ALLOWED_ROLES: User['role'][] = ['admin', 'pony_provider', 'archery_provider', 'client'];
+const ALLOWED_ROLES: User['role'][] = [
+  'admin',
+  'pony_provider',
+  'archery_provider',
+  'luge_provider',
+  'atlm_collaborator',
+  'client'
+];
 
 /**
  * Crée un utilisateur dans la table `users` de Supabase.

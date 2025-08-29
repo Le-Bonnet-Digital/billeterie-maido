@@ -36,7 +36,9 @@ describe('AdminLayout', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText(/pass/i)).toBeInTheDocument();
     expect(await screen.findByText(/planning/i)).toBeInTheDocument();
-    expect(await screen.findByText(/activités/i)).toBeInTheDocument();
+    expect(
+      await screen.findByRole('link', { name: /^activités$/i }),
+    ).toBeInTheDocument();
     expect(await screen.findByText(/gestion des flux/i)).toBeInTheDocument();
     expect(await screen.findByText(/réservations/i)).toBeInTheDocument();
     expect(await screen.findByText(/reporting/i)).toBeInTheDocument();

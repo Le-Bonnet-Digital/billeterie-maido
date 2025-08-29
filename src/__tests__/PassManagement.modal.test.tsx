@@ -1,0 +1,31 @@
+import React from 'react';
+import { describe, it, expect } from 'vitest';
+import userEvent from '@testing-library/user-event';
+import PassManagement from '../pages/admin/PassManagement';
+import { render, screen } from '../test/utils';
+
+describe('PassManagement add/edit modal', () => {
+  it('renders a scrollable dialog for long content', async () => {
+    render(<PassManagement />);
+
+    // Open the creation modal
+    const openBtn = await screen.findByRole('button', { name: /Nouveau Pass/i });
+    await userEvent.click(openBtn);
+
+    // Dialog should be present with proper role
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toBeInTheDocument();
+
+    // Container should constrain height and allow internal scroll
+    // Max height enforced via inline style for compatibility
+    expect((dialog as HTMLElement).style.maxHeight).toBe('90vh');
+
+    // The form section should be scrollable
+    const formRegion = dialog.querySelector('form');
+    expect(formRegion).toBeTruthy();
+    expect(formRegion?.className).toMatch(/overflow-y-auto/);
+
+    // Accessibility sanity checks
+    expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+});

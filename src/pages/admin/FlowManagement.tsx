@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, Clock, Calendar, Download, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -13,15 +13,10 @@ interface TimeSlotWithReservations {
   remaining_capacity: number;
   event_activity: {
     id: string;
+    requires_time_slot?: boolean;
     activity: {
       name: string;
       icon: string;
-    };
-  };
-  pass: {
-    name: string;
-    event: {
-      name: string;
     };
   };
   reservations: Array<{
@@ -98,16 +93,10 @@ export default function FlowManagement() {
           capacity,
           event_activities!inner (
             id,
+            requires_time_slot,
             activities (
               name,
               icon
-            )
-          ),
-          passes!inner (
-            name,
-            events!inner (
-              id,
-              name
             )
           ),
           reservations (
@@ -118,7 +107,8 @@ export default function FlowManagement() {
             created_at
           )
         `)
-        .eq('passes.events.id', selectedEvent)
+        // Filter directly by the foreign key on event_activities to avoid requiring a join on events
+        .eq('event_activities.event_id', selectedEvent)
         .gte('slot_time', startDate.toISOString())
         .lte('slot_time', endDate.toISOString())
         .order('slot_time');
@@ -135,15 +125,14 @@ export default function FlowManagement() {
             ...slot,
             remaining_capacity: capacityData || 0,
             event_activity: slot.event_activities,
-            pass: {
-              name: slot.passes.name,
-              event: slot.passes.events
-            }
+            // pass info not required for print view
           };
         })
       );
 
-      setTimeSlots(slotsWithCapacity);
+      // Keep only activities that require a time slot (safety)
+      const filtered = slotsWithCapacity.filter((s) => s.event_activity?.requires_time_slot !== false);
+      setTimeSlots(filtered);
     } catch (err) {
       logger.error('Erreur chargement créneaux', { error: err });
       toast.error('Erreur lors du chargement des créneaux');
@@ -190,6 +179,32 @@ export default function FlowManagement() {
     return 'Disponible';
   };
 
+  const selectedEventObj = useMemo(() => events.find(e => e.id === selectedEvent) || null, [events, selectedEvent]);
+
+  // Group time slots by activity id for print view
+  const groupedByActivity = useMemo(() => {
+    const groups: Record<string, { activityName: string; activityIcon: string; slots: TimeSlotWithReservations[] }> = {};
+    timeSlots.forEach((slot) => {
+      const key = slot.event_activity?.id || slot.id;
+      if (!groups[key]) {
+        groups[key] = {
+          activityName: slot.event_activity?.activity?.name || 'Activité',
+          activityIcon: slot.event_activity?.activity?.icon || '',
+          slots: []
+        };
+      }
+      groups[key].slots.push(slot);
+    });
+    // sort slots by time
+    Object.values(groups).forEach((g) => g.slots.sort((a, b) => new Date(a.slot_time).getTime() - new Date(b.slot_time).getTime()));
+    return groups;
+  }, [timeSlots]);
+
+  const handlePrint = () => {
+    // Ensure any async layout completes
+    setTimeout(() => window.print(), 0);
+  };
+
   if (loading && events.length === 0) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -199,7 +214,8 @@ export default function FlowManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <>
+    <div className="space-y-6 print:hidden">
       <div>
         <h1 className="text-2xl font-bold text-gray-900">Gestion des Flux</h1>
         <p className="text-gray-600">Suivez et gérez les participants par créneau</p>
@@ -240,6 +256,16 @@ export default function FlowManagement() {
         </div>
       </div>
 
+      {/* Actions globales */}
+      <div className="flex items-center justify-end gap-2">
+        <button
+          onClick={handlePrint}
+          className="px-3 py-2 bg-gray-900 text-white hover:bg-black rounded text-sm font-medium transition-colors"
+        >
+          Imprimer les listes
+        </button>
+      </div>
+
       {/* Vue d'ensemble des créneaux */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
@@ -273,7 +299,7 @@ export default function FlowManagement() {
                           {slot.event_activity.activity.name}
                         </h3>
                         <p className="text-sm text-gray-600">
-                          {format(new Date(slot.slot_time), 'HH:mm')} - {slot.pass.name}
+                          {format(new Date(slot.slot_time), 'HH:mm')}
                         </p>
                       </div>
                     </div>
@@ -291,48 +317,111 @@ export default function FlowManagement() {
                     </div>
                   </div>
                   
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedSlot(slot)}
-                      className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
-                    >
-                      <Users className="h-3 w-3" />
-                      Voir participants
-                    </button>
-                    
-                    <button
-                      onClick={() => exportParticipantsList(slot)}
-                      className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
-                    >
-                      <Download className="h-3 w-3" />
-                      Exporter
-                    </button>
-                  </div>
-                </div>
-                
-                {/* Barre de progression */}
-                <div className="mt-3">
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className={`h-2 rounded-full transition-all ${getSlotStatusColor(slot.remaining_capacity, slot.capacity)}`}
-                      style={{ width: `${((slot.capacity - slot.remaining_capacity) / slot.capacity) * 100}%` }}
-                    ></div>
-                  </div>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={() => setSelectedSlot(slot)}
+                    className="px-3 py-1 bg-blue-100 text-blue-700 hover:bg-blue-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
+                  >
+                    <Users className="h-3 w-3" />
+                    Voir participants
+                  </button>
+                  
+                  <button
+                    onClick={() => exportParticipantsList(slot)}
+                    className="px-3 py-1 bg-green-100 text-green-700 hover:bg-green-200 rounded text-sm font-medium transition-colors flex items-center gap-1"
+                  >
+                    <Download className="h-3 w-3" />
+                    Exporter
+                  </button>
                 </div>
               </div>
-            ))}
-          </div>
-        )}
-      </div>
-
-      {/* Modal détail des participants */}
-      {selectedSlot && (
-        <ParticipantsModal
-          slot={selectedSlot}
-          onClose={() => setSelectedSlot(null)}
-        />
+              
+              {/* Barre de progression */}
+              <div className="mt-3">
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all ${getSlotStatusColor(slot.remaining_capacity, slot.capacity)}`}
+                    style={{ width: `${((slot.capacity - slot.remaining_capacity) / slot.capacity) * 100}%` }}
+                  ></div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
     </div>
+
+    {/* Modal détail des participants */}
+    {selectedSlot && (
+      <ParticipantsModal
+        slot={selectedSlot}
+        onClose={() => setSelectedSlot(null)}
+      />
+    )}
+    </div>
+
+    {/* Print-only view */}
+    <div className="hidden print:block">
+      <div className="p-6">
+        <div className="mb-6">
+          <div className="text-2xl font-bold">Listes des inscrits par activité</div>
+          <div className="text-gray-700">
+            {selectedEventObj ? selectedEventObj.name : 'Événement'} — {selectedDate ? format(new Date(selectedDate), 'dd/MM/yyyy') : ''}
+          </div>
+        </div>
+
+        {Object.keys(groupedByActivity).length === 0 ? (
+          <div className="text-gray-700">Aucune activité avec créneaux pour cette date.</div>
+        ) : (
+          Object.entries(groupedByActivity).map(([key, group], idx) => (
+            <div key={key} style={{ pageBreakAfter: idx < Object.keys(groupedByActivity).length - 1 ? 'always' : 'auto' }}>
+              <div className="mb-4">
+                <div className="text-xl font-semibold flex items-center gap-2">
+                  <span className="text-2xl">{group.activityIcon}</span>
+                  {group.activityName}
+                </div>
+              </div>
+
+              {group.slots.map((slot) => (
+                <div key={slot.id} className="mb-6">
+                  <div className="font-medium text-gray-900 mb-2">
+                    Créneau {format(new Date(slot.slot_time), 'HH:mm')} • {slot.capacity - slot.remaining_capacity}/{slot.capacity} inscrits
+                  </div>
+                  {slot.reservations.length === 0 ? (
+                    <div className="text-gray-700">Aucun inscrit</div>
+                  ) : (
+                    <table className="w-full text-sm border-collapse">
+                      <thead>
+                        <tr>
+                          <th className="border border-gray-300 text-left p-2"># Réservation</th>
+                          <th className="border border-gray-300 text-left p-2">Email</th>
+                          <th className="border border-gray-300 text-left p-2">Statut</th>
+                          <th className="border border-gray-300 text-left p-2">Date</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {slot.reservations
+                          .slice()
+                          .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime())
+                          .map((res) => (
+                            <tr key={res.id}>
+                              <td className="border border-gray-300 p-2">{res.reservation_number}</td>
+                              <td className="border border-gray-300 p-2">{res.client_email}</td>
+                              <td className="border border-gray-300 p-2">{res.payment_status}</td>
+                              <td className="border border-gray-300 p-2">{format(new Date(res.created_at), 'dd/MM/yyyy HH:mm')}</td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              ))}
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+    </>
   );
 }
 
@@ -348,12 +437,17 @@ function ParticipantsModal({ slot, onClose }: ParticipantsModalProps) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden">
+    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
+      <div
+        className="bg-white rounded-lg max-w-4xl w-full max-h-[80vh] overflow-hidden"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="participants-modal-title"
+      >
         <div className="p-6 border-b border-gray-200">
           <div className="flex items-center justify-between">
             <div>
-              <h2 className="text-xl font-semibold text-gray-900 flex items-center gap-2">
+              <h2 id="participants-modal-title" className="text-xl font-semibold text-gray-900 flex items-center gap-2">
                 <span className="text-2xl">{slot.event_activity.activity.icon}</span>
                 {slot.event_activity.activity.name}
               </h2>
@@ -367,7 +461,7 @@ function ParticipantsModal({ slot, onClose }: ParticipantsModalProps) {
           </div>
         </div>
         
-        <div className="p-6">
+        <div className="p-6 overflow-y-auto" style={{ maxHeight: 'calc(80vh - 140px)' }}>
           {/* Statistiques */}
           <div className="grid grid-cols-3 gap-4 mb-6">
             <div className="bg-blue-50 rounded-lg p-4 text-center">

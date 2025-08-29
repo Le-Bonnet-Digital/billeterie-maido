@@ -1,4 +1,3 @@
-import React from 'react';
 import { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { 
@@ -67,7 +66,9 @@ export default function AdminLayout() {
 
   const navigation = [
     { name: 'Tableau de Bord', href: '/admin', icon: LayoutDashboard },
+    { name: 'Utilisateurs', href: '/admin/users', icon: Users },
     { name: 'Événements', href: '/admin/events', icon: Calendar },
+    { name: 'Variantes Activités', href: '/admin/activity-variants', icon: Settings },
     { name: 'Planning', href: '/admin/time-slots', icon: Clock },
     { name: 'Activités', href: '/admin/activities', icon: Activity },
     { name: 'Pass', href: '/admin/passes', icon: Ticket },

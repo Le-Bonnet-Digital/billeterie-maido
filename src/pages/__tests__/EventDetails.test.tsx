@@ -96,7 +96,7 @@ describe('EventDetails Page', () => {
     fireEvent.click(modalButton);
 
     await waitFor(() => {
-      expect(addToCart).toHaveBeenCalledWith('pass1', 'activity1');
+      expect(addToCart).toHaveBeenCalledWith('pass1', 'activity1', undefined, 1, undefined, undefined, expect.anything());
       expect(refresh).toHaveBeenCalled();
     });
 

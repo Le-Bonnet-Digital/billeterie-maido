@@ -7,10 +7,8 @@ describe('App Component', () => {
   it('should render without crashing', async () => {
     const { container } = render(<App />);
 
-    // Should render the layout with header
-    expect(
-      screen.getByRole('link', { name: /BilletEvent/i })
-    ).toBeInTheDocument();
+    // Should render navigation
+    expect(screen.getAllByText(/Billetterie/i).length).toBeGreaterThan(0);
 
     // Ensure no accessibility violations
     const results = await axe(container);

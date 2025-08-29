@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
 import { Calendar, Info, Plus, Minus } from 'lucide-react';
@@ -10,11 +10,31 @@ import { toast } from 'react-hot-toast';
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, passes, eventActivities, loading, refresh } = useEventDetails(eventId);
+  const { event, passes, eventActivities, loading, refresh, loadTimeSlotsForActivity } = useEventDetails(eventId);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
   const [selectedActivities, setSelectedActivities] = useState<{ [key: string]: string }>({});
+
+  // Type de pass (utilise pass_type si fourni, sinon heuristique sur le nom)
+  const classifyPassType = (p: Pass): 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney' | 'other' => {
+    if (p.pass_type) return p.pass_type;
+    const n = (p.name || '').toLowerCase();
+    if (/baby/.test(n) && /poney/.test(n)) return 'baby_poney';
+    if (/luge/.test(n) && /seule/.test(n)) return 'luge_seule';
+    if (/(moins|<)\s*de?\s*8/.test(n) || /(moins).*8/.test(n)) return 'moins_8';
+    if (/(plus|>)\s*de?\s*8/.test(n) || /(plus).*8/.test(n)) return 'plus_8';
+    return 'other';
+  };
+
+  // Disponible uniquement quand les pass -8 et +8 sont épuisés
+  const isLugeOnlyAvailable = useMemo(() => {
+    const moins = passes.find((p) => classifyPassType(p) === 'moins_8');
+    const plus = passes.find((p) => classifyPassType(p) === 'plus_8');
+    const moinsHas = (moins?.remaining_stock ?? 0) > 0;
+    const plusHas = (plus?.remaining_stock ?? 0) > 0;
+    return !moinsHas && !plusHas;
+  }, [passes]);
 
   const handleAddToCart = (pass: Pass) => {
     setSelectedPass(pass);
@@ -23,12 +43,30 @@ export default function EventDetails() {
     setShowPurchaseModal(true);
   };
 
-  const handlePurchase = async () => {
+  const handlePurchase = async (selectedSlots: { [key: number]: string | undefined }, attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }) => {
     if (!selectedPass) return;
-
     for (let i = 0; i < selectedQuantity; i++) {
-      const eventActivityId = selectedActivities[i];
-      const success = await addToCart(selectedPass.id, eventActivityId);
+      // Auto-assign activity when pass type implies it
+      let eventActivityId = selectedActivities[i];
+      const type = classifyPassType(selectedPass);
+      if (!eventActivityId) {
+        if (type === 'moins_8' || type === 'baby_poney') {
+          const p = eventActivities.find((ea) => ea.activity.name === 'poney');
+          eventActivityId = p?.id;
+        } else if (type === 'plus_8') {
+          const t = eventActivities.find((ea) => ea.activity.name === 'tir_arc');
+          eventActivityId = t?.id;
+        }
+      }
+      const timeSlotId = selectedSlots[i];
+      const a = attendees[i] || {};
+      const attendee = {
+        firstName: a.firstName,
+        lastName: a.lastName,
+        birthYear: a.birthYear ? parseInt(a.birthYear) : undefined,
+        conditionsAck: a.ack === true,
+      };
+      const success = await addToCart(selectedPass.id, eventActivityId, timeSlotId, 1, undefined, undefined, attendee);
       if (!success) {
         toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
         return;
@@ -113,10 +151,18 @@ export default function EventDetails() {
               </div>
 
               <p className="text-gray-600 mb-6">{pass.description}</p>
+              {typeof pass.guaranteed_runs === 'number' && pass.guaranteed_runs > 0 && (
+                <div className="mb-4 text-xs font-medium text-green-700 bg-green-50 border border-green-200 inline-block px-2 py-1 rounded">
+                  Garantie {pass.guaranteed_runs} tour{pass.guaranteed_runs > 1 ? 's' : ''}
+                </div>
+              )}
 
               <button
                 onClick={() => handleAddToCart(pass)}
-                disabled={pass.remaining_stock === 0}
+                disabled={
+                  pass.remaining_stock === 0 ||
+                  (classifyPassType(pass) === 'luge_seule' && !isLugeOnlyAvailable)
+                }
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
                 {pass.remaining_stock === 0 ? 'Épuisé' : 'Ajouter au Panier'}
@@ -135,7 +181,9 @@ export default function EventDetails() {
           onQuantityChange={setSelectedQuantity}
           selectedActivities={selectedActivities}
           onActivitySelection={handleActivitySelection}
-          onPurchase={handlePurchase}
+          onPurchase={(slots, attendees) => handlePurchase(slots, attendees)}
+          loadTimeSlots={loadTimeSlotsForActivity}
+          conditionsMarkdown={event?.key_info_content}
           onClose={() => {
             setShowPurchaseModal(false);
             setSelectedPass(null);
@@ -153,7 +201,9 @@ interface PurchaseModalProps {
   onQuantityChange: (quantity: number) => void;
   selectedActivities: { [key: string]: string };
   onActivitySelection: (index: number, eventActivityId: string) => void;
-  onPurchase: () => void;
+  onPurchase: (selectedSlots: { [key: number]: string | undefined }, attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }) => void;
+  loadTimeSlots: (eventActivityId: string) => Promise<import('../lib/types').TimeSlot[]>;
+  conditionsMarkdown?: string;
   onClose: () => void;
 }
 
@@ -165,8 +215,75 @@ function PurchaseModal({
   selectedActivities,
   onActivitySelection,
   onPurchase,
+  loadTimeSlots,
+  conditionsMarkdown,
   onClose
 }: PurchaseModalProps) {
+  const [slotsByActivity, setSlotsByActivity] = useState<Record<string, import('../lib/types').TimeSlot[]>>({});
+  const [selectedSlots, setSelectedSlots] = useState<Record<number, string | undefined>>({});
+  const [attendees, setAttendees] = useState<Record<number, { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean }>>({});
+
+  const requiresSlot = useMemo(() => {
+    const map: Record<string, boolean> = {};
+    eventActivities.forEach((ea) => { map[ea.id] = ea.requires_time_slot; });
+    return map;
+  }, [eventActivities]);
+
+  // Map activity name -> event_activity_id for auto-assignment
+  const activityByName = useMemo(() => {
+    const map: Record<string, string> = {};
+    eventActivities.forEach((ea) => { map[ea.activity.name] = ea.id; });
+    return map;
+  }, [eventActivities]);
+
+  // Detect pass type for fixed activity assignment
+  const passType = useMemo(() => {
+    const n = (pass.name || '').toLowerCase();
+    const t = pass.pass_type as undefined | string;
+    if (t) return t;
+    if (/baby/.test(n) && /poney/.test(n)) return 'baby_poney';
+    if (/(moins|<)\s*de?\s*8/.test(n) || /(moins).*8/.test(n)) return 'moins_8';
+    if (/(plus|>)\s*de?\s*8/.test(n) || /(plus).*8/.test(n)) return 'plus_8';
+    return 'other';
+  }, [pass]);
+
+  const fixedActivityId = useMemo(() => {
+    if (passType === 'moins_8' || passType === 'baby_poney') return activityByName['poney'];
+    if (passType === 'plus_8') return activityByName['tir_arc'];
+    return undefined;
+  }, [passType, activityByName]);
+
+  const ensureSlotsLoaded = async (eventActivityId: string) => {
+    if (!slotsByActivity[eventActivityId]) {
+      const slots = await loadTimeSlots(eventActivityId);
+      setSlotsByActivity((prev) => ({ ...prev, [eventActivityId]: slots }));
+    }
+  };
+
+  const handleSelectActivity = async (index: number, eventActivityId: string) => {
+    onActivitySelection(index, eventActivityId);
+    if (requiresSlot[eventActivityId]) {
+      await ensureSlotsLoaded(eventActivityId);
+      const slots = slotsByActivity[eventActivityId];
+      if (slots && slots.length > 0) {
+        setSelectedSlots((prev) => ({ ...prev, [index]: slots[0].id }));
+      }
+    } else {
+      setSelectedSlots((prev) => ({ ...prev, [index]: undefined }));
+    }
+  };
+
+  const allConfigured = useMemo(() => {
+    return Array.from({ length: quantity }, (_, i) => i).every((i) => {
+      const eaId = fixedActivityId || selectedActivities[i];
+      if (!eaId) return false;
+      if (requiresSlot[eaId]) {
+        return !!selectedSlots[i];
+      }
+      return true;
+    });
+  }, [quantity, selectedActivities, requiresSlot, selectedSlots, fixedActivityId]);
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-lg max-w-2xl w-full max-h-[80vh] overflow-hidden">
@@ -202,7 +319,7 @@ function PurchaseModal({
             </div>
           </div>
 
-          {/* Sélection d'activités pour chaque pass */}
+          {/* Sélection d'activités et créneaux pour chaque pass */}
           <div className="space-y-4">
             {Array.from({ length: quantity }, (_, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4">
@@ -210,6 +327,7 @@ function PurchaseModal({
                   Pass #{index + 1} - Choisissez une activité
                 </h4>
 
+                {!fixedActivityId && (
                 <div className="grid grid-cols-1 gap-3">
                   {eventActivities.map((eventActivity) => (
                     <div
@@ -221,7 +339,7 @@ function PurchaseModal({
                       }`}
                     >
                       <button
-                        onClick={() => onActivitySelection(index, eventActivity.id)}
+                        onClick={() => handleSelectActivity(index, eventActivity.id)}
                         className="w-full p-3 text-left"
                       >
                         <div className="flex items-center justify-between">
@@ -239,12 +357,87 @@ function PurchaseModal({
                           </div>
                         </div>
                       </button>
+                      {selectedActivities[index] === eventActivity.id && eventActivity.requires_time_slot && (
+                        <div className="p-3 border-t border-blue-100 bg-blue-50">
+                          <label className="block text-sm font-medium text-blue-900 mb-1">Sélectionnez un créneau</label>
+                          <select
+                            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                            value={selectedSlots[index] || ''}
+                            onChange={(e) => setSelectedSlots((prev) => ({ ...prev, [index]: e.target.value }))}
+                            onFocus={() => ensureSlotsLoaded(eventActivity.id)}
+                          >
+                            <option value="" disabled>Choisir un créneau</option>
+                            {(slotsByActivity[eventActivity.id] || []).map((slot) => (
+                              <option key={slot.id} value={slot.id}>
+                                {format(new Date(slot.slot_time), 'HH:mm — d MMM yyyy', { locale: fr })}
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
+                )}
+
+                {/* Informations participant */}
+                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                  <input
+                    type="text"
+                    placeholder="Prénom"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={attendees[index]?.firstName || ''}
+                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], firstName: e.target.value } }))}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Nom"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={attendees[index]?.lastName || ''}
+                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], lastName: e.target.value } }))}
+                  />
+                  <input
+                    type="number"
+                    placeholder="Année de naissance (ex: 2012)"
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    value={attendees[index]?.birthYear || ''}
+                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], birthYear: e.target.value } }))}
+                  />
+                </div>
+
+                {/* Si activité fixe (moins_8, plus_8, baby_poney) afficher uniquement le créneau pour cette activité */}
+                {fixedActivityId && (
+                  <div className="mt-3">
+                    <label className="block text-sm font-medium text-blue-900 mb-1">Sélectionnez un créneau</label>
+                    <select
+                      className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                      value={selectedSlots[index] || ''}
+                      onChange={(e) => setSelectedSlots((prev) => ({ ...prev, [index]: e.target.value }))}
+                      onFocus={() => ensureSlotsLoaded(fixedActivityId)}
+                    >
+                      <option value="" disabled>Choisir un créneau</option>
+                      {(slotsByActivity[fixedActivityId] || []).map((slot) => (
+                        <option key={slot.id} value={slot.id}>
+                          {format(new Date(slot.slot_time), 'HH:mm - d MMM yyyy', { locale: fr })}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                )}
               </div>
             ))}
           </div>
+
+          {/* Conditions d'accès */}
+          {conditionsMarkdown && (
+            <div className="mt-6 bg-blue-50 border border-blue-100 rounded-md p-4">
+              <div className="flex items-start gap-2 mb-2">
+                <Info className="h-5 w-5 text-blue-600 mt-0.5" />
+                <span className="font-medium text-blue-900">Conditions d'accès</span>
+              </div>
+              <MarkdownRenderer className="text-sm text-blue-900" content={conditionsMarkdown} />
+            </div>
+          )}
         </div>
 
         <div className="p-6 border-t border-gray-200">
@@ -260,8 +453,8 @@ function PurchaseModal({
               Annuler
             </button>
             <button
-              onClick={onPurchase}
-              disabled={quantity === 0 || Object.keys(selectedActivities).length < quantity}
+              onClick={() => onPurchase(selectedSlots, attendees)}
+              disabled={quantity === 0 || !allConfigured}
               className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
             >
               Ajouter au Panier

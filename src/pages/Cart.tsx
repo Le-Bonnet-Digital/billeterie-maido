@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import ConfirmationModal from '../components/ConfirmationModal';
 import CheckoutForm, { type CustomerData } from '../components/CheckoutForm';
@@ -17,9 +17,15 @@ interface ConfirmationData {
   eventName: string;
   passName: string;
   price: number;
-  timeSlot: { slot_time: string } | null;
+  timeSlot?: { slot_time: string };
   activityName?: string;
 }
+
+type InsertedReservation = {
+  reservation_number: string;
+  passes: { name: string; price: number } | Array<{ name: string; price: number }>;
+  time_slots: { slot_time: string } | Array<{ slot_time: string }> | null;
+};
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
@@ -88,7 +94,6 @@ export default function Cart() {
           .insert({
             client_email: customerData.email,
             pass_id: item.pass.id,
-            event_activity_id: item.eventActivity?.id || null,
             time_slot_id: item.timeSlot?.id || null,
             payment_status: 'paid'
           })
@@ -96,9 +101,6 @@ export default function Cart() {
             id,
             reservation_number,
             passes!inner (name, price),
-            event_activities (
-              activities (name)
-            ),
             time_slots (slot_time),
             events!inner (name)
           `)
@@ -119,16 +121,20 @@ export default function Cart() {
       
       // Afficher la confirmation pour la première réservation
       if (reservations.length > 0) {
-        const firstReservation = reservations[0];
+        const firstReservation = reservations[0] as InsertedReservation;
         const eventName = cartItems[0]?.pass ? 'Les Défis Lontan' : 'Événement'; // Nom par défaut
+        const passInfo = Array.isArray(firstReservation.passes) ? firstReservation.passes[0] : firstReservation.passes;
+        const timeSlotInfo = firstReservation.time_slots
+          ? (Array.isArray(firstReservation.time_slots) ? firstReservation.time_slots[0] : firstReservation.time_slots)
+          : undefined;
         setConfirmationData({
           reservationNumber: firstReservation.reservation_number,
           email: customerData.email,
           eventName: eventName,
-          passName: firstReservation.passes.name,
-          price: firstReservation.passes.price,
-          timeSlot: firstReservation.time_slots,
-          activityName: firstReservation.event_activities?.activities?.name
+          passName: passInfo?.name ?? '',
+          price: passInfo?.price ?? 0,
+          timeSlot: timeSlotInfo ? { slot_time: timeSlotInfo.slot_time } : undefined,
+          activityName: undefined
         });
         setShowConfirmation(true);
       }
