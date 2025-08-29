@@ -228,10 +228,14 @@ export default function Reports() {
             />
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="endDate"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Date de fin
             </label>
             <input
+              id="endDate"
               type="date"
               value={dateRange.end}
               onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
