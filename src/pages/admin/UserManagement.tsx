@@ -25,6 +25,7 @@ interface UserRow {
 export default function UserManagement() {
   const [me, setMe] = useState<AuthUser | null>(null);
   const [query, setQuery] = useState('');
+  const [roleFilter, setRoleFilter] = useState<Role | ''>('');
   const [loading, setLoading] = useState(false);
   const [users, setUsers] = useState<UserRow[]>([]);
   const [saving, setSaving] = useState<Record<string, boolean>>({});
@@ -33,7 +34,16 @@ export default function UserManagement() {
     (async () => {
       setMe(await getCurrentUser());
     })();
+    // Chargement initial des utilisateurs
+    void search();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  useEffect(() => {
+    // Recharge lorsque le filtre de rôle change
+    void search();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [roleFilter]);
 
   const canManage = useMemo(() => me?.role === 'admin', [me]);
 
@@ -41,10 +51,14 @@ export default function UserManagement() {
     try {
       setLoading(true);
       const q = query.trim();
-      const builder = supabase.from('users').select('id,email,role').limit(50);
-      const { data, error } = q
-        ? await builder.ilike('email', `%${q}%`)
-        : await builder;
+      let builder = supabase.from('users').select('id,email,role').limit(50);
+      if (roleFilter) {
+        builder = builder.eq('role', roleFilter);
+      }
+      if (q) {
+        builder = builder.ilike('email', `%${q}%`);
+      }
+      const { data, error } = await builder;
       if (error) throw error;
       setUsers((data ?? []) as UserRow[]);
     } catch (err) {
@@ -79,7 +93,7 @@ export default function UserManagement() {
         </div>
       </div>
 
-      <div className="bg-white p-4 rounded-lg shadow-sm flex items-center gap-3">
+      <div className="bg-white p-4 rounded-lg shadow-sm flex flex-wrap items-center gap-3">
         <Search className="h-5 w-5 text-gray-500" />
         <input
           type="text"
@@ -89,6 +103,17 @@ export default function UserManagement() {
           placeholder="Rechercher par email..."
           onKeyDown={(e) => e.key === 'Enter' && search()}
         />
+        <select
+          value={roleFilter}
+          onChange={(e) => setRoleFilter(e.target.value as Role | '')}
+          className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
+          aria-label="Filtrer par rôle"
+        >
+          <option value="">Tous</option>
+          {ROLES.map((r) => (
+            <option key={r} value={r}>{r}</option>
+          ))}
+        </select>
         <button
           onClick={search}
           disabled={loading}
@@ -140,7 +165,7 @@ export default function UserManagement() {
             {users.length === 0 && (
               <tr>
                 <td className="px-6 py-10 text-center text-sm text-gray-500" colSpan={3}>
-                  Aucun résultat. Lancez une recherche pour trouver des utilisateurs.
+                  Aucun utilisateur trouvé.
                 </td>
               </tr>
             )}

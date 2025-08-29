@@ -26,37 +26,28 @@ describe("Admin UserManagement", () => {
       { id: "u1", email: "prov@test.com", role: "client" as const },
     ];
 
-    // Minimal builder interface matching the calls used by the component
-    interface UsersQueryBuilder {
-      select: (cols?: string) => UsersQueryBuilder;
-      ilike: (
-        column: string,
-        pattern: string
-      ) => Promise<{ data: typeof users; error: null }>;
-      limit: (n: number) => UsersQueryBuilder;
-      // update returns the builder so eq can be called afterwards
-      update: (data: Partial<(typeof users)[number]>) => UsersQueryBuilder;
-      // eq resolves to a response object containing error (or null)
-      eq: (
-        column: string,
-        value: string
-      ) => Promise<{ error: null } | { error: unknown }>;
-    }
+    const updateEq = vi.fn().mockResolvedValue({ error: null });
 
-    const usersBuilder: UsersQueryBuilder = {
-      select: vi.fn(function (this: UsersQueryBuilder) {
+    const usersBuilder = {
+      select: vi.fn(function (this: typeof usersBuilder) {
+        return this;
+      }),
+      limit: vi.fn(function (this: typeof usersBuilder) {
+        return this;
+      }),
+      eq: vi.fn(function (this: typeof usersBuilder) {
         return this;
       }),
       ilike: vi.fn().mockResolvedValue({ data: users, error: null }),
-      limit: vi.fn(function (this: UsersQueryBuilder) {
-        return this;
-      }),
-      // update should be chainable and return the builder so eq() is called
-      update: vi.fn(function (this: UsersQueryBuilder) {
-        return this;
-      }),
-      eq: vi.fn().mockResolvedValue({ error: null }),
-    } as unknown as UsersQueryBuilder;
+      update: vi.fn(() => ({
+        eq: updateEq,
+      })),
+      then: vi.fn((resolve: (value: { data: typeof users; error: null }) => unknown) =>
+        resolve({ data: users, error: null })
+      ),
+    };
+
+    type UsersQueryBuilder = typeof usersBuilder;
 
     const { default: UserManagement } = await import("../UserManagement");
     const supa = (await import("../../../lib/supabase")) as unknown as {
@@ -66,27 +57,31 @@ describe("Admin UserManagement", () => {
     };
     // Override supabase.from at runtime
     supa.supabase.from = vi.fn((table: string) =>
-      table === "users" ? usersBuilder : {}
+      table === "users" ? (usersBuilder as unknown as UsersQueryBuilder) : {}
     );
 
     render(<UserManagement />);
 
     const input = screen.getByPlaceholderText(/Rechercher par email/i);
     fireEvent.change(input, { target: { value: "prov@test.com" } });
-    fireEvent.click(screen.getByRole("button", { name: /Rechercher/i }));
 
-    // Wait for ilike to be called
+    // Apply role filter which triggers search
+    const roleSelect = screen.getByLabelText(/Filtrer par rôle/i);
+    fireEvent.change(roleSelect, { target: { value: "client" } });
+
+    // Wait for ilike and eq to be called
     type MockLike = { mock?: { calls?: unknown[] } };
     await waitFor(() => {
       expect(
         (usersBuilder.ilike as unknown as MockLike).mock?.calls?.length ?? 0
       ).toBeGreaterThanOrEqual(1);
+      expect(usersBuilder.eq).toHaveBeenCalledWith("role", "client");
     });
 
     // Assert table shows the user
     await waitFor(
       () => {
-        const noResultsMessage = screen.queryByText(/Aucun résultat/i);
+        const noResultsMessage = screen.queryByText(/Aucun utilisateur trouvé/i);
         expect(noResultsMessage).not.toBeInTheDocument();
 
         const rows = screen.getAllByRole("row");
@@ -98,7 +93,7 @@ describe("Admin UserManagement", () => {
       { timeout: 2000 }
     );
 
-    // Change role select and submit
+    // Change role select for user and submit
     const select = await screen.findByLabelText(/Rôle de prov@test.com/i);
     expect(select).toBeInTheDocument();
 
@@ -108,11 +103,8 @@ describe("Admin UserManagement", () => {
 
     // ensure update called
     await waitFor(() => {
-      expect(
-        (usersBuilder.update as unknown as MockLike).mock?.calls?.length ?? 0
-      ).toBeGreaterThanOrEqual(1);
+      expect(updateEq).toHaveBeenCalled();
       expect(successToast).toHaveBeenCalled();
     });
   });
 });
-// Wait for ilike to be called
