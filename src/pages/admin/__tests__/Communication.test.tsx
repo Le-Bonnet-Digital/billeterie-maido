@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, afterAll } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '../../../test/utils';
+import { render, screen, act, waitFor } from '../../../test/utils';
 import Communication from '../Communication';
 
 vi.stubEnv('VITE_TEST_DELAY_MS', '0');
@@ -14,10 +14,14 @@ describe('Communication', () => {
     render(<Communication />);
 
     const openButton = await screen.findByRole('button', { name: /modèles/i });
-    await user.click(openButton);
+    await act(async () => {
+      await user.click(openButton);
+    });
 
-    expect(
-      await screen.findByRole('heading', { name: /modèles d'email/i })
-    ).toBeInTheDocument();
+    await waitFor(() => {
+      expect(
+        screen.getByRole('heading', { name: /modèles d'email/i })
+      ).toBeInTheDocument();
+    });
   });
 });
