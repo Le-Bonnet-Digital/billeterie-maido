@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Plus, Trash2, Save, ListOrdered, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -17,10 +17,7 @@ export default function ActivityVariantsManagement() {
   const [drafts, setDrafts] = useState<Record<string, DraftVariant>>({});
   const [newVariant, setNewVariant] = useState<{ name: string; price: number; stock: number | ''; imageFile?: File | null; imagePreview?: string | null }>({ name: '', price: 0, stock: '', imageFile: null, imagePreview: null });
 
-  useEffect(() => { init(); }, []);
-  useEffect(() => { if (selectedActivity) loadVariants(selectedActivity); }, [selectedActivity]);
-
-  const init = async () => {
+  const init = useCallback(async () => {
     try {
       if (!isSupabaseConfigured()) { setLoading(false); return; }
       setLoading(true);
@@ -32,9 +29,9 @@ export default function ActivityVariantsManagement() {
       logger.error('Erreur chargement activités', { error: err });
       toast.error('Chargement impossible');
     } finally { setLoading(false); }
-  };
+  }, []);
 
-  const loadVariants = async (activityId: string) => {
+  const loadVariants = useCallback(async (activityId: string) => {
     try {
       const { data, error } = await supabase
         .from('activity_variants')
@@ -48,7 +45,10 @@ export default function ActivityVariantsManagement() {
       logger.error('Erreur chargement variantes', { error: err });
       toast.error('Chargement impossible');
     }
-  };
+  }, []);
+
+  useEffect(() => { init(); }, [init]);
+  useEffect(() => { if (selectedActivity) loadVariants(selectedActivity); }, [selectedActivity, loadVariants]);
 
   const createVariant = async () => {
     if (!selectedActivity || !newVariant.name) return;
