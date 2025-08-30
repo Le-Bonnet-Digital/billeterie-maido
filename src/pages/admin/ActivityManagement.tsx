@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Activity, Plus, Edit, Trash2, X, Image as ImageIcon } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -27,11 +27,7 @@ export default function ActivityManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingActivity, setEditingActivity] = useState<ActivityType | null>(null);
 
-  useEffect(() => {
-    loadActivities();
-  }, []);
-
-  const loadActivities = async () => {
+  const loadActivities = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -47,7 +43,11 @@ export default function ActivityManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadActivities();
+  }, [loadActivities]);
 
   const handleDeleteActivity = async (activityId: string) => {
     if (!confirm("Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l'utilisent.")) return;
