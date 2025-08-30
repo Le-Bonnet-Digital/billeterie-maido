@@ -134,7 +134,7 @@ export default function Reports() {
 
   useEffect(() => {
     loadReportData();
-  }, [loadReportData]);
+  }, [dateRange, loadReportData]);
 
   const exportReport = () => {
     if (!reportData) return;
