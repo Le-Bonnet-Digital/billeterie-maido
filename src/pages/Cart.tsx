@@ -87,27 +87,38 @@ export default function Cart() {
       
       // Créer les réservations pour chaque article du panier
       const reservations = [];
-      
+
       for (const item of cartItems) {
-        const { data: reservation, error } = await supabase
-          .from('reservations')
-          .insert({
-            client_email: customerData.email,
-            pass_id: item.pass.id,
-            time_slot_id: item.timeSlot?.id || null,
-            payment_status: 'paid'
-          })
-          .select(`
+        const { data: acts, error: actsError } = await supabase
+          .from('cart_item_activities')
+          .select('event_activity_id, time_slot_id')
+          .eq('cart_item_id', item.id);
+        if (actsError) throw actsError;
+
+        const activities = acts && acts.length > 0 ? acts : [null];
+
+        for (const act of activities) {
+          const { data: reservation, error } = await supabase
+            .from('reservations')
+            .insert({
+              client_email: customerData.email,
+              pass_id: item.pass.id,
+              event_activity_id: act ? act.event_activity_id : null,
+              time_slot_id: act ? act.time_slot_id : null,
+              payment_status: 'paid'
+            })
+            .select(`
             id,
             reservation_number,
             passes!inner (name, price),
             time_slots (slot_time),
             events!inner (name)
           `)
-          .single();
-          
-        if (error) throw error;
-        reservations.push(reservation);
+            .single();
+
+          if (error) throw error;
+          reservations.push(reservation);
+        }
       }
       
       // Vider le panier

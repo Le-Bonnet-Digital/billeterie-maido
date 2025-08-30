@@ -95,7 +95,7 @@ describe('Cart Functions', () => {
     it('should return false when repository is not configured', async () => {
       const repo = createRepo({ isConfigured: vi.fn().mockReturnValue(false) });
       const notify = vi.fn();
-      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
+      const result = await addToCart('pass-id', [], 1, repo, notify);
       expect(result).toBe(false);
       expect(notify).toHaveBeenCalledWith('error', 'Configuration requise. Veuillez connecter Supabase.');
     });
@@ -105,7 +105,7 @@ describe('Cart Functions', () => {
       const notify = vi.fn();
       mockLocalStorage.getItem.mockReturnValue('session-123');
 
-      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
+      const result = await addToCart('pass-id', [], 1, repo, notify);
       expect(result).toBe(true);
       expect(repo.insertCartItem).toHaveBeenCalled();
       expect(notify).toHaveBeenCalledWith('success', 'Article ajouté au panier');
@@ -114,7 +114,7 @@ describe('Cart Functions', () => {
     it('should return false for invalid quantity', async () => {
       const repo = createRepo();
       const notify = vi.fn();
-      const result = await addToCart('pass-id', undefined, undefined, 0, repo, notify);
+      const result = await addToCart('pass-id', [], 0, repo, notify);
       expect(result).toBe(false);
       expect(notify).toHaveBeenCalledWith('error', 'La quantité doit être un entier positif');
     });
@@ -123,7 +123,7 @@ describe('Cart Functions', () => {
       const repo = createRepo({ insertCartItem: vi.fn().mockRejectedValue(new Error('fail')) });
       const notify = vi.fn();
       const spy = vi.spyOn(logger, 'error').mockImplementation(() => {});
-      const result = await addToCart('pass-id', undefined, undefined, 1, repo, notify);
+      const result = await addToCart('pass-id', [], 1, repo, notify);
       expect(result).toBe(false);
       expect(notify).toHaveBeenCalledWith('error', 'Une erreur est survenue');
       expect(spy).toHaveBeenCalled();
@@ -133,13 +133,13 @@ describe('Cart Functions', () => {
   describe('validateStock', () => {
     it('should return null when stock is sufficient', async () => {
       const repo = createRepo();
-      const result = await validateStock(repo, 'pass', undefined, undefined, 1);
+      const result = await validateStock(repo, 'pass', [], 1);
       expect(result).toBeNull();
     });
 
     it('should return error message when stock is insufficient', async () => {
       const repo = createRepo({ getPassRemainingStock: vi.fn().mockResolvedValue(0) });
-      const result = await validateStock(repo, 'pass', undefined, undefined, 1);
+      const result = await validateStock(repo, 'pass', [], 1);
       expect(result).toBe('Stock insuffisant pour ce pass');
     });
   });
@@ -158,9 +158,9 @@ describe('Cart Functions', () => {
     it('should insert item using repository', async () => {
       const insertCartItem = vi.fn().mockResolvedValue(true);
       const repo = createRepo({ insertCartItem });
-      const success = await insertNewItem(repo, 'sess', 'pass', undefined, undefined, 1);
+      const success = await insertNewItem(repo, 'sess', 'pass', [], 1);
       expect(success).toBe(true);
-      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', undefined, undefined, 1, undefined, undefined);
+      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', [], 1, undefined, undefined);
     });
   });
 

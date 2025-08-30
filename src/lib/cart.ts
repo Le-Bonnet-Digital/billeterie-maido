@@ -66,8 +66,7 @@ export function getSessionId(): string {
 export async function validateStock(
   repo: CartRepository,
   passId: string,
-  eventActivityId: string | undefined,
-  timeSlotId: string | undefined,
+  activities: { eventActivityId: string; timeSlotId?: string }[],
   quantity: number,
 ): Promise<string | null> {
   const passStock = await repo.getPassRemainingStock(passId);
@@ -75,19 +74,20 @@ export async function validateStock(
     return 'Stock insuffisant pour ce pass';
   }
 
-  if (eventActivityId) {
-    const activityStock = await repo.getEventActivityRemainingStock(eventActivityId);
+  for (const activity of activities) {
+    const activityStock = await repo.getEventActivityRemainingStock(activity.eventActivityId);
     if (activityStock !== null && activityStock < quantity) {
       return 'Stock insuffisant pour cette activité';
     }
-  }
 
-  if (timeSlotId) {
-    const slotCapacity = await repo.getSlotRemainingCapacity(timeSlotId);
-    if (slotCapacity !== null && slotCapacity < quantity) {
-      return 'Plus de places disponibles pour ce créneau';
+    if (activity.timeSlotId) {
+      const slotCapacity = await repo.getSlotRemainingCapacity(activity.timeSlotId);
+      if (slotCapacity !== null && slotCapacity < quantity) {
+        return 'Plus de places disponibles pour ce créneau';
+      }
     }
   }
+
   return null;
 }
 
@@ -111,13 +111,12 @@ export async function insertNewItem(
   repo: CartRepository,
   sessionId: string,
   passId: string | null,
-  eventActivityId: string | undefined,
-  timeSlotId: string | undefined,
+  activities: { eventActivityId: string; timeSlotId?: string }[] | undefined,
   quantity: number,
   attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
   product?: { type?: 'event_pass' | 'activity_variant'; id?: string },
 ): Promise<boolean> {
-  return repo.insertCartItem(sessionId, passId, eventActivityId, timeSlotId, quantity, attendee, product);
+  return repo.insertCartItem(sessionId, passId, activities, quantity, attendee, product);
 }
 
 /**
@@ -138,8 +137,7 @@ export function notifyUser(notify: NotifyFn, type: 'success' | 'error', message:
  */
 export async function addToCart(
   passId: string,
-  eventActivityId?: string,
-  timeSlotId?: string,
+  activities: { eventActivityId: string; timeSlotId?: string }[],
   quantity = 1,
   repo: CartRepository = new SupabaseCartRepository(),
   notify: NotifyFn = toastNotify,
@@ -157,7 +155,7 @@ export async function addToCart(
   try {
     const sessionId = getSessionId();
 
-    const stockError = await validateStock(repo, passId, eventActivityId, timeSlotId, quantity);
+    const stockError = await validateStock(repo, passId, activities, quantity);
     if (stockError) {
       notifyUser(notify, 'error', stockError);
       return false;
@@ -165,9 +163,9 @@ export async function addToCart(
 
     await repo.cleanupExpiredCartItems();
 
-    // Si des informations d'attestation/participant sont fournies, on évite d'agréger
-    // afin de conserver les infos par billet. Dans ce cas, on insère une ligne par billet.
-    const existingItem = attendee ? null : await repo.findCartItem(sessionId, passId, eventActivityId, timeSlotId);
+    // Si des informations d'attestation/participant sont fournies ou si des activités sont associées,
+    // on évite d'agréger afin de conserver les infos par billet.
+    const existingItem = attendee || activities.length > 0 ? null : await repo.findCartItem(sessionId, passId);
 
     let success = false;
     if (existingItem) {
@@ -176,7 +174,7 @@ export async function addToCart(
         notifyUser(notify, 'error', 'Erreur lors de la mise à jour du panier');
       }
     } else {
-      success = await insertNewItem(repo, sessionId, passId, eventActivityId, timeSlotId, quantity, attendee, { type: 'event_pass', id: passId });
+      success = await insertNewItem(repo, sessionId, passId, activities, quantity, attendee, { type: 'event_pass', id: passId });
       if (!success) {
         notifyUser(notify, 'error', "Erreur lors de l'ajout au panier");
       }
@@ -190,7 +188,7 @@ export async function addToCart(
   } catch (err) {
     logger.error('Erreur addToCart', {
       error: err,
-      query: { action: 'addToCart', passId, eventActivityId, timeSlotId },
+      query: { action: 'addToCart', passId, activities: activities.length },
     });
     notifyUser(notify, 'error', 'Une erreur est survenue');
     return false;
@@ -494,7 +492,6 @@ export async function addActivityVariantToCart(
       repo,
       sessionId,
       null,
-      undefined,
       undefined,
       quantity,
       attendee,

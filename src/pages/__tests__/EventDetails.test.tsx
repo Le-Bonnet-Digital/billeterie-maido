@@ -97,9 +97,18 @@ describe('EventDetails Page', () => {
     fireEvent.click(modalButton);
 
     await waitFor(() => {
-      expect(addToCart).toHaveBeenCalledTimes(2);
-      expect(addToCart).toHaveBeenCalledWith('pass1', 'activity1', undefined, 1, undefined, undefined, expect.anything());
-      expect(addToCart).toHaveBeenCalledWith('pass1', 'activity2', undefined, 1, undefined, undefined, expect.anything());
+      expect(addToCart).toHaveBeenCalledTimes(1);
+      expect(addToCart).toHaveBeenCalledWith(
+        'pass1',
+        [
+          { eventActivityId: 'activity1', timeSlotId: undefined },
+          { eventActivityId: 'activity2', timeSlotId: undefined },
+        ],
+        1,
+        undefined,
+        undefined,
+        expect.anything()
+      );
       expect(refresh).toHaveBeenCalled();
     });
 
