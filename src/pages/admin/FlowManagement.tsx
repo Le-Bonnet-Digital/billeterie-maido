@@ -138,7 +138,7 @@ export default function FlowManagement() {
 
   useEffect(() => {
     loadTimeSlots();
-  }, [loadTimeSlots]);
+  }, [selectedEvent, selectedDate, loadTimeSlots]);
 
   const exportParticipantsList = (slot: TimeSlotWithReservations) => {
     const csvContent = [
