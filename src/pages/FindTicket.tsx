@@ -28,7 +28,6 @@ export default function FindTicket() {
       
       // Demander au serveur d'envoyer l'e-mail (sans exposer la table)
       const res = await requestReservationEmail({ email });
-      if (!res) throw new Error('Service indisponible');
 
       if (res.found && res.sent) {
         setFound(true);
@@ -38,7 +37,11 @@ export default function FindTicket() {
       }
     } catch (err) {
       logger.error('Erreur recherche billet', { error: err });
-      toast.error('Une erreur est survenue lors de la recherche');
+      toast.error(
+        err instanceof Error
+          ? err.message
+          : 'Une erreur est survenue lors de la recherche'
+      );
     } finally {
       setLoading(false);
     }
