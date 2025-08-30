@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Mail, Send, Users, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -86,17 +86,7 @@ L'équipe BilletEvent`
     }
   ];
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEvent) {
-      loadRecipientCount();
-    }
-  }, [selectedEvent]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('events')
@@ -109,9 +99,10 @@ L'équipe BilletEvent`
       logger.error('Erreur chargement événements', { error: err });
       toast.error('Erreur lors du chargement des événements');
     }
-  };
+  }, []);
 
-  const loadRecipientCount = async () => {
+  const loadRecipientCount = useCallback(async () => {
+    if (!selectedEvent) return;
     try {
       const { data, error } = await supabase
         .from('reservations')
@@ -125,7 +116,7 @@ L'équipe BilletEvent`
         .eq('payment_status', 'paid');
 
       if (error) throw error;
-      
+
       // Compter les emails uniques
       const uniqueEmails = new Set((data || []).map(r => r.client_email));
       setRecipientCount(uniqueEmails.size);
@@ -134,7 +125,15 @@ L'équipe BilletEvent`
       toast.error('Erreur lors du comptage des destinataires');
       setRecipientCount(0);
     }
-  };
+  }, [selectedEvent]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
+    loadRecipientCount();
+  }, [loadRecipientCount]);
 
   const handleSendEmail = async () => {
     if (!selectedEvent || !emailSubject || !emailContent) {

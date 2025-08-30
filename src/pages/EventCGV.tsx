@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, FileText } from 'lucide-react';
@@ -17,16 +17,11 @@ export default function EventCGV() {
   const [event, setEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (eventId) {
-      loadEventCGV();
-    }
-  }, [eventId]);
-
-  const loadEventCGV = async () => {
+  const loadEventCGV = useCallback(async () => {
+    if (!eventId) return;
     try {
       setLoading(true);
-      
+
       const { data, error } = await supabase
         .from('events')
         .select('id, name, cgv_content')
@@ -42,7 +37,11 @@ export default function EventCGV() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventId]);
+
+  useEffect(() => {
+    loadEventCGV();
+  }, [loadEventCGV]);
 
   if (loading) {
     return (

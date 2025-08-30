@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Plus, Settings, Clock, Users, Target, Trash2 } from 'lucide-react';
 import { format } from 'date-fns';
@@ -42,11 +42,7 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTimeSlotsModal, setShowTimeSlotsModal] = useState<EventActivity | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -101,7 +97,11 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
     } finally {
       setLoading(false);
     }
-  };
+  }, [event.id]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleRemoveActivity = async (eventActivityId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir retirer cette activité de l\'événement ?')) return;

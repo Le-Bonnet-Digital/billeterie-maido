@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { BarChart3, TrendingUp, Euro, Users, Download } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
@@ -35,11 +35,7 @@ export default function Reports() {
     end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
   });
 
-  useEffect(() => {
-    loadReportData();
-  }, [dateRange]);
-
-  const loadReportData = async () => {
+  const loadReportData = useCallback(async () => {
     try {
       setLoading(true);
 
@@ -134,7 +130,11 @@ export default function Reports() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [dateRange]);
+
+  useEffect(() => {
+    loadReportData();
+  }, [loadReportData]);
 
   const exportReport = () => {
     if (!reportData) return;

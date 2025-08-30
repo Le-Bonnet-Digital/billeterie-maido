@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Plus, Trash2, Clock, Users } from 'lucide-react';
 import { format, addMinutes, startOfDay } from 'date-fns';
@@ -38,11 +38,7 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
   const [loading, setLoading] = useState(true);
   const [showCreateForm, setShowCreateForm] = useState(false);
 
-  useEffect(() => {
-    loadTimeSlots();
-  }, []);
-
-  const loadTimeSlots = async () => {
+  const loadTimeSlots = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -73,7 +69,11 @@ export default function TimeSlotsManager({ eventActivity, event, onClose }: Time
     } finally {
       setLoading(false);
     }
-  };
+  }, [eventActivity.id]);
+
+  useEffect(() => {
+    loadTimeSlots();
+  }, [loadTimeSlots]);
 
   const handleDeleteSlot = async (slotId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer ce créneau ?')) return;
