@@ -7,7 +7,6 @@ import {
   TimeSlot,
   fetchEvent,
   fetchPasses,
-  fetchEventActivities,
   fetchTimeSlots,
 } from '../lib/eventDetails';
 
@@ -45,14 +44,13 @@ export function useEventDetails(eventId?: string): UseEventDetailsResult {
     }
     try {
       setLoading(true);
-      const [evt, passesData, activitiesData] = await Promise.all([
+      const [evt, passesData] = await Promise.all([
         fetchEvent(eventId),
         fetchPasses(eventId),
-        fetchEventActivities(eventId),
       ]);
       setEvent(evt);
       setPasses(passesData);
-      setEventActivities(activitiesData);
+      setEventActivities(passesData.flatMap((p) => p.event_activities));
       setError(null);
     } catch (err) {
       console.error('Erreur chargement événement:', err);
@@ -78,3 +76,4 @@ export function useEventDetails(eventId?: string): UseEventDetailsResult {
 }
 
 export default useEventDetails;
+export type { Pass, EventActivity, Event, TimeSlot } from '../lib/types';

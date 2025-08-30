@@ -1,13 +1,5 @@
 import { supabase } from './supabase';
-import type {
-  Event,
-  EventActivity,
-  EventActivityRow,
-  Pass,
-  PassRow,
-  TimeSlot,
-  TimeSlotRow,
-} from './types';
+import type { Event, Pass, TimeSlot, TimeSlotRow } from './types';
 
 /**
  * Récupère les informations d'un événement publié.
@@ -27,65 +19,20 @@ export async function fetchEvent(eventId: string): Promise<Event> {
 }
 
 /**
- * Récupère les passes d'un événement avec leur stock restant.
+ * Récupère les passes d'un événement avec leurs activités associées et leur stock restant.
  * @param eventId Identifiant de l'événement
  * @returns Liste des passes
  */
 export async function fetchPasses(eventId: string): Promise<Pass[]> {
-  const { data, error } = await supabase
-    .from('passes')
-    .select('id, name, price, description, initial_stock')
-    .eq('event_id', eventId);
+  const { data, error } = await supabase.rpc('get_passes_with_activities', {
+    event_uuid: eventId,
+  });
 
   if (error) throw error;
 
-  const passesWithStock = await Promise.all(
-    (data || []).map(async (pass: PassRow): Promise<Pass> => {
-      if (pass.initial_stock === null) {
-        return { ...pass, remaining_stock: 999999 };
-      }
-
-      const { data: stockData } = await supabase
-        .rpc('get_pass_remaining_stock', { pass_uuid: pass.id });
-
-      return { ...pass, remaining_stock: stockData || 0 };
-    })
-  );
-
-  return passesWithStock;
+  return (data || []) as Pass[];
 }
 
-/**
- * Récupère les activités d'un événement avec leur stock restant.
- * @param eventId Identifiant de l'événement
- * @returns Liste des activités
- */
-export async function fetchEventActivities(eventId: string): Promise<EventActivity[]> {
-  const { data, error } = await supabase
-    .from('event_activities')
-    .select(`
-      *,
-      activities (*)
-    `)
-    .eq('event_id', eventId);
-
-  if (error) throw error;
-
-  const activitiesWithStock = await Promise.all(
-    (data || []).map(async (eventActivity: EventActivityRow): Promise<EventActivity> => {
-      const { data: stockData } = await supabase
-        .rpc('get_event_activity_remaining_stock', { event_activity_id_param: eventActivity.id });
-
-      return {
-        ...eventActivity,
-        activity: eventActivity.activities,
-        remaining_stock: stockData || 0
-      };
-    })
-  );
-
-  return activitiesWithStock;
-}
 
 /**
  * Récupère les créneaux horaires d'une activité.
