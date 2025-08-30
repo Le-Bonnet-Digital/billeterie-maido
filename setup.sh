@@ -2,43 +2,41 @@
 set -euo pipefail
 
 echo "▶ Installing Node deps"
-npm install
+npm ci || npm install
 
-# (Optionnel) nettoyer un warning npm proxy bruyant
+# Nettoie les warnings NPM proxy (facultatif)
 npm config delete http-proxy || true
 npm config delete https-proxy || true
 
-# ---- Variables nécessaires (fail fast lisible)
+# -- Variables requises (fail fast lisible)
 : "${SUPABASE_URL:?Missing SUPABASE_URL}"
 : "${SUPABASE_SERVICE_ROLE_KEY:?Missing SUPABASE_SERVICE_ROLE_KEY}"
 : "${STRIPE_SECRET:?Missing STRIPE_SECRET}"
 : "${WEBHOOK_SECRET:?Missing WEBHOOK_SECRET}"
+: "${SUPABASE_PROJECT_REF:?Missing SUPABASE_PROJECT_REF}"
+: "${SUPABASE_ACCESS_TOKEN:?Missing SUPABASE_ACCESS_TOKEN}"
 
-# ---- Pousser les secrets vers Supabase Edge Functions via CLI sans installation globale
-# Requiert : SUPABASE_ACCESS_TOKEN + SUPABASE_PROJECT_REF
-if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ] && [ -n "${SUPABASE_PROJECT_REF:-}" ]; then
-  echo "▶ Setting Edge Function secrets on project ${SUPABASE_PROJECT_REF}"
-  cat <<'SECRETS' | SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN}" \
-    npx -y supabase@latest secrets set --project-ref "${SUPABASE_PROJECT_REF}" --env-file -
-SUPABASE_URL=${SUPABASE_URL}
-SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}
-STRIPE_SECRET=${STRIPE_SECRET}
-WEBHOOK_SECRET=${WEBHOOK_SECRET}
-SECRETS
-else
-  echo "⚠️  SUPABASE_ACCESS_TOKEN ou SUPABASE_PROJECT_REF manquant(s) — je saute l'étape 'supabase secrets set'."
-fi
+echo "▶ Preparing env file for Supabase secrets"
+tmp="$(mktemp)"
+trap 'rm -f "$tmp"' EXIT
+{
+  echo "SUPABASE_URL=${SUPABASE_URL}"
+  echo "SUPABASE_SERVICE_ROLE_KEY=${SUPABASE_SERVICE_ROLE_KEY}"
+  echo "STRIPE_SECRET=${STRIPE_SECRET}"
+  echo "WEBHOOK_SECRET=${WEBHOOK_SECRET}"
+} > "$tmp"
 
-# ---- Migrations (facultatif, seulement si tu veux les appliquer côté projet)
-# Active uniquement si tu ajoutes SUPABASE_RUN_MIGRATIONS=true
+echo "▶ Setting Edge Function secrets on project ${SUPABASE_PROJECT_REF}"
+SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN}" \
+  npx -y supabase@latest secrets set \
+  --project-ref "${SUPABASE_PROJECT_REF}" \
+  --env-file "$tmp"
+
+# (Optionnel) Lancer les migrations distantes si tu le souhaites
 if [ "${SUPABASE_RUN_MIGRATIONS:-false}" = "true" ]; then
-  if [ -n "${SUPABASE_ACCESS_TOKEN:-}" ] && [ -n "${SUPABASE_PROJECT_REF:-}" ]; then
-    echo "▶ Applying migrations on remote project ${SUPABASE_PROJECT_REF}"
-    SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN}" \
-      npx -y supabase@latest migration up --project-ref "${SUPABASE_PROJECT_REF}"
-  else
-    echo "⚠️  Migrations non lancées (token/ref manquants)."
-  fi
+  echo "▶ Applying migrations on ${SUPABASE_PROJECT_REF}"
+  SUPABASE_ACCESS_TOKEN="${SUPABASE_ACCESS_TOKEN}" \
+    npx -y supabase@latest migration up --project-ref "${SUPABASE_PROJECT_REF}"
 fi
 
 echo "✅ setup.sh completed"
