@@ -2,7 +2,7 @@
 // - Input: { email: string }
 // - Behavior: If a paid reservation exists for the email, trigger the
 //             `send-reservation-email` function and return success.
-// - Security: Uses service role; no direct DB access from client needed.
+// - Security: Utilise le client Supabase côté serveur sans clé service role.
 
 // deno-lint-ignore-file no-explicit-any
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
@@ -17,9 +17,9 @@ function getEnvVar(name: string): string {
 }
 
 const supabaseUrl = getEnvVar('SUPABASE_URL');
-const serviceRoleKey = getEnvVar('SUPABASE_SERVICE_ROLE_KEY');
+const anonKey = getEnvVar('SUPABASE_ANON_KEY');
 
-const supabase = createClient(supabaseUrl, serviceRoleKey);
+const supabase = createClient(supabaseUrl, anonKey);
 
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
