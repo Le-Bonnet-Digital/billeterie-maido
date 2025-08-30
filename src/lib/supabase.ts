@@ -340,6 +340,21 @@ export type Database = {
         Args: { pass_uuid: string; quantity_requested: number };
         Returns: boolean;
       };
+      reserve_pass_with_stock_check: {
+        Args: {
+          session_id: string;
+          pass_id: string | null;
+          time_slot_id?: string | null;
+          quantity?: number;
+          attendee_first_name?: string | null;
+          attendee_last_name?: string | null;
+          attendee_birth_year?: number | null;
+          access_conditions_ack?: boolean;
+          product_type?: string;
+          product_id?: string | null;
+        };
+        Returns: void;
+      };
       get_event_passes_activities_stock: {
         Args: { event_uuid: string };
         Returns: {

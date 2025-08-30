@@ -132,8 +132,7 @@ describe("SupabaseCartRepository", () => {
 
   describe("insertCartItem", () => {
     it("saves new item", async () => {
-      const insert = vi.fn().mockResolvedValue({ error: null });
-      vi.mocked(supabase.from).mockReturnValue({ insert } as never);
+      vi.mocked(supabase.rpc).mockResolvedValue({ error: null } as never);
       const result = await repo.insertCartItem(
         "sess",
         "pass",
@@ -142,24 +141,27 @@ describe("SupabaseCartRepository", () => {
         2
       );
       expect(result).toBe(true);
-      expect(insert).toHaveBeenCalledWith({
-        session_id: "sess",
-        pass_id: "pass",
-        event_activity_id: undefined,
-        time_slot_id: undefined,
-        quantity: 2,
-        product_id: null,
-        product_type: "event_pass",
-        access_conditions_ack: false,
-        attendee_birth_year: undefined,
-        attendee_first_name: undefined,
-        attendee_last_name: undefined,
-      });
+      expect(supabase.rpc).toHaveBeenCalledWith(
+        "reserve_pass_with_stock_check",
+        {
+          session_id: "sess",
+          pass_id: "pass",
+          time_slot_id: undefined,
+          quantity: 2,
+          attendee_first_name: undefined,
+          attendee_last_name: undefined,
+          attendee_birth_year: undefined,
+          access_conditions_ack: false,
+          product_type: "event_pass",
+          product_id: null,
+        }
+      );
     });
 
     it("returns false on insert error", async () => {
-      const insert = vi.fn().mockResolvedValue({ error: { message: "err" } });
-      vi.mocked(supabase.from).mockReturnValue({ insert } as never);
+      vi
+        .mocked(supabase.rpc)
+        .mockResolvedValue({ error: { message: "err" } } as never);
       const result = await repo.insertCartItem("sess", "pass");
       expect(result).toBe(false);
     });
