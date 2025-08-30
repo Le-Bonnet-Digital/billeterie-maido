@@ -102,20 +102,18 @@ export class SupabaseCartRepository implements CartRepository {
     attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
     product?: { type?: 'event_pass' | 'activity_variant'; id?: string }
   ): Promise<boolean> {
-    const { error } = await supabase
-      .from('cart_items')
-      .insert({
-        session_id: sessionId,
-        pass_id: product?.type === 'activity_variant' ? null : passId,
-        time_slot_id: timeSlotId,
-        quantity,
-        attendee_first_name: attendee?.firstName,
-        attendee_last_name: attendee?.lastName,
-        attendee_birth_year: attendee?.birthYear,
-        access_conditions_ack: attendee?.conditionsAck ?? false,
-        product_type: product?.type ?? 'event_pass',
-        product_id: product?.id ?? null,
-      });
+    const { error } = await supabase.rpc('reserve_pass_with_stock_check', {
+      session_id: sessionId,
+      pass_id: product?.type === 'activity_variant' ? null : passId,
+      time_slot_id: timeSlotId,
+      quantity,
+      attendee_first_name: attendee?.firstName,
+      attendee_last_name: attendee?.lastName,
+      attendee_birth_year: attendee?.birthYear,
+      access_conditions_ack: attendee?.conditionsAck ?? false,
+      product_type: product?.type ?? 'event_pass',
+      product_id: product?.id ?? null,
+    });
     if (error) {
       logger.error('Erreur insertion cart_items', {
         error,
