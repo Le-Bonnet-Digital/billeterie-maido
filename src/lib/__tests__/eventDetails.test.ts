@@ -8,7 +8,7 @@ vi.mock('../supabase', () => ({
 }));
 
 import { supabase } from '../supabase';
-import { fetchEvent, fetchPasses, fetchEventActivities, fetchTimeSlots } from '../eventDetails';
+import { fetchEvent, fetchPasses, fetchTimeSlots } from '../eventDetails';
 
 const from = supabase.from as unknown as Mock;
 const rpc = supabase.rpc as unknown as Mock;
@@ -60,72 +60,44 @@ describe('fetchEvent', () => {
 });
 
 describe('fetchPasses', () => {
-  it('retrieves passes with remaining stock', async () => {
-    const eq = vi.fn().mockResolvedValue({
+  it('retrieves passes with their activities and remaining stock', async () => {
+    rpc.mockResolvedValueOnce({
       data: [
-        { id: 'p1', name: 'P1', price: 10, description: '', initial_stock: null },
-        { id: 'p2', name: 'P2', price: 20, description: '', initial_stock: 5 },
+        {
+          id: 'p1',
+          name: 'P1',
+          price: 10,
+          description: '',
+          initial_stock: null,
+          remaining_stock: 5,
+          event_activities: [
+            {
+              id: 'ea1',
+              activity_id: 'a1',
+              stock_limit: null,
+              requires_time_slot: false,
+              remaining_stock: 3,
+              activity: { id: 'a1', name: 'Act', description: '', icon: 'icon' },
+            },
+          ],
+        },
       ],
       error: null,
     });
-    const select = vi.fn().mockReturnValue({ eq });
-    from.mockReturnValue({ select });
-    rpc.mockResolvedValueOnce({ data: 2 });
 
     const result = await fetchPasses('e1');
 
-    expect(from).toHaveBeenCalledWith('passes');
-    expect(select).toHaveBeenCalledWith('id, name, price, description, initial_stock');
-    expect(eq).toHaveBeenCalledWith('event_id', 'e1');
-    expect(result[0].remaining_stock).toBe(999999);
-    expect(result[1].remaining_stock).toBe(2);
-    expect(rpc).toHaveBeenCalledWith('get_pass_remaining_stock', { pass_uuid: 'p2' });
+    expect(rpc).toHaveBeenCalledWith('get_passes_with_activities', { event_uuid: 'e1' });
+    expect(result[0].event_activities[0].activity.name).toBe('Act');
   });
 
-  it('throws when query fails', async () => {
-    const eq = vi.fn().mockResolvedValue({ data: null, error: new Error('boom') });
-    const select = vi.fn().mockReturnValue({ eq });
-    from.mockReturnValue({ select });
+  it('throws when rpc fails', async () => {
+    rpc.mockResolvedValueOnce({ data: null, error: new Error('boom') });
 
     await expect(fetchPasses('e1')).rejects.toThrow('boom');
   });
 });
 
-describe('fetchEventActivities', () => {
-  it('retrieves activities with remaining stock', async () => {
-    const eq = vi.fn().mockResolvedValue({
-      data: [
-        {
-          id: 'ea1',
-          activity_id: 'a1',
-          stock_limit: null,
-          requires_time_slot: false,
-          activities: { id: 'a1', name: 'Act', description: '', icon: 'icon' },
-        },
-      ],
-      error: null,
-    });
-    const select = vi.fn().mockReturnValue({ eq });
-    from.mockReturnValue({ select });
-    rpc.mockResolvedValueOnce({ data: 3 });
-
-    const result = await fetchEventActivities('e1');
-
-    expect(from).toHaveBeenCalledWith('event_activities');
-    expect(eq).toHaveBeenCalledWith('event_id', 'e1');
-    expect(result[0].activity.name).toBe('Act');
-    expect(result[0].remaining_stock).toBe(3);
-    expect(rpc).toHaveBeenCalledWith('get_event_activity_remaining_stock', { event_activity_id_param: 'ea1' });
-  });
-
-  it('throws when query fails', async () => {
-    const eq = vi.fn().mockResolvedValue({ data: null, error: new Error('err') });
-    const select = vi.fn().mockReturnValue({ eq });
-    from.mockReturnValue({ select });
-
-    await expect(fetchEventActivities('e1')).rejects.toThrow('err');
-  });
-});
 
 describe('fetchTimeSlots', () => {
   it('retrieves time slots with remaining capacity', async () => {

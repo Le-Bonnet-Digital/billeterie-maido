@@ -65,6 +65,7 @@ describe('EventDetails Page', () => {
           description: 'desc',
           initial_stock: 10,
           remaining_stock: 5,
+          event_activities: [],
         },
       ],
       eventActivities: [

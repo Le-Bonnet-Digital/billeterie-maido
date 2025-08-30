@@ -35,9 +35,9 @@ describe('EventDetails luge seule gating', () => {
 
   it('disables Pass Luge Seule when -8 or +8 still have stock', () => {
     mockUseEventDetails([
-      { id: 'p-moins', name: 'Pass Moins de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 1 },
-      { id: 'p-plus', name: 'Pass Plus de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0 },
-      { id: 'p-luge', name: 'Pass Luge Seule', price: 7, description: '', initial_stock: null, remaining_stock: 999999 },
+      { id: 'p-moins', name: 'Pass Moins de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 1, event_activities: [] },
+      { id: 'p-plus', name: 'Pass Plus de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0, event_activities: [] },
+      { id: 'p-luge', name: 'Pass Luge Seule', price: 7, description: '', initial_stock: null, remaining_stock: 999999, event_activities: [] },
     ]);
 
     render(<EventDetails />);
@@ -53,9 +53,9 @@ describe('EventDetails luge seule gating', () => {
 
   it('enables Pass Luge Seule when both -8 and +8 are sold out', () => {
     mockUseEventDetails([
-      { id: 'p-moins', name: 'Pass Moins de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0 },
-      { id: 'p-plus', name: 'Pass Plus de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0 },
-      { id: 'p-luge', name: 'Pass Luge Seule', price: 7, description: '', initial_stock: null, remaining_stock: 999999 },
+      { id: 'p-moins', name: 'Pass Moins de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0, event_activities: [] },
+      { id: 'p-plus', name: 'Pass Plus de 8 ans', price: 9, description: '', initial_stock: 10, remaining_stock: 0, event_activities: [] },
+      { id: 'p-luge', name: 'Pass Luge Seule', price: 7, description: '', initial_stock: null, remaining_stock: 999999, event_activities: [] },
     ]);
 
     render(<EventDetails />);

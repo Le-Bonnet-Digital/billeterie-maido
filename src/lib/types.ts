@@ -16,6 +16,7 @@ export interface Pass {
   pass_type?: 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney';
   /** Optional field: number of guaranteed runs for certain passes */
   guaranteed_runs?: number;
+  event_activities: EventActivity[];
 }
 
 export interface Activity {

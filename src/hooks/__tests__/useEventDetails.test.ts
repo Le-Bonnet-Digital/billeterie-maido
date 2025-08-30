@@ -1,17 +1,11 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook, waitFor, act } from '@testing-library/react';
 import { useEventDetails } from '../useEventDetails';
-import {
-  fetchEvent,
-  fetchPasses,
-  fetchEventActivities,
-  fetchTimeSlots,
-} from '../../lib/eventDetails';
+import { fetchEvent, fetchPasses, fetchTimeSlots } from '../../lib/eventDetails';
 
 vi.mock('../../lib/eventDetails', () => ({
   fetchEvent: vi.fn(),
   fetchPasses: vi.fn(),
-  fetchEventActivities: vi.fn(),
   fetchTimeSlots: vi.fn(),
 }));
 
@@ -32,9 +26,25 @@ describe('useEventDetails', () => {
       key_info_content: 'info',
     });
     (fetchPasses as Mock).mockResolvedValue([
-      { id: 'p1', name: 'Pass 1', price: 10, description: 'desc', initial_stock: 10, remaining_stock: 5 },
+      {
+        id: 'p1',
+        name: 'Pass 1',
+        price: 10,
+        description: 'desc',
+        initial_stock: 10,
+        remaining_stock: 5,
+        event_activities: [
+          {
+            id: 'ea1',
+            activity_id: 'a1',
+            stock_limit: null,
+            requires_time_slot: false,
+            remaining_stock: 3,
+            activity: { id: 'a1', name: 'Act', description: '', icon: 'icon' },
+          },
+        ],
+      },
     ]);
-    (fetchEventActivities as Mock).mockResolvedValue([]);
 
     const { result } = renderHook(() => useEventDetails('1'));
 
@@ -42,6 +52,7 @@ describe('useEventDetails', () => {
 
     expect(result.current.event?.name).toBe('Event');
     expect(result.current.passes).toHaveLength(1);
+    expect(result.current.eventActivities).toHaveLength(1);
   });
 
   it('handles errors from services', async () => {
@@ -66,7 +77,6 @@ describe('useEventDetails', () => {
       key_info_content: 'info',
     });
     (fetchPasses as Mock).mockResolvedValue([]);
-    (fetchEventActivities as Mock).mockResolvedValue([]);
     (fetchTimeSlots as Mock).mockRejectedValue(new Error('fail'));
 
     const { result } = renderHook(() => useEventDetails('1'));

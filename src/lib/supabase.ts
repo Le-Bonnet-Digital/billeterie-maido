@@ -381,6 +381,32 @@ export type Database = {
           }[];
         };
       };
+      get_passes_with_activities: {
+        Args: { event_uuid: string };
+        Returns: {
+          id: string;
+          name: string;
+          price: number;
+          description: string;
+          initial_stock: number | null;
+          pass_type?: 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney';
+          guaranteed_runs?: number | null;
+          remaining_stock: number;
+          event_activities: {
+            id: string;
+            activity_id: string;
+            stock_limit: number | null;
+            requires_time_slot: boolean;
+            remaining_stock: number;
+            activity: {
+              id: string;
+              name: string;
+              description: string;
+              icon: string;
+            };
+          }[];
+        }[];
+      };
       get_activity_variant_remaining_stock: {
         Args: { variant_uuid: string };
         Returns: number;
