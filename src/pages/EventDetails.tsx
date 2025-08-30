@@ -5,16 +5,15 @@ import { Calendar, Info, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import MarkdownRenderer from '../components/MarkdownRenderer';
-import useEventDetails, { Pass, EventActivity } from '../hooks/useEventDetails';
+import useEventDetails, { Pass } from '../hooks/useEventDetails';
 import { toast } from 'react-hot-toast';
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, passes, eventActivities, loading, refresh, loadTimeSlotsForActivity } = useEventDetails(eventId);
+  const { event, passes, loading, refresh, loadTimeSlotsForActivity } = useEventDetails(eventId);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
-  const [selectedActivities, setSelectedActivities] = useState<{ [key: string]: string }>({});
 
   // Type de pass (utilise pass_type si fourni, sinon heuristique sur le nom)
   const classifyPassType = (p: Pass): 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney' | 'other' => {
@@ -39,26 +38,17 @@ export default function EventDetails() {
   const handleAddToCart = (pass: Pass) => {
     setSelectedPass(pass);
     setSelectedQuantity(1);
-    setSelectedActivities({});
     setShowPurchaseModal(true);
   };
 
-  const handlePurchase = async (selectedSlots: { [key: number]: string | undefined }, attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }) => {
+  const handlePurchase = async (
+    selectedSlots: { [key: number]: { [activityId: string]: string | undefined } },
+    attendees: {
+      [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean };
+    }
+  ) => {
     if (!selectedPass) return;
     for (let i = 0; i < selectedQuantity; i++) {
-      // Auto-assign activity when pass type implies it
-      let eventActivityId = selectedActivities[i];
-      const type = classifyPassType(selectedPass);
-      if (!eventActivityId) {
-        if (type === 'moins_8' || type === 'baby_poney') {
-          const p = eventActivities.find((ea) => ea.activity.name === 'poney');
-          eventActivityId = p?.id;
-        } else if (type === 'plus_8') {
-          const t = eventActivities.find((ea) => ea.activity.name === 'tir_arc');
-          eventActivityId = t?.id;
-        }
-      }
-      const timeSlotId = selectedSlots[i];
       const a = attendees[i] || {};
       const attendee = {
         firstName: a.firstName,
@@ -66,20 +56,27 @@ export default function EventDetails() {
         birthYear: a.birthYear ? parseInt(a.birthYear) : undefined,
         conditionsAck: a.ack === true,
       };
-      const success = await addToCart(selectedPass.id, eventActivityId, timeSlotId, 1, undefined, undefined, attendee);
-      if (!success) {
-        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
-        return;
+      for (const eventActivity of selectedPass.event_activities) {
+        const timeSlotId = selectedSlots[i]?.[eventActivity.id];
+        const success = await addToCart(
+          selectedPass.id,
+          eventActivity.id,
+          timeSlotId,
+          1,
+          undefined,
+          undefined,
+          attendee
+        );
+        if (!success) {
+          toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
+          return;
+        }
       }
     }
 
     setShowPurchaseModal(false);
     setSelectedPass(null);
     await refresh(); // Recharger pour mettre à jour les stocks
-  };
-
-  const handleActivitySelection = (index: number, eventActivityId: string) => {
-    setSelectedActivities({ ...selectedActivities, [index]: eventActivityId });
   };
 
   if (loading) {
@@ -176,11 +173,8 @@ export default function EventDetails() {
       {showPurchaseModal && selectedPass && (
         <PurchaseModal
           pass={selectedPass}
-          eventActivities={eventActivities}
           quantity={selectedQuantity}
           onQuantityChange={setSelectedQuantity}
-          selectedActivities={selectedActivities}
-          onActivitySelection={handleActivitySelection}
           onPurchase={(slots, attendees) => handlePurchase(slots, attendees)}
           loadTimeSlots={loadTimeSlotsForActivity}
           conditionsMarkdown={event?.key_info_content}
@@ -196,12 +190,12 @@ export default function EventDetails() {
 
 interface PurchaseModalProps {
   pass: Pass;
-  eventActivities: EventActivity[];
   quantity: number;
   onQuantityChange: (quantity: number) => void;
-  selectedActivities: { [key: string]: string };
-  onActivitySelection: (index: number, eventActivityId: string) => void;
-  onPurchase: (selectedSlots: { [key: number]: string | undefined }, attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }) => void;
+  onPurchase: (
+    selectedSlots: { [key: number]: { [activityId: string]: string | undefined } },
+    attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }
+  ) => void;
   loadTimeSlots: (eventActivityId: string) => Promise<import('../lib/types').TimeSlot[]>;
   conditionsMarkdown?: string;
   onClose: () => void;
@@ -209,49 +203,16 @@ interface PurchaseModalProps {
 
 function PurchaseModal({
   pass,
-  eventActivities,
   quantity,
   onQuantityChange,
-  selectedActivities,
-  onActivitySelection,
   onPurchase,
   loadTimeSlots,
   conditionsMarkdown,
-  onClose
+  onClose,
 }: PurchaseModalProps) {
   const [slotsByActivity, setSlotsByActivity] = useState<Record<string, import('../lib/types').TimeSlot[]>>({});
-  const [selectedSlots, setSelectedSlots] = useState<Record<number, string | undefined>>({});
+  const [selectedSlots, setSelectedSlots] = useState<Record<number, Record<string, string | undefined>>>({});
   const [attendees, setAttendees] = useState<Record<number, { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean }>>({});
-
-  const requiresSlot = useMemo(() => {
-    const map: Record<string, boolean> = {};
-    eventActivities.forEach((ea) => { map[ea.id] = ea.requires_time_slot; });
-    return map;
-  }, [eventActivities]);
-
-  // Map activity name -> event_activity_id for auto-assignment
-  const activityByName = useMemo(() => {
-    const map: Record<string, string> = {};
-    eventActivities.forEach((ea) => { map[ea.activity.name] = ea.id; });
-    return map;
-  }, [eventActivities]);
-
-  // Detect pass type for fixed activity assignment
-  const passType = useMemo(() => {
-    const n = (pass.name || '').toLowerCase();
-    const t = pass.pass_type as undefined | string;
-    if (t) return t;
-    if (/baby/.test(n) && /poney/.test(n)) return 'baby_poney';
-    if (/(moins|<)\s*de?\s*8/.test(n) || /(moins).*8/.test(n)) return 'moins_8';
-    if (/(plus|>)\s*de?\s*8/.test(n) || /(plus).*8/.test(n)) return 'plus_8';
-    return 'other';
-  }, [pass]);
-
-  const fixedActivityId = useMemo(() => {
-    if (passType === 'moins_8' || passType === 'baby_poney') return activityByName['poney'];
-    if (passType === 'plus_8') return activityByName['tir_arc'];
-    return undefined;
-  }, [passType, activityByName]);
 
   const ensureSlotsLoaded = async (eventActivityId: string) => {
     if (!slotsByActivity[eventActivityId]) {
@@ -260,29 +221,18 @@ function PurchaseModal({
     }
   };
 
-  const handleSelectActivity = async (index: number, eventActivityId: string) => {
-    onActivitySelection(index, eventActivityId);
-    if (requiresSlot[eventActivityId]) {
-      await ensureSlotsLoaded(eventActivityId);
-      const slots = slotsByActivity[eventActivityId];
-      if (slots && slots.length > 0) {
-        setSelectedSlots((prev) => ({ ...prev, [index]: slots[0].id }));
-      }
-    } else {
-      setSelectedSlots((prev) => ({ ...prev, [index]: undefined }));
-    }
-  };
-
   const allConfigured = useMemo(() => {
-    return Array.from({ length: quantity }, (_, i) => i).every((i) => {
-      const eaId = fixedActivityId || selectedActivities[i];
-      if (!eaId) return false;
-      if (requiresSlot[eaId]) {
-        return !!selectedSlots[i];
-      }
-      return true;
-    });
-  }, [quantity, selectedActivities, requiresSlot, selectedSlots, fixedActivityId]);
+    return Array.from({ length: quantity }, (_, i) => i).every((i) =>
+      pass.event_activities.every((ea) => {
+        if (ea.requires_time_slot) {
+          return !!selectedSlots[i]?.[ea.id];
+        }
+        return true;
+      })
+    );
+  }, [quantity, pass.event_activities, selectedSlots]);
+
+  const isBabyPoney = pass.pass_type === 'baby_poney';
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
@@ -319,111 +269,75 @@ function PurchaseModal({
             </div>
           </div>
 
-          {/* Sélection d'activités et créneaux pour chaque pass */}
+          {/* Créneaux pour chaque pass et activité */}
           <div className="space-y-4">
             {Array.from({ length: quantity }, (_, index) => (
               <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-3">
-                  Pass #{index + 1} - Choisissez une activité
-                </h4>
+                <h4 className="font-medium text-gray-900 mb-3">Pass #{index + 1}</h4>
 
-                {!fixedActivityId && (
-                <div className="grid grid-cols-1 gap-3">
-                  {eventActivities.map((eventActivity) => (
-                    <div
-                      key={eventActivity.id}
-                      className={`border rounded-md transition-colors ${
-                        selectedActivities[index] === eventActivity.id
-                          ? 'border-blue-500 bg-blue-50'
-                          : 'border-gray-200 hover:border-gray-300'
-                      }`}
-                    >
-                      <button
-                        onClick={() => handleSelectActivity(index, eventActivity.id)}
-                        className="w-full p-3 text-left"
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-3">
-                            <span className="text-xl">{eventActivity.activity.icon}</span>
-                            <div>
-                              <div className="font-medium">{eventActivity.activity.name}</div>
-                              <div className="text-sm text-gray-600">{eventActivity.activity.description}</div>
-                            </div>
-                          </div>
-                          <div className="text-sm text-gray-500">
-                            {eventActivity.stock_limit === null
-                              ? 'Illimité'
-                              : `${eventActivity.remaining_stock} restant(s)`}
-                          </div>
-                        </div>
-                      </button>
-                      {selectedActivities[index] === eventActivity.id && eventActivity.requires_time_slot && (
-                        <div className="p-3 border-t border-blue-100 bg-blue-50">
-                          <label className="block text-sm font-medium text-blue-900 mb-1">Sélectionnez un créneau</label>
-                          <select
-                            className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                            value={selectedSlots[index] || ''}
-                            onChange={(e) => setSelectedSlots((prev) => ({ ...prev, [index]: e.target.value }))}
-                            onFocus={() => ensureSlotsLoaded(eventActivity.id)}
-                          >
-                            <option value="" disabled>Choisir un créneau</option>
-                            {(slotsByActivity[eventActivity.id] || []).map((slot) => (
-                              <option key={slot.id} value={slot.id}>
-                                {format(new Date(slot.slot_time), 'HH:mm — d MMM yyyy', { locale: fr })}
-                              </option>
-                            ))}
-                          </select>
-                        </div>
-                      )}
+                {pass.event_activities.map((eventActivity) => (
+                  <div key={eventActivity.id} className="mb-3">
+                    <div className="flex items-center gap-3 mb-2">
+                      <span className="text-xl">{eventActivity.activity.icon}</span>
+                      <div className="font-medium">{eventActivity.activity.name}</div>
                     </div>
-                  ))}
-                </div>
-                )}
+                    {eventActivity.requires_time_slot && (
+                      <select
+                        className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
+                        value={selectedSlots[index]?.[eventActivity.id] || ''}
+                        onChange={(e) =>
+                          setSelectedSlots((prev) => ({
+                            ...prev,
+                            [index]: { ...(prev[index] || {}), [eventActivity.id]: e.target.value },
+                          }))
+                        }
+                        onFocus={() => ensureSlotsLoaded(eventActivity.id)}
+                      >
+                        <option value="" disabled>
+                          Choisir un créneau
+                        </option>
+                        {(slotsByActivity[eventActivity.id] || []).map((slot) => (
+                          <option key={slot.id} value={slot.id}>
+                            {format(new Date(slot.slot_time), 'HH:mm — d MMM yyyy', { locale: fr })}
+                          </option>
+                        ))}
+                      </select>
+                    )}
+                  </div>
+                ))}
 
                 {/* Informations participant */}
-                <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-3">
+                <div className={`mt-4 grid grid-cols-1 gap-3 ${isBabyPoney ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
                   <input
                     type="text"
                     placeholder="Prénom"
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={attendees[index]?.firstName || ''}
-                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], firstName: e.target.value } }))}
+                    onChange={(e) =>
+                      setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], firstName: e.target.value } }))
+                    }
                   />
-                  <input
-                    type="text"
-                    placeholder="Nom"
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    value={attendees[index]?.lastName || ''}
-                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], lastName: e.target.value } }))}
-                  />
+                  {!isBabyPoney && (
+                    <input
+                      type="text"
+                      placeholder="Nom"
+                      className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                      value={attendees[index]?.lastName || ''}
+                      onChange={(e) =>
+                        setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], lastName: e.target.value } }))
+                      }
+                    />
+                  )}
                   <input
                     type="number"
                     placeholder="Année de naissance (ex: 2012)"
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={attendees[index]?.birthYear || ''}
-                    onChange={(e) => setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], birthYear: e.target.value } }))}
+                    onChange={(e) =>
+                      setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], birthYear: e.target.value } }))
+                    }
                   />
                 </div>
-
-                {/* Si activité fixe (moins_8, plus_8, baby_poney) afficher uniquement le créneau pour cette activité */}
-                {fixedActivityId && (
-                  <div className="mt-3">
-                    <label className="block text-sm font-medium text-blue-900 mb-1">Sélectionnez un créneau</label>
-                    <select
-                      className="w-full px-3 py-2 border border-blue-200 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500 bg-white"
-                      value={selectedSlots[index] || ''}
-                      onChange={(e) => setSelectedSlots((prev) => ({ ...prev, [index]: e.target.value }))}
-                      onFocus={() => ensureSlotsLoaded(fixedActivityId)}
-                    >
-                      <option value="" disabled>Choisir un créneau</option>
-                      {(slotsByActivity[fixedActivityId] || []).map((slot) => (
-                        <option key={slot.id} value={slot.id}>
-                          {format(new Date(slot.slot_time), 'HH:mm - d MMM yyyy', { locale: fr })}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-                )}
               </div>
             ))}
           </div>
