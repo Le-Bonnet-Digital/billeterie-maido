@@ -42,7 +42,7 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
   const [showAddModal, setShowAddModal] = useState(false);
   const [showTimeSlotsModal, setShowTimeSlotsModal] = useState<EventActivity | null>(null);
 
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (): Promise<void> => {
     try {
       setLoading(true);
       
