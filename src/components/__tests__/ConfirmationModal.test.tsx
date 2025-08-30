@@ -2,6 +2,10 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '../../test/utils';
 import ConfirmationModal from '../ConfirmationModal';
 
+vi.mock('qrcode', () => ({
+  default: { toDataURL: vi.fn().mockResolvedValue('data:qr') }
+}));
+
 describe('ConfirmationModal Component', () => {
   const mockProps = {
     isOpen: true,
@@ -22,15 +26,16 @@ describe('ConfirmationModal Component', () => {
     expect(screen.queryByText(/réservation confirmée/i)).not.toBeInTheDocument();
   });
 
-  it('should render confirmation details when open', () => {
+  it('should render confirmation details when open', async () => {
     render(<ConfirmationModal {...mockProps} />);
-    
+
     expect(screen.getByText(/réservation confirmée/i)).toBeInTheDocument();
     expect(screen.getByText('RES-123456')).toBeInTheDocument();
     expect(screen.getByText('Test Event')).toBeInTheDocument();
     expect(screen.getByText('Test Pass')).toBeInTheDocument();
     expect(screen.getByText('25€')).toBeInTheDocument();
     expect(screen.getByText(/test@example.com/i)).toBeInTheDocument();
+    expect(await screen.findByAltText('QR RES-123456')).toBeInTheDocument();
   });
 
   it('should render activity information when provided', () => {
