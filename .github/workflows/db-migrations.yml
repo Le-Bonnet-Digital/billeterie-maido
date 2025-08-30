@@ -1,0 +1,21 @@
+name: DB Migrations
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - "supabase/migrations/**"
+  workflow_dispatch:
+
+jobs:
+  migrate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: supabase/setup-cli@v1
+        with:
+          version: latest
+      - name: Show pending migrations
+        run: supabase migration status --db-url "${{ secrets.SUPABASE_DB_URL }}" || true
+      - name: Apply migrations
+        run: supabase migration up --db-url "${{ secrets.SUPABASE_DB_URL }}" --include-all --yes
