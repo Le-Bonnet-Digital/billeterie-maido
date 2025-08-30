@@ -5,13 +5,16 @@ import { MemoryRouter } from 'react-router-dom';
 
 // Custom render function with providers
 const AllTheProviders = ({ children }: { children: React.ReactNode }) => {
+  const futureConfig =
+    import.meta.env.MODE === 'test'
+      ? undefined
+      : {
+          v7_startTransition: true,
+          v7_relativeSplatPath: true,
+        };
+
   return (
-    <MemoryRouter
-      future={{
-        v7_startTransition: true,
-        v7_relativeSplatPath: true,
-      }}
-    >
+    <MemoryRouter future={futureConfig}>
       {children}
     </MemoryRouter>
   );
