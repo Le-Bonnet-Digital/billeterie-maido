@@ -89,7 +89,6 @@ export default function Settings() {
       await supabase.from('reservations').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('time_slots').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('passes').delete().neq('id', '00000000-0000-0000-0000-000000000000');
-      await supabase.from('pony_resources').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       await supabase.from('events').delete().neq('id', '00000000-0000-0000-0000-000000000000');
       
       toast.success('Base de données réinitialisée avec succès');

@@ -5,7 +5,6 @@
     - `events` - Gestion des événements avec CGV, FAQ et infos clés
     - `passes` - Types de billets pour chaque événement
     - `time_slots` - Créneaux horaires pour les activités
-    - `pony_resources` - Ressources poney par événement  
     - `users` - Utilisateurs avec rôles administrateur/prestataire
     - `reservations` - Réservations clients avec statuts de paiement
     - `cart_items` - Articles temporaires dans le panier
@@ -58,14 +57,6 @@ CREATE TABLE IF NOT EXISTS time_slots (
   activity text NOT NULL CHECK (activity IN ('poney', 'tir_arc')),
   slot_time timestamptz NOT NULL,
   capacity integer NOT NULL DEFAULT 15,
-  created_at timestamptz DEFAULT now()
-);
-
--- Table des ressources poney
-CREATE TABLE IF NOT EXISTS pony_resources (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  event_id uuid REFERENCES events(id) ON DELETE CASCADE,
-  initial_stock integer NOT NULL,
   created_at timestamptz DEFAULT now()
 );
 
@@ -201,7 +192,6 @@ $$ LANGUAGE plpgsql;
 ALTER TABLE events ENABLE ROW LEVEL SECURITY;
 ALTER TABLE passes ENABLE ROW LEVEL SECURITY;
 ALTER TABLE time_slots ENABLE ROW LEVEL SECURITY;
-ALTER TABLE pony_resources ENABLE ROW LEVEL SECURITY;
 ALTER TABLE users ENABLE ROW LEVEL SECURITY;
 ALTER TABLE reservations ENABLE ROW LEVEL SECURITY;
 ALTER TABLE cart_items ENABLE ROW LEVEL SECURITY;
@@ -241,13 +231,6 @@ CREATE POLICY "Anyone can view time slots for published events" ON time_slots
   );
 
 CREATE POLICY "Admins can manage time slots" ON time_slots
-  FOR ALL TO authenticated
-  USING (EXISTS (
-    SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'
-  ));
-
--- Politiques pour les ressources poney
-CREATE POLICY "Admins can manage pony resources" ON pony_resources
   FOR ALL TO authenticated
   USING (EXISTS (
     SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'

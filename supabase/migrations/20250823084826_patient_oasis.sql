@@ -6,7 +6,6 @@
     - `events` - Événements avec statuts et contenu
     - `passes` - Types de billets pour chaque événement
     - `time_slots` - Créneaux horaires pour les activités
-    - `pony_resources` - Ressources disponibles pour l'activité poney
     - `reservations` - Réservations confirmées avec numéros uniques
     - `cart_items` - Articles temporaires dans le panier
     
@@ -194,29 +193,6 @@ BEGIN
   ) THEN
     CREATE POLICY "Admins can manage time slots"
       ON time_slots FOR ALL
-      USING (auth.role() = 'admin');
-  END IF;
-END $$;
-
--- 5. Table des ressources poney
-CREATE TABLE IF NOT EXISTS pony_resources (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  event_id uuid REFERENCES events(id) ON DELETE CASCADE,
-  initial_stock integer NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-
--- RLS pour pony_resources
-ALTER TABLE pony_resources ENABLE ROW LEVEL SECURITY;
-
-DO $$
-BEGIN
-  IF NOT EXISTS (
-    SELECT 1 FROM pg_policies 
-    WHERE tablename = 'pony_resources' AND policyname = 'Admins can manage pony resources'
-  ) THEN
-    CREATE POLICY "Admins can manage pony resources"
-      ON pony_resources FOR ALL
       USING (auth.role() = 'admin');
   END IF;
 END $$;
@@ -557,12 +533,6 @@ ON CONFLICT (id) DO UPDATE SET
   activity = EXCLUDED.activity,
   slot_time = EXCLUDED.slot_time,
   capacity = EXCLUDED.capacity;
-
--- Insérer les ressources poney pour l'événement
-INSERT INTO pony_resources (id, event_id, initial_stock) VALUES
-('880e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 12)
-ON CONFLICT (id) DO UPDATE SET
-  initial_stock = EXCLUDED.initial_stock;
 
 -- Insérer un utilisateur admin par défaut
 INSERT INTO users (id, email, role) VALUES

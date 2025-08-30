@@ -6,7 +6,6 @@
     - `events` (événements)
     - `passes` (types de billets)
     - `time_slots` (créneaux horaires pour activités)
-    - `pony_resources` (ressources poney par événement)
     - `reservations` (réservations clients)
     - `cart_items` (panier temporaire)
 
@@ -23,7 +22,6 @@
 -- Supprimer les tables existantes (dans l'ordre inverse des dépendances)
 DROP TABLE IF EXISTS cart_items CASCADE;
 DROP TABLE IF EXISTS reservations CASCADE;
-DROP TABLE IF EXISTS pony_resources CASCADE;
 DROP TABLE IF EXISTS time_slots CASCADE;
 DROP TABLE IF EXISTS passes CASCADE;
 DROP TABLE IF EXISTS events CASCADE;
@@ -135,20 +133,6 @@ CREATE POLICY "Admins can manage time slots"
   USING (auth.role() = 'admin');
 
 CREATE INDEX idx_time_slots_event ON time_slots(event_id, activity);
-
--- 5. Table pony_resources
-CREATE TABLE pony_resources (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
-  event_id uuid REFERENCES events(id) ON DELETE CASCADE,
-  initial_stock integer NOT NULL,
-  created_at timestamptz DEFAULT now()
-);
-
-ALTER TABLE pony_resources ENABLE ROW LEVEL SECURITY;
-
-CREATE POLICY "Admins can manage pony resources"
-  ON pony_resources FOR ALL
-  USING (auth.role() = 'admin');
 
 -- 6. Table reservations
 CREATE TABLE reservations (
@@ -421,12 +405,6 @@ ON CONFLICT (id) DO UPDATE SET
   activity = EXCLUDED.activity,
   slot_time = EXCLUDED.slot_time,
   capacity = EXCLUDED.capacity;
-
--- Insérer les ressources poney pour l'événement
-INSERT INTO pony_resources (id, event_id, initial_stock) VALUES
-  ('850e8400-e29b-41d4-a716-446655440001', '550e8400-e29b-41d4-a716-446655440000', 20)
-ON CONFLICT (id) DO UPDATE SET
-  initial_stock = EXCLUDED.initial_stock;
 
 -- Fonction de nettoyage automatique des articles expirés du panier
 CREATE OR REPLACE FUNCTION cleanup_expired_cart_items()
