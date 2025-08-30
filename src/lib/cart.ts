@@ -463,9 +463,6 @@ export function calculateCartTotal(items: CartItem[]): number {
   return items.reduce((total, item) => total + item.pass.price * item.quantity, 0);
 }
 
-// Add a park offer to cart
-// Removed deprecated park_offer flow
-
 // Add an activity variant to cart (Parc activity-first model)
 export async function addActivityVariantToCart(
   variantId: string,
