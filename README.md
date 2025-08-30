@@ -99,6 +99,16 @@ Les clés API, jetons et autres secrets doivent être fournis via des variables 
 
 ## Configuration Supabase
 
+### Secrets
+
+Pour configurer les secrets nécessaires aux fonctions Supabase, exécutez le script `setup.sh` :
+
+```bash
+SUPABASE_SERVICE_ROLE_KEY=<clé> STRIPE_SECRET=<clé> WEBHOOK_SECRET=<clé> ./setup.sh
+```
+
+Ce script lit les variables d'environnement fournies et les enregistre via `supabase secrets set`.
+
 * Les migrations SQL se trouvent dans le dossier `supabase/migrations`.
 * Pour appliquer les migrations en local :
 

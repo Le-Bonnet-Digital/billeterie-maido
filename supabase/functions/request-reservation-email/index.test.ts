@@ -30,7 +30,7 @@ describe('request-reservation-email edge function', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     process.env.SUPABASE_URL = 'https://example.supabase.co';
-    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-role-key';
+    process.env.SUPABASE_ANON_KEY = 'anon-key';
     interface DenoEnv {
       get(name: string): string | undefined;
     }
