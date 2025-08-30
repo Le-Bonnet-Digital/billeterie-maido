@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -407,8 +407,14 @@ interface PassFormModalProps {
 function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
   const [availableActivities, setAvailableActivities] = useState<EventActivity[]>([]);
   const [selectedActivities, setSelectedActivities] = useState<string[]>([]);
-  const [activityStocks, setActivityStocks] = useState<{[key: string]: number | null}>({});
-  const [calculatedMaxStock, setCalculatedMaxStock] = useState<number | null>(null);
+  const [activityStocks, setActivityStocks] = useState<{ [key: string]: number | null }>({});
+  const calculatedMaxStock = useMemo(() => {
+    if (selectedActivities.length === 0) return null;
+    const stocks = selectedActivities
+      .map((activityId) => activityStocks[activityId])
+      .filter((stock): stock is number => stock !== null);
+    return stocks.length > 0 ? Math.min(...stocks) : null;
+  }, [selectedActivities, activityStocks]);
   const [formData, setFormData] = useState({
     event_id: pass?.event.id || '',
     name: pass?.name || '',
@@ -417,50 +423,23 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     initial_stock: pass?.initial_stock || null
   });
   const [saving, setSaving] = useState(false);
-
-  const updateCalculatedStock = useCallback(() => {
-    if (selectedActivities.length === 0) {
-      setCalculatedMaxStock(null);
-      setFormData(prev => ({ ...prev, initial_stock: null }));
-      return;
-    }
-
-    const stocks = selectedActivities.map(activityId => activityStocks[activityId]).filter(stock => stock !== null);
-    const minStock = stocks.length > 0 ? Math.min(...stocks) : null;
-    setCalculatedMaxStock(minStock);
-    
-    // Mettre à jour automatiquement le stock initial avec le minimum calculé (si limité)
-    if (minStock !== null) {
-      setFormData(prev => ({ ...prev, initial_stock: minStock }));
-    } else {
-      setFormData(prev => ({ ...prev, initial_stock: null }));
-    }
-  }, [selectedActivities, activityStocks]);
-
   
-
-  // will run after loadEventActivities is defined
+  useEffect(() => {
+    setFormData((prev) => {
+      const newStock = calculatedMaxStock ?? null;
+      if (prev.initial_stock === newStock) {
+        return prev;
+      }
+      return { ...prev, initial_stock: newStock };
+    });
+  }, [calculatedMaxStock]);
 
   useEffect(() => {
-    // Initialiser les activités sélectionnées après le chargement du pass
-    let timeoutId: ReturnType<typeof setTimeout>;
-
     if (pass?.event_activities && availableActivities.length > 0) {
-      const passActivityIds = pass.event_activities.map(ea => ea.id);
+      const passActivityIds = pass.event_activities.map((ea) => ea.id);
       setSelectedActivities(passActivityIds);
-
-      // Calculer le stock initial après avoir défini les activités sélectionnées
-      timeoutId = setTimeout(() => {
-        updateCalculatedStock();
-      }, 0);
     }
-
-    return () => {
-      if (timeoutId) {
-        clearTimeout(timeoutId);
-      }
-    };
-  }, [pass, availableActivities, updateCalculatedStock]);
+  }, [pass, availableActivities]);
 
   const loadEventActivities = useCallback(async () => {
     try {

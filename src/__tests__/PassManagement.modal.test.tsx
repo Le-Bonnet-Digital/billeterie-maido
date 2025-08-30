@@ -1,5 +1,5 @@
 import React from 'react';
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import PassManagement from '../pages/admin/PassManagement';
 import { render, screen } from '../test/utils';
@@ -27,5 +27,21 @@ describe('PassManagement add/edit modal', () => {
 
     // Accessibility sanity checks
     expect(dialog).toHaveAttribute('aria-modal', 'true');
+  });
+
+  it('opens modal without maximum update depth warning', async () => {
+    const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(<PassManagement />);
+
+    const openBtn = await screen.findByRole('button', { name: /Nouveau Pass/i });
+    await userEvent.click(openBtn);
+
+    await screen.findByRole('dialog');
+
+    const hasWarning = errorSpy.mock.calls.some(([msg]) =>
+      String(msg).includes('Maximum update depth exceeded')
+    );
+    expect(hasWarning).toBe(false);
+    errorSpy.mockRestore();
   });
 });
