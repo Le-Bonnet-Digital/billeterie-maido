@@ -238,6 +238,26 @@ export type Database = {
           product_id?: string | null;
         };
       };
+      cart_item_activities: {
+        Row: {
+          id: string;
+          cart_item_id: string;
+          event_activity_id: string;
+          time_slot_id: string | null;
+        };
+        Insert: {
+          id?: string;
+          cart_item_id: string;
+          event_activity_id: string;
+          time_slot_id?: string | null;
+        };
+        Update: {
+          id?: string;
+          cart_item_id?: string;
+          event_activity_id?: string;
+          time_slot_id?: string | null;
+        };
+      };
       park_time_slots: {
         Row: {
           id: string;
@@ -344,7 +364,7 @@ export type Database = {
         Args: {
           session_id: string;
           pass_id: string | null;
-          time_slot_id?: string | null;
+          activities?: { event_activity_id: string; time_slot_id?: string | null }[] | null;
           quantity?: number;
           attendee_first_name?: string | null;
           attendee_last_name?: string | null;

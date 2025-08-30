@@ -64,45 +64,33 @@ describe("SupabaseCartRepository", () => {
   });
 
   describe("findCartItem", () => {
-    it("loads item with time slot", async () => {
+    it("loads item", async () => {
       const builder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
-        maybeSingle: vi
-          .fn()
-          .mockResolvedValue({ data: { id: "1", quantity: 2 } }),
+        maybeSingle: vi.fn().mockResolvedValue({ data: { id: "1", quantity: 2 } }),
       };
       vi.mocked(supabase.from).mockReturnValue(builder as never);
-      const result = await repo.findCartItem(
-        "sess",
-        "pass",
-        "activity",
-        "slot"
-      );
+      const result = await repo.findCartItem("sess", "pass");
       expect(result).toEqual({ id: "1", quantity: 2 });
-      expect(builder.eq).toHaveBeenCalledWith("time_slot_id", "slot");
-      expect(builder.is).not.toHaveBeenCalled();
+      expect(builder.eq).toHaveBeenCalledWith("pass_id", "pass");
     });
 
-    it("loads item without time slot", async () => {
+    it("returns null when not found", async () => {
       const builder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockResolvedValue({ data: null }),
       };
       vi.mocked(supabase.from).mockReturnValue(builder as never);
       const result = await repo.findCartItem("sess", "pass");
       expect(result).toBeNull();
-      expect(builder.is).toHaveBeenCalledWith("time_slot_id", null);
     });
 
     it("propagates errors from query", async () => {
       const builder = {
         select: vi.fn().mockReturnThis(),
         eq: vi.fn().mockReturnThis(),
-        is: vi.fn().mockReturnThis(),
         maybeSingle: vi.fn().mockRejectedValue(new Error("fail")),
       };
       vi.mocked(supabase.from).mockReturnValue(builder as never);
@@ -133,20 +121,14 @@ describe("SupabaseCartRepository", () => {
   describe("insertCartItem", () => {
     it("saves new item", async () => {
       vi.mocked(supabase.rpc).mockResolvedValue({ error: null } as never);
-      const result = await repo.insertCartItem(
-        "sess",
-        "pass",
-        undefined,
-        undefined,
-        2
-      );
+      const result = await repo.insertCartItem("sess", "pass", [], 2);
       expect(result).toBe(true);
       expect(supabase.rpc).toHaveBeenCalledWith(
         "reserve_pass_with_stock_check",
         {
           session_id: "sess",
           pass_id: "pass",
-          time_slot_id: undefined,
+          activities: [],
           quantity: 2,
           attendee_first_name: undefined,
           attendee_last_name: undefined,

@@ -9,13 +9,12 @@ export interface CartRepository {
   getSlotRemainingCapacity(timeSlotId: string): Promise<number | null>;
   getActivityVariantRemainingStock(variantId: string): Promise<number | null>;
   cleanupExpiredCartItems(): Promise<void>;
-  findCartItem(sessionId: string, passId: string, eventActivityId?: string, timeSlotId?: string): Promise<{ id: string; quantity: number } | null>;
+  findCartItem(sessionId: string, passId: string): Promise<{ id: string; quantity: number } | null>;
   updateCartItem(id: string, newQuantity: number): Promise<boolean>;
   insertCartItem(
     sessionId: string,
     passId: string | null,
-    eventActivityId?: string,
-    timeSlotId?: string,
+    activities?: { eventActivityId: string; timeSlotId?: string }[],
     quantity?: number,
     attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
     product?: { type?: 'event_pass' | 'activity_variant'; id?: string }
@@ -60,23 +59,13 @@ export class SupabaseCartRepository implements CartRepository {
   }
 
   /** @inheritdoc */
-  async findCartItem(sessionId: string, passId: string, eventActivityId?: string, timeSlotId?: string): Promise<{ id: string; quantity: number } | null> {
-    // eventActivityId is kept for backward-compatibility with callers, but not used
-    // since the current schema does not store event_activity_id in cart_items.
-    void eventActivityId;
-    let query = supabase
+  async findCartItem(sessionId: string, passId: string): Promise<{ id: string; quantity: number } | null> {
+    const { data } = await supabase
       .from('cart_items')
       .select('id, quantity')
       .eq('session_id', sessionId)
-      .eq('pass_id', passId);
-
-    if (timeSlotId) {
-      query = query.eq('time_slot_id', timeSlotId);
-    } else {
-      query = query.is('time_slot_id', null);
-    }
-
-    const { data } = await query.maybeSingle();
+      .eq('pass_id', passId)
+      .maybeSingle();
     return data as { id: string; quantity: number } | null;
   }
 
@@ -96,8 +85,7 @@ export class SupabaseCartRepository implements CartRepository {
   async insertCartItem(
     sessionId: string,
     passId: string | null,
-    eventActivityId?: string,
-    timeSlotId?: string,
+    activities: { eventActivityId: string; timeSlotId?: string }[] = [],
     quantity = 1,
     attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
     product?: { type?: 'event_pass' | 'activity_variant'; id?: string }
@@ -105,7 +93,7 @@ export class SupabaseCartRepository implements CartRepository {
     const { error } = await supabase.rpc('reserve_pass_with_stock_check', {
       session_id: sessionId,
       pass_id: product?.type === 'activity_variant' ? null : passId,
-      time_slot_id: timeSlotId,
+      activities: activities.map(a => ({ event_activity_id: a.eventActivityId, time_slot_id: a.timeSlotId ?? null })),
       quantity,
       attendee_first_name: attendee?.firstName,
       attendee_last_name: attendee?.lastName,
@@ -120,8 +108,7 @@ export class SupabaseCartRepository implements CartRepository {
         payload: {
           sessionId,
           passId: product?.type === 'event_pass' ? passId : null,
-          eventActivityId: eventActivityId ?? null,
-          timeSlotId: timeSlotId ?? null,
+          activitiesLength: activities.length,
           quantity,
           productType: product?.type ?? 'event_pass',
           productId: product?.id ?? null,

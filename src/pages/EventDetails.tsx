@@ -56,21 +56,21 @@ export default function EventDetails() {
         birthYear: a.birthYear ? parseInt(a.birthYear) : undefined,
         conditionsAck: a.ack === true,
       };
-      for (const eventActivity of selectedPass.event_activities) {
-        const timeSlotId = selectedSlots[i]?.[eventActivity.id];
-        const success = await addToCart(
-          selectedPass.id,
-          eventActivity.id,
-          timeSlotId,
-          1,
-          undefined,
-          undefined,
-          attendee
-        );
-        if (!success) {
-          toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
-          return;
-        }
+      const activities = selectedPass.event_activities.map((eventActivity) => ({
+        eventActivityId: eventActivity.id,
+        timeSlotId: selectedSlots[i]?.[eventActivity.id],
+      }));
+      const success = await addToCart(
+        selectedPass.id,
+        activities,
+        1,
+        undefined,
+        undefined,
+        attendee
+      );
+      if (!success) {
+        toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
+        return;
       }
     }
 
