@@ -27,7 +27,7 @@ describe('requestReservationEmail', () => {
     });
   });
 
-  it('should return null on failure', async () => {
+  it('should throw on failure', async () => {
     vi.mocked(supabase.functions.invoke).mockResolvedValue({
       data: null,
       error: { message: 'fail' },
@@ -35,7 +35,7 @@ describe('requestReservationEmail', () => {
 
     await expect(
       requestReservationEmail({ email: 'test@example.com' })
-    ).resolves.toBeNull();
+    ).rejects.toThrow('fail');
   });
 });
 
