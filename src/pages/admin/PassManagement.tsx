@@ -59,11 +59,7 @@ export default function PassManagement() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingPass, setEditingPass] = useState<Pass | null>(null);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -203,7 +199,11 @@ export default function PassManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
 
   const handleDeletePass = async (passId: string) => {
     if (!window.confirm('Êtes-vous sûr de vouloir supprimer ce pass ? Cette action est irréversible.')) return;
