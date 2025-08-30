@@ -133,6 +133,10 @@ Ce script lit les variables d'environnement fournies et les enregistre via `supa
 VITE_SUPABASE_ANON_KEY="votre_clef_anon"
 ```
 
+### Tâches planifiées
+
+Une tâche `pg_cron` exécute `cleanup_expired_cart_items` toutes les 15 minutes afin de supprimer automatiquement les paniers expirés. Elle est définie dans `supabase/migrations/20250901093000_schedule_cleanup_expired_cart_items.sql` et est appliquée lors de l'exécution des migrations (`supabase db reset` ou `supabase migration up`).
+
 ## Rôles et Accès
 
 - Rôles supportés: `admin`, `pony_provider`, `archery_provider`, `luge_provider`, `atlm_collaborator`, `client`.
