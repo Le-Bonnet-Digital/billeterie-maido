@@ -159,6 +159,7 @@ Cette page utilise Supabase pour interroger la table `users` (`select`, `eq`, `i
 ## Scan / Validation
 
 - Le scan utilise le numéro de réservation encodé dans le QR (les lecteurs se comportent comme un clavier).
+- La validation sur site se fait en scannant un QR par participant (un QR code par numéro de réservation).
 - Les validations sont enregistrées dans la table `reservation_validations` (migration incluse), avec activité: `poney`, `tir_arc`, `luge_bracelet`.
 
 ## Profil Utilisateur

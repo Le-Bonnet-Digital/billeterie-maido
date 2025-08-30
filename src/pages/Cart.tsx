@@ -87,6 +87,7 @@ export default function Cart() {
       
       // Créer les réservations pour chaque article du panier
       const reservations = [];
+      const reservationNumbers = new Set<string>();
 
       for (const item of cartItems) {
         const { data: acts, error: actsError } = await supabase
@@ -117,6 +118,13 @@ export default function Cart() {
             .single();
 
           if (error) throw error;
+          if (!reservation?.reservation_number) {
+            throw new Error('Reservation number generation failed');
+          }
+          if (reservationNumbers.has(reservation.reservation_number)) {
+            throw new Error('Duplicate reservation number detected');
+          }
+          reservationNumbers.add(reservation.reservation_number);
           reservations.push(reservation);
         }
       }

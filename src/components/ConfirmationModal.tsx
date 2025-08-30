@@ -1,5 +1,7 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { CheckCircle, X, Download, Mail } from 'lucide-react';
+import QRCode from 'qrcode';
+import { logger } from '../lib/logger';
 
 interface ConfirmationModalProps {
   isOpen: boolean;
@@ -26,6 +28,20 @@ export default function ConfirmationModal({
   timeSlot,
   activityName
 }: ConfirmationModalProps) {
+  const [qrDataUrl, setQrDataUrl] = useState('');
+
+  useEffect(() => {
+    let mounted = true;
+    QRCode.toDataURL(reservationNumber)
+      .then(url => {
+        if (mounted) setQrDataUrl(url);
+      })
+      .catch(err => logger.error('Erreur génération QR', { error: err }));
+    return () => {
+      mounted = false;
+    };
+  }, [reservationNumber]);
+
   if (!isOpen) return null;
 
   const handleDownloadTicket = () => {
@@ -83,6 +99,16 @@ Présentez ce billet à l'entrée de l'événement.
                 {reservationNumber}
               </div>
             </div>
+
+            {qrDataUrl && (
+              <div className="flex justify-center">
+                <img
+                  src={qrDataUrl}
+                  alt={`QR ${reservationNumber}`}
+                  className="w-32 h-32"
+                />
+              </div>
+            )}
 
             <div className="space-y-2">
               <div className="flex justify-between">
