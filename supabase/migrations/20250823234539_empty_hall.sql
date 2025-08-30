@@ -6,7 +6,6 @@
     - `event_activities` - Activities enabled for specific events with their limits
     
   2. Changes
-    - Remove `pony_resources` table (deprecated)
     - Update `activity_resources` to reference `event_activities`
     - Add quantity selection and activity choice for passes
     - Add time slot requirement configuration
@@ -104,8 +103,6 @@ BEGIN
   END IF;
 END $$;
 
--- Remove pony_resources table (deprecated)
-DROP TABLE IF EXISTS pony_resources CASCADE;
 
 -- Enable RLS
 ALTER TABLE activities ENABLE ROW LEVEL SECURITY;
