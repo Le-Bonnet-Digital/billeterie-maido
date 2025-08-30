@@ -2,6 +2,9 @@ import '@testing-library/jest-dom';
 import { vi, expect } from 'vitest';
 import React from 'react';
 import { toHaveNoViolations } from 'jest-axe';
+import { installConsoleFilters } from '../lib/consoleFilters';
+
+installConsoleFilters();
 
 expect.extend(toHaveNoViolations);
 
