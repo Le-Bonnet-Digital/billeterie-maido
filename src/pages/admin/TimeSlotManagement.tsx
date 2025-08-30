@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Calendar, Clock, Users, Filter, Eye, BarChart3, AlertCircle } from 'lucide-react';
 import { format, startOfDay, endOfDay, eachHourOfInterval, isSameHour } from 'date-fns';
@@ -41,17 +41,7 @@ export default function TimeSlotManagement() {
   const [viewMode, setViewMode] = useState<ViewMode>('dashboard');
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEvent && selectedDate) {
-      loadTimeSlots();
-    }
-  }, [selectedEvent, selectedDate]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -74,12 +64,13 @@ export default function TimeSlotManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadTimeSlots = async () => {
+  const loadTimeSlots = useCallback(async () => {
+    if (!selectedEvent || !selectedDate) return;
     try {
       setLoading(true);
-      
+
       const startDate = startOfDay(new Date(selectedDate));
       const endDate = endOfDay(new Date(selectedDate));
 
@@ -138,7 +129,15 @@ export default function TimeSlotManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedEvent, selectedDate]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
+    loadTimeSlots();
+  }, [loadTimeSlots]);
 
   const getCapacityColor = (remaining: number, total: number) => {
     const percentage = (remaining / total) * 100;

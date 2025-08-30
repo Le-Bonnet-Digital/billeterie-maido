@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Users, Clock, Calendar, Download, Mail, CheckCircle, AlertCircle } from 'lucide-react';
 import { format } from 'date-fns';
@@ -42,17 +42,7 @@ export default function FlowManagement() {
   const [selectedSlot, setSelectedSlot] = useState<TimeSlotWithReservations | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadEvents();
-  }, []);
-
-  useEffect(() => {
-    if (selectedEvent && selectedDate) {
-      loadTimeSlots();
-    }
-  }, [selectedEvent, selectedDate]);
-
-  const loadEvents = async () => {
+  const loadEvents = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('events')
@@ -74,12 +64,13 @@ export default function FlowManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const loadTimeSlots = async () => {
+  const loadTimeSlots = useCallback(async () => {
+    if (!selectedEvent || !selectedDate) return;
     try {
       setLoading(true);
-      
+
       const startDate = new Date(selectedDate);
       startDate.setHours(0, 0, 0, 0);
       const endDate = new Date(selectedDate);
@@ -139,7 +130,15 @@ export default function FlowManagement() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [selectedEvent, selectedDate]);
+
+  useEffect(() => {
+    loadEvents();
+  }, [loadEvents]);
+
+  useEffect(() => {
+    loadTimeSlots();
+  }, [loadTimeSlots]);
 
   const exportParticipantsList = (slot: TimeSlotWithReservations) => {
     const csvContent = [

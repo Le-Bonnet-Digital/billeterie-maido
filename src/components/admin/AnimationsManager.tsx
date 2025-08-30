@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { X, Plus, Edit, Trash2, Clock, MapPin, Users, Eye, EyeOff } from 'lucide-react';
 import { format } from 'date-fns';
@@ -34,11 +34,7 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
   const [showCreateForm, setShowCreateForm] = useState(false);
   const [editingAnimation, setEditingAnimation] = useState<Animation | null>(null);
 
-  useEffect(() => {
-    loadAnimations();
-  }, []);
-
-  const loadAnimations = async () => {
+  const loadAnimations = useCallback(async () => {
     try {
       setLoading(true);
       const { data, error } = await supabase
@@ -58,7 +54,11 @@ export default function AnimationsManager({ event, onClose }: AnimationsManagerP
     } finally {
       setLoading(false);
     }
-  };
+  }, [event.id]);
+
+  useEffect(() => {
+    loadAnimations();
+  }, [loadAnimations]);
 
   const handleDeleteAnimation = async (animationId: string) => {
     if (!confirm('Êtes-vous sûr de vouloir supprimer cette animation ?')) return;
