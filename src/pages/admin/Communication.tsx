@@ -133,7 +133,7 @@ L'équipe BilletEvent`
 
   useEffect(() => {
     loadRecipientCount();
-  }, [loadRecipientCount]);
+  }, [selectedEvent, loadRecipientCount]);
 
   const handleSendEmail = async () => {
     if (!selectedEvent || !emailSubject || !emailContent) {
