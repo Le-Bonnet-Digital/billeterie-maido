@@ -534,16 +534,20 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
         id: string;
         activity_id: string;
         stock_limit: number | null;
-        activities: { id: string; name: string; icon: string };
+        activities:
+          | { id: string; name: string; icon: string }
+          | { id: string; name: string; icon: string }[];
       };
 
       const activities: EventActivity[] = (
-        (data || []) as RawEventActivity[]
+        (data ?? []) as unknown as RawEventActivity[]
       ).map((ea: RawEventActivity) => ({
         id: ea.id,
         activity_id: ea.activity_id,
         stock_limit: ea.stock_limit,
-        activity: ea.activities,
+        activity: Array.isArray(ea.activities)
+          ? ea.activities[0]
+          : ea.activities,
       }));
 
       setAvailableActivities(activities);
