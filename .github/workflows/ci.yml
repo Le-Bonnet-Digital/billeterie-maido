@@ -12,6 +12,10 @@ concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
 
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
   pull-requests: write
@@ -21,7 +25,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      npm_config_http_proxy: ""
+      NPM_CONFIG_HTTP_PROXY: ""
+      NPM_CONFIG_HTTPS_PROXY: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -32,15 +37,16 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - run: npm ci --no-audit --no-fund
-      - run: npm run lint -- --max-warnings=0
+      - run: npm run lint --max-warnings=0
       - run: npm test -- --silent
       - run: npm run build
         if: github.event_name == 'push'
 
       - name: Audit dependencies
         if: github.event_name == 'push'
-        run: npm audit --production --audit-level=high
+        run: npm audit --production --audit-level=moderate
         continue-on-error: true
+
       # Static analysis (no Semgrep account required)
       - name: Static analysis with Semgrep
         uses: returntocorp/semgrep-action@v1

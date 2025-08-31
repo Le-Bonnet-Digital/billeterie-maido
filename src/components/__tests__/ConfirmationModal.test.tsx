@@ -1,6 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '../../test/utils';
-import { act } from 'react-dom/test-utils';
+import { render, screen, waitFor } from '../../test/utils';
+import userEvent from '@testing-library/user-event';
 import ConfirmationModal from '../ConfirmationModal';
 
 vi.mock('qrcode', () => ({
@@ -46,36 +46,28 @@ describe('ConfirmationModal Component', () => {
   it('should render activity information when provided', async () => {
     const propsWithDetails = {
       ...mockProps,
-      timeSlot: {
-        slot_time: '2024-01-01T10:00:00Z',
-      },
+      timeSlot: { slot_time: '2024-01-01T10:00:00Z' },
       activityName: 'Poney',
     };
 
     render(<ConfirmationModal {...propsWithDetails} />);
-
     await waitFor(() => expect(screen.getByText(/Poney/i)).toBeInTheDocument());
   });
 
   it('should call onClose when close button is clicked', async () => {
     render(<ConfirmationModal {...mockProps} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByRole('button', { name: /close/i }));
-    });
-
-    await waitFor(() => expect(mockProps.onClose).toHaveBeenCalled());
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /close/i }));
+    expect(mockProps.onClose).toHaveBeenCalled();
   });
 
   it('should trigger download when download button is clicked', async () => {
     render(<ConfirmationModal {...mockProps} />);
 
-    await act(async () => {
-      fireEvent.click(screen.getByText(/télécharger le billet/i));
-    });
-
-    await waitFor(() =>
-      expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled(),
-    );
+    const user = userEvent.setup();
+    await user.click(screen.getByText(/télécharger le billet/i));
+    // Verify that the download was triggered (mocked in setup)
+    expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
 });
