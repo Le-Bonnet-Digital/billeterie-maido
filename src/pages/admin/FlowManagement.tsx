@@ -636,12 +636,12 @@ function ParticipantsModal({ slot, onClose }: ParticipantsModalProps) {
                       {reservation.payment_status === 'paid' ? (
                         <CheckCircle
                           className="h-4 w-4 text-green-600"
-                          title="Payé"
+                          aria-label="Payé"
                         />
                       ) : (
                         <AlertCircle
                           className="h-4 w-4 text-yellow-600"
-                          title="En attente"
+                          aria-label="En attente"
                         />
                       )}
 
