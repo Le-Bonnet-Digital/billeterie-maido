@@ -6,22 +6,42 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+  pull-requests: write
+  security-events: write  # needed for SARIF upload
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
           cache: npm
+
       - run: npm ci
       - run: npm run lint
       - run: npm test
       - name: Run UI tests
         run: npm run test:ui
       - run: npm run build
+
       - name: Audit dependencies
         run: npm audit --production
+
+      # Static analysis (no Semgrep account required)
       - name: Static analysis with Semgrep
-        run: npx semgrep --config=auto
+        uses: returntocorp/semgrep-action@v1
+        with:
+          config: auto          # auto-selects community rules
+          generateSarif: true   # writes semgrep.sarif
+
+      # Publish results to the Security tab
+      - name: Upload SARIF
+        if: always()
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: semgrep.sarif
