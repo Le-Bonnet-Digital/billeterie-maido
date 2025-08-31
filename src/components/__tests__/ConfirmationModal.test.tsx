@@ -1,9 +1,10 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, fireEvent } from '../../test/utils';
+import { render, screen, waitFor } from '../../test/utils';
+import userEvent from '@testing-library/user-event';
 import ConfirmationModal from '../ConfirmationModal';
 
 vi.mock('qrcode', () => ({
-  default: { toDataURL: vi.fn().mockResolvedValue('data:qr') }
+  default: { toDataURL: vi.fn().mockResolvedValue('data:qr') },
 }));
 
 describe('ConfirmationModal Component', () => {
@@ -21,9 +22,13 @@ describe('ConfirmationModal Component', () => {
     vi.clearAllMocks();
   });
 
-  it('should not render when isOpen is false', () => {
+  it('should not render when isOpen is false', async () => {
     render(<ConfirmationModal {...mockProps} isOpen={false} />);
-    expect(screen.queryByText(/réservation confirmée/i)).not.toBeInTheDocument();
+    await waitFor(() =>
+      expect(
+        screen.queryByText(/réservation confirmée/i),
+      ).not.toBeInTheDocument(),
+    );
   });
 
   it('should render confirmation details when open', async () => {
@@ -38,33 +43,34 @@ describe('ConfirmationModal Component', () => {
     expect(await screen.findByAltText('QR RES-123456')).toBeInTheDocument();
   });
 
-  it('should render activity information when provided', () => {
+  it('should render activity information when provided', async () => {
     const propsWithDetails = {
       ...mockProps,
       timeSlot: {
-        slot_time: '2024-01-01T10:00:00Z'
+        slot_time: '2024-01-01T10:00:00Z',
       },
-      activityName: 'Poney'
+      activityName: 'Poney',
     };
 
     render(<ConfirmationModal {...propsWithDetails} />);
 
-    expect(screen.getByText(/Poney/i)).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText(/Poney/i)).toBeInTheDocument());
   });
 
-  it('should call onClose when close button is clicked', () => {
+  it('should call onClose when close button is clicked', async () => {
     render(<ConfirmationModal {...mockProps} />);
-    
-    fireEvent.click(screen.getByRole('button', { name: /close/i }));
+
+    const user = userEvent.setup();
+    await user.click(screen.getByRole('button', { name: /close/i }));
     expect(mockProps.onClose).toHaveBeenCalled();
   });
 
-  it('should trigger download when download button is clicked', () => {
+  it('should trigger download when download button is clicked', async () => {
     render(<ConfirmationModal {...mockProps} />);
-    
-    fireEvent.click(screen.getByText(/télécharger le billet/i));
+
+    const user = userEvent.setup();
+    await user.click(screen.getByText(/télécharger le billet/i));
     // Verify that the download was triggered (mocked in setup)
     expect(HTMLAnchorElement.prototype.click).toHaveBeenCalled();
   });
 });
-

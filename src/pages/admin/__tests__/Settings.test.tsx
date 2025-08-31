@@ -1,13 +1,15 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import { render, screen } from '../../../test/utils';
+import { render, screen, waitFor } from '../../../test/utils';
+import { act } from 'react';
 import { toast } from 'react-hot-toast';
 import { safeStorage } from '../../../lib/storage';
 
 vi.mock('../../../lib/auth', async () => {
-  const actual = await vi.importActual<typeof import('../../../lib/auth')>(
-    '../../../lib/auth'
-  );
+  const actual =
+    await vi.importActual<typeof import('../../../lib/auth')>(
+      '../../../lib/auth',
+    );
   return {
     ...actual,
     getCurrentUser: vi.fn(),
@@ -35,14 +37,18 @@ describe('Settings Page', () => {
         notification_email: 'notify@mysite.com',
         maintenance_mode: true,
         registration_enabled: false,
-      })
+      }),
     );
 
-    render(<Settings />);
+    await act(async () => {
+      render(<Settings />);
+    });
 
     expect(await screen.findByDisplayValue('My Site')).toBeInTheDocument();
     expect(screen.getByDisplayValue('contact@mysite.com')).toBeInTheDocument();
-    expect(await screen.findByDisplayValue('admin@example.com')).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue('admin@example.com'),
+    ).toBeInTheDocument();
     expect(getCurrentUser).toHaveBeenCalled();
   });
 
@@ -53,7 +59,9 @@ describe('Settings Page', () => {
       .spyOn(safeStorage, 'setItem')
       .mockImplementation(() => {});
 
-    render(<Settings />);
+    await act(async () => {
+      render(<Settings />);
+    });
 
     const nameInput = await screen.findByDisplayValue('BilletEvent');
     await user.clear(nameInput);
@@ -64,12 +72,16 @@ describe('Settings Page', () => {
     });
     await user.click(saveBtn);
 
-    expect(setItemMock).toHaveBeenCalledWith(
-      'system_settings',
-      expect.stringContaining('"site_name":"New Name"')
+    await waitFor(() =>
+      expect(setItemMock).toHaveBeenCalledWith(
+        'system_settings',
+        expect.stringContaining('"site_name":"New Name"'),
+      ),
     );
-    expect(toast.success).toHaveBeenCalledWith(
-      'Paramètres sauvegardés avec succès'
+    await waitFor(() =>
+      expect(toast.success).toHaveBeenCalledWith(
+        'Paramètres sauvegardés avec succès',
+      ),
     );
   });
 
@@ -77,13 +89,17 @@ describe('Settings Page', () => {
     const user = userEvent.setup();
     vi.spyOn(safeStorage, 'getItem').mockReturnValue(null);
 
-    render(<Settings />);
+    await act(async () => {
+      render(<Settings />);
+    });
 
-    const emailInput = await screen.findByDisplayValue('contact@billetevent.com');
+    const emailInput = await screen.findByDisplayValue(
+      'contact@billetevent.com',
+    );
     await user.clear(emailInput);
     await user.type(emailInput, 'invalid');
 
-    expect(emailInput).toBeInvalid();
+    await waitFor(() => expect(emailInput).toBeInvalid());
   });
 
   it('shows error toast when save fails', async () => {
@@ -93,14 +109,17 @@ describe('Settings Page', () => {
       throw new Error('fail');
     });
 
-    render(<Settings />);
+    await act(async () => {
+      render(<Settings />);
+    });
 
     const saveBtn = await screen.findByRole('button', {
       name: /sauvegarder les paramètres/i,
     });
     await user.click(saveBtn);
 
-    expect(toast.error).toHaveBeenCalledWith('Erreur lors de la sauvegarde');
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith('Erreur lors de la sauvegarde'),
+    );
   });
 });
-

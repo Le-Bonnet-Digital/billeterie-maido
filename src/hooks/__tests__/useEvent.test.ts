@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { renderHook, waitFor } from '@testing-library/react';
+import { renderHook, waitFor, act } from '@testing-library/react';
 import { useEvent } from '../useEvent';
 import {
   fetchEvent,
@@ -62,9 +62,7 @@ describe('useEvent', () => {
         key_info_content: 'info',
       })
       .mockRejectedValueOnce(new Error('fail'));
-    (fetchPasses as Mock)
-      .mockResolvedValueOnce([])
-      .mockResolvedValue([]);
+    (fetchPasses as Mock).mockResolvedValueOnce([]).mockResolvedValue([]);
     (fetchEventActivities as Mock)
       .mockResolvedValueOnce([])
       .mockResolvedValue([]);
@@ -73,7 +71,9 @@ describe('useEvent', () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.event?.name).toBe('Event');
 
-    await expect(result.current.reload()).rejects.toThrow('fail');
+    await act(async () => {
+      await expect(result.current.reload()).rejects.toThrow('fail');
+    });
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.event?.name).toBe('Event');
   });
