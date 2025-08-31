@@ -1,5 +1,11 @@
 import { supabase } from './supabase';
-import type { Event, Pass, TimeSlot, TimeSlotRow } from './types';
+import type {
+  Event,
+  Pass,
+  TimeSlot,
+  TimeSlotRow,
+  EventActivityRow,
+} from './types';
 
 /**
  * Récupère les informations d'un événement publié.
@@ -33,13 +39,14 @@ export async function fetchPasses(eventId: string): Promise<Pass[]> {
   return (data || []) as Pass[];
 }
 
-
 /**
  * Récupère les créneaux horaires d'une activité.
  * @param eventActivityId Identifiant de l'activité
  * @returns Liste des créneaux
  */
-export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[]> {
+export async function fetchTimeSlots(
+  eventActivityId: string,
+): Promise<TimeSlot[]> {
   const { data, error } = await supabase
     .from('time_slots')
     .select(
@@ -61,20 +68,28 @@ export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[
   if (error) throw error;
 
   const slotsWithCapacity = await Promise.all(
-    ((data || []) as TimeSlotRow[]).map(async (slot): Promise<TimeSlot> => {
-      const { data: capacityData } = await supabase
-        .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
+    ((data ?? []) as unknown as TimeSlotRow[]).map(
+      async (slot): Promise<TimeSlot> => {
+        const { data: capacityData } = await supabase.rpc(
+          'get_slot_remaining_capacity',
+          { slot_uuid: slot.id },
+        );
 
-      return {
-        ...slot,
-        remaining_capacity: capacityData || 0,
-        event_activity: {
-          ...slot.event_activities,
-          activity: slot.event_activities.activities
-        },
-        event_activity_id: slot.event_activity_id,
-      };
-    })
+        const eventActivity = (
+          slot.event_activities as unknown as EventActivityRow[]
+        )[0];
+
+        return {
+          ...slot,
+          remaining_capacity: capacityData || 0,
+          event_activity: {
+            ...eventActivity,
+            activity: eventActivity.activities,
+          },
+          event_activity_id: slot.event_activity_id,
+        };
+      },
+    ),
   );
 
   return slotsWithCapacity;
