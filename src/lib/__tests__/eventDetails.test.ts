@@ -21,7 +21,12 @@ beforeEach(() => {
 describe('fetchEvent', () => {
   it('retrieves a published event', async () => {
     const single = vi.fn().mockResolvedValue({
-      data: { id: 'e1', name: 'Event', event_date: '2025-01-01', key_info_content: 'info' },
+      data: {
+        id: 'e1',
+        name: 'Event',
+        event_date: '2025-01-01',
+        key_info_content: 'info',
+      },
       error: null,
     });
     const query = { select: vi.fn(), eq: vi.fn(), single } as {
@@ -36,7 +41,9 @@ describe('fetchEvent', () => {
     const result = await fetchEvent('e1');
 
     expect(from).toHaveBeenCalledWith('events');
-    expect(query.select).toHaveBeenCalledWith('id, name, event_date, key_info_content');
+    expect(query.select).toHaveBeenCalledWith(
+      'id, name, event_date, key_info_content',
+    );
     expect(query.eq.mock.calls).toEqual([
       ['id', 'e1'],
       ['status', 'published'],
@@ -45,7 +52,9 @@ describe('fetchEvent', () => {
   });
 
   it('throws when query fails', async () => {
-    const single = vi.fn().mockResolvedValue({ data: null, error: new Error('fail') });
+    const single = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('fail') });
     const query = { select: vi.fn(), eq: vi.fn(), single } as {
       select: Mock;
       eq: Mock;
@@ -77,7 +86,12 @@ describe('fetchPasses', () => {
               stock_limit: null,
               requires_time_slot: false,
               remaining_stock: 3,
-              activity: { id: 'a1', name: 'Act', description: '', icon: 'icon' },
+              activity: {
+                id: 'a1',
+                name: 'Act',
+                description: '',
+                icon: 'icon',
+              },
             },
           ],
         },
@@ -87,7 +101,9 @@ describe('fetchPasses', () => {
 
     const result = await fetchPasses('e1');
 
-    expect(rpc).toHaveBeenCalledWith('get_passes_with_activities', { event_uuid: 'e1' });
+    expect(rpc).toHaveBeenCalledWith('get_passes_with_activities', {
+      event_uuid: 'e1',
+    });
     expect(result[0].event_activities[0].activity.name).toBe('Act');
   });
 
@@ -98,7 +114,6 @@ describe('fetchPasses', () => {
   });
 });
 
-
 describe('fetchTimeSlots', () => {
   it('retrieves time slots with remaining capacity', async () => {
     const order = vi.fn().mockResolvedValue({
@@ -107,13 +122,20 @@ describe('fetchTimeSlots', () => {
           id: 's1',
           slot_time: '2025-01-01T10:00:00Z',
           capacity: 5,
-          event_activities: {
-            id: 'ea1',
-            activity_id: 'a1',
-            stock_limit: null,
-            requires_time_slot: false,
-            activities: { id: 'a1', name: 'Act', description: '', icon: 'icon' },
-          },
+          event_activities: [
+            {
+              id: 'ea1',
+              activity_id: 'a1',
+              stock_limit: null,
+              requires_time_slot: false,
+              activities: {
+                id: 'a1',
+                name: 'Act',
+                description: '',
+                icon: 'icon',
+              },
+            },
+          ],
         },
       ],
       error: null,
@@ -132,11 +154,15 @@ describe('fetchTimeSlots', () => {
     expect(order).toHaveBeenCalledWith('slot_time');
     expect(result[0].remaining_capacity).toBe(4);
     expect(result[0].event_activity.activity.name).toBe('Act');
-    expect(rpc).toHaveBeenCalledWith('get_slot_remaining_capacity', { slot_uuid: 's1' });
+    expect(rpc).toHaveBeenCalledWith('get_slot_remaining_capacity', {
+      slot_uuid: 's1',
+    });
   });
 
   it('throws when query fails', async () => {
-    const order = vi.fn().mockResolvedValue({ data: null, error: new Error('fail') });
+    const order = vi
+      .fn()
+      .mockResolvedValue({ data: null, error: new Error('fail') });
     const gte = vi.fn().mockReturnValue({ order });
     const eq = vi.fn().mockReturnValue({ gte });
     const select = vi.fn().mockReturnValue({ eq });
@@ -145,4 +171,3 @@ describe('fetchTimeSlots', () => {
     await expect(fetchTimeSlots('ea1')).rejects.toThrow('fail');
   });
 });
-
