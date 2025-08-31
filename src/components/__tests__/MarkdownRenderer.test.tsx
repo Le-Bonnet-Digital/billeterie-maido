@@ -26,7 +26,6 @@ describe('MarkdownRenderer', () => {
     render(<MarkdownRenderer content={markdown} />);
 
     expect(document.querySelector('script')).toBeNull();
-    // @ts-expect-error - ensure global not set
     expect((window as any).hacked).toBeUndefined();
   });
 

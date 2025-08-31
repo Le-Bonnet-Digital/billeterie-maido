@@ -63,6 +63,7 @@ export interface EventActivityRow {
 
 export interface TimeSlotRow {
   id: string;
+  event_activity_id: string;
   slot_time: string;
   capacity: number;
   event_activities: EventActivityRow;

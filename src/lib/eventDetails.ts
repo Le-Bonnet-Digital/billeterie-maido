@@ -42,15 +42,18 @@ export async function fetchPasses(eventId: string): Promise<Pass[]> {
 export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[]> {
   const { data, error } = await supabase
     .from('time_slots')
-    .select(`
+    .select(
+      `
       id,
+      event_activity_id,
       slot_time,
       capacity,
       event_activities!inner (
         *,
         activities (*)
       )
-    `)
+    `,
+    )
     .eq('event_activity_id', eventActivityId)
     .gte('slot_time', new Date().toISOString())
     .order('slot_time');
@@ -58,7 +61,7 @@ export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[
   if (error) throw error;
 
   const slotsWithCapacity = await Promise.all(
-    (data || []).map(async (slot: TimeSlotRow): Promise<TimeSlot> => {
+    ((data || []) as TimeSlotRow[]).map(async (slot): Promise<TimeSlot> => {
       const { data: capacityData } = await supabase
         .rpc('get_slot_remaining_capacity', { slot_uuid: slot.id });
 
@@ -68,7 +71,8 @@ export async function fetchTimeSlots(eventActivityId: string): Promise<TimeSlot[
         event_activity: {
           ...slot.event_activities,
           activity: slot.event_activities.activities
-        }
+        },
+        event_activity_id: slot.event_activity_id,
       };
     })
   );
