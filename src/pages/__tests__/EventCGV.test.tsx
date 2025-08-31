@@ -1,10 +1,10 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen } from '../../test/utils';
 import { toast } from 'react-hot-toast';
 import EventCGV from '../EventCGV';
 import { supabase } from '../../lib/supabase';
 
-const mockFrom = supabase.from as unknown as vi.Mock;
+const mockFrom = supabase.from as unknown as Mock;
 
 const createQueryBuilder = () => {
   const single = vi.fn();
@@ -51,7 +51,7 @@ describe('EventCGV Page', () => {
 
     expect(await screen.findByText('Test Event')).toBeInTheDocument();
     expect(
-      screen.getByText((_, node) => node.textContent === 'This is content'),
+      screen.getByText((_, node) => node?.textContent === 'This is content'),
     ).toBeInTheDocument();
     expect(screen.getByText('content').tagName).toBe('STRONG');
   });

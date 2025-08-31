@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, afterEach, type Mock } from 'vitest';
 import { render, screen, fireEvent, waitFor } from '../../test/utils';
 import AdminLogin from '../AdminLogin';
 import { signInWithEmail } from '../../lib/auth';
@@ -20,7 +20,7 @@ vi.mock('../../lib/logger', () => ({
 
 describe('AdminLogin Component', () => {
   const mockOnLogin = vi.fn();
-  const mockSignIn = signInWithEmail as unknown as vi.Mock;
+  const mockSignIn = signInWithEmail as unknown as Mock;
 
   beforeEach(() => {
     vi.clearAllMocks();

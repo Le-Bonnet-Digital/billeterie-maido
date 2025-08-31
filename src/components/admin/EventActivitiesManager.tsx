@@ -207,11 +207,12 @@ export default function EventActivitiesManager({ event, onClose }: EventActiviti
                               <Users className="h-4 w-4" />
                               <span>
                                 Stock: {eventActivity.stock_limit === null ? 'Illimité' : eventActivity.stock_limit}
-                                {eventActivity.requires_time_slot && eventActivity.total_capacity > 0 && (
-                                  <span className="text-blue-600 ml-1">
-                                    (calculé: {eventActivity.total_capacity})
-                                  </span>
-                                )}
+                                {eventActivity.requires_time_slot &&
+                                  (eventActivity.total_capacity ?? 0) > 0 && (
+                                    <span className="text-blue-600 ml-1">
+                                      (calculé: {eventActivity.total_capacity ?? 0})
+                                    </span>
+                                  )}
                               </span>
                             </div>
                             
