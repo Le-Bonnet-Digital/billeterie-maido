@@ -1,0 +1,12 @@
+# Dépendances (à n'importe quelle profondeur)
+**/node_modules/
+
+# Artefacts de build / cache / rapports
+dist/
+build/
+coverage/
+.cache/
+.tmp/
+
+# (spécifique) node_modules sous les fonctions Edge Supabase
+supabase/functions/**/node_modules/
