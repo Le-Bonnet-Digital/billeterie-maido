@@ -1,6 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import { act } from 'react-dom/test-utils';
+import { render, screen, waitFor, act } from '@testing-library/react';
 import Layout from '../Layout';
 
 // Mock auth to return an admin user for Admin link rendering

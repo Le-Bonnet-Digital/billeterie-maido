@@ -3,7 +3,7 @@ import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import PassManagement from '../pages/admin/PassManagement';
 import { render, screen, waitFor } from '../test/utils';
-import { act } from 'react-dom/test-utils';
+import { act } from '@testing-library/react';
 
 describe('PassManagement add/edit modal', () => {
   it('renders a scrollable dialog for long content', async () => {
