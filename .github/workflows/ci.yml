@@ -41,7 +41,7 @@ jobs:
 
       # Publish results to the Security tab
       - name: Upload SARIF
-        if: always()
+        if: always() && hashFiles('semgrep.sarif') != ''
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: semgrep.sarif
