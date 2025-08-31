@@ -18,6 +18,8 @@ permissions:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      npm_config_http_proxy: ""
     steps:
       - uses: actions/checkout@v4
 
@@ -28,7 +30,7 @@ jobs:
           cache-dependency-path: package-lock.json
 
       - run: npm ci --no-audit --no-fund
-      - run: npm run lint --max-warnings=0
+      - run: npm run lint -- --max-warnings=0
       - run: npm test -- --silent
       - run: npm run build
         if: github.event_name == 'push'
