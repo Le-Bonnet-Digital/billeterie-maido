@@ -8,7 +8,9 @@ import { safeStorage } from '../../../lib/storage';
 
 vi.mock('../../../lib/auth', async () => {
   const actual =
-    await vi.importActual<typeof import('../../../lib/auth')>('../../../lib/auth');
+    await vi.importActual<typeof import('../../../lib/auth')>(
+      '../../../lib/auth',
+    );
   return {
     ...actual,
     getCurrentUser: vi.fn(),
@@ -21,12 +23,13 @@ import Settings from '../Settings';
 describe('Settings Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(getCurrentUser).mockResolvedValue({
+    vi.spyOn(toast, 'success').mockImplementation(() => {});
+    vi.spyOn(toast, 'error').mockImplementation(() => {});
+    return vi.mocked(getCurrentUser).mockResolvedValue({
+      id: 'u1',
       email: 'admin@example.com',
       role: 'admin',
     });
-    vi.spyOn(toast, 'success').mockImplementation(() => {});
-    vi.spyOn(toast, 'error').mockImplementation(() => {});
   });
 
   it('loads user and saved settings', async () => {
@@ -47,14 +50,18 @@ describe('Settings Page', () => {
 
     expect(await screen.findByDisplayValue('My Site')).toBeInTheDocument();
     expect(screen.getByDisplayValue('contact@mysite.com')).toBeInTheDocument();
-    expect(await screen.findByDisplayValue('admin@example.com')).toBeInTheDocument();
+    expect(
+      await screen.findByDisplayValue('admin@example.com'),
+    ).toBeInTheDocument();
     expect(getCurrentUser).toHaveBeenCalled();
   });
 
   it('updates state on user input and saves successfully', async () => {
     const user = userEvent.setup();
     vi.spyOn(safeStorage, 'getItem').mockReturnValue(null);
-    const setItemMock = vi.spyOn(safeStorage, 'setItem').mockImplementation(() => {});
+    const setItemMock = vi
+      .spyOn(safeStorage, 'setItem')
+      .mockImplementation(() => {});
 
     await act(async () => {
       render(<Settings />);
@@ -66,7 +73,9 @@ describe('Settings Page', () => {
       await user.type(nameInput, 'New Name');
     });
 
-    const saveBtn = screen.getByRole('button', { name: /sauvegarder les paramètres/i });
+    const saveBtn = screen.getByRole('button', {
+      name: /sauvegarder les paramètres/i,
+    });
     await act(async () => {
       await user.click(saveBtn);
     });
@@ -78,7 +87,9 @@ describe('Settings Page', () => {
       ),
     );
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith('Paramètres sauvegardés avec succès'),
+      expect(toast.success).toHaveBeenCalledWith(
+        'Paramètres sauvegardés avec succès',
+      ),
     );
   });
 
@@ -90,7 +101,9 @@ describe('Settings Page', () => {
       render(<Settings />);
     });
 
-    const emailInput = await screen.findByDisplayValue('contact@billetevent.com');
+    const emailInput = await screen.findByDisplayValue(
+      'contact@billetevent.com',
+    );
     await act(async () => {
       await user.clear(emailInput);
       await user.type(emailInput, 'invalid');
