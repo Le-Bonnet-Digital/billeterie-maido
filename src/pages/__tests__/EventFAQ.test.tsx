@@ -18,7 +18,12 @@ describe('EventFAQ Page', () => {
   });
 
   it('shows spinner and loading text when loading', () => {
-    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: true, error: null });
+    mockedUseFaq.mockReturnValue({
+      event: null,
+      faqs: [],
+      loading: true,
+      error: null,
+    });
 
     const { container } = render(<EventFAQ />);
 
@@ -27,14 +32,19 @@ describe('EventFAQ Page', () => {
   });
 
   it('shows not found message when no event', () => {
-    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: false, error: null });
+    mockedUseFaq.mockReturnValue({
+      event: null,
+      faqs: [],
+      loading: false,
+      error: null,
+    });
 
     render(<EventFAQ />);
 
     expect(screen.getByText(/faq introuvable/i)).toBeInTheDocument();
   });
 
-  it('renders event name and FAQ content', () => {
+  it('renders event name and FAQ content', async () => {
     mockedUseFaq.mockReturnValue({
       event: { id: '1', name: 'Event' },
       faqs: [{ question: 'Q', answer: 'A' }],
@@ -48,16 +58,23 @@ describe('EventFAQ Page', () => {
     const question = screen.getByText('Q');
     expect(question).toBeInTheDocument();
     fireEvent.click(question);
-    expect(screen.getByText('A')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByText('A')).toBeInTheDocument());
   });
 
   it('displays error toast when request fails', async () => {
-    mockedUseFaq.mockReturnValue({ event: null, faqs: [], loading: false, error: new Error('fail') });
+    mockedUseFaq.mockReturnValue({
+      event: null,
+      faqs: [],
+      loading: false,
+      error: new Error('fail'),
+    });
 
     render(<EventFAQ />);
 
     await waitFor(() => {
-      expect(toast.error).toHaveBeenCalledWith('Erreur lors du chargement de la FAQ');
+      expect(toast.error).toHaveBeenCalledWith(
+        'Erreur lors du chargement de la FAQ',
+      );
     });
     expect(screen.getByText(/faq introuvable/i)).toBeInTheDocument();
   });

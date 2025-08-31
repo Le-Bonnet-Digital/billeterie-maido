@@ -68,13 +68,21 @@ describe('EventDetails Page', () => {
           event_activities: [
             {
               id: 'activity1',
-              activity: { name: 'Activity 1', description: 'activity desc', icon: '🎉' },
+              activity: {
+                name: 'Activity 1',
+                description: 'activity desc',
+                icon: '🎉',
+              },
               stock_limit: null,
               requires_time_slot: false,
             },
             {
               id: 'activity2',
-              activity: { name: 'Activity 2', description: 'activity2 desc', icon: '🎯' },
+              activity: {
+                name: 'Activity 2',
+                description: 'activity2 desc',
+                icon: '🎯',
+              },
               stock_limit: null,
               requires_time_slot: false,
             },
@@ -93,7 +101,9 @@ describe('EventDetails Page', () => {
     render(<EventDetails />);
 
     fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
-    const modalButton = screen.getAllByRole('button', { name: /ajouter au panier/i })[1];
+    const modalButton = screen.getAllByRole('button', {
+      name: /ajouter au panier/i,
+    })[1];
     fireEvent.click(modalButton);
 
     await waitFor(() => {
@@ -107,17 +117,19 @@ describe('EventDetails Page', () => {
         1,
         undefined,
         undefined,
-        expect.anything()
+        expect.anything(),
       );
       expect(refresh).toHaveBeenCalled();
     });
 
     await waitFor(() => {
-      expect(screen.queryByText(/configurer votre achat/i)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/configurer votre achat/i),
+      ).not.toBeInTheDocument();
     });
   });
 
-  it('hides last name field for baby poney passes', () => {
+  it('hides last name field for baby poney passes', async () => {
     vi.mocked(useEventDetails).mockReturnValue({
       event: {
         id: 'event',
@@ -148,8 +160,12 @@ describe('EventDetails Page', () => {
 
     fireEvent.click(screen.getByRole('button', { name: /ajouter au panier/i }));
 
-    expect(screen.queryByPlaceholderText(/^Nom$/i)).not.toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/prénom/i)).toBeInTheDocument();
-    expect(screen.getByPlaceholderText(/année de naissance/i)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.queryByPlaceholderText(/^Nom$/i)).not.toBeInTheDocument();
+      expect(screen.getByPlaceholderText(/prénom/i)).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText(/année de naissance/i),
+      ).toBeInTheDocument();
+    });
   });
 });
