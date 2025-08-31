@@ -1,15 +1,14 @@
+// src/components/__tests__/Settings.test.tsx
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import { render, screen, waitFor } from '../../../test/utils';
-import { act } from 'react';
+import { act } from '@testing-library/react';
 import { toast } from 'react-hot-toast';
 import { safeStorage } from '../../../lib/storage';
 
 vi.mock('../../../lib/auth', async () => {
   const actual =
-    await vi.importActual<typeof import('../../../lib/auth')>(
-      '../../../lib/auth',
-    );
+    await vi.importActual<typeof import('../../../lib/auth')>('../../../lib/auth');
   return {
     ...actual,
     getCurrentUser: vi.fn(),
@@ -26,6 +25,8 @@ describe('Settings Page', () => {
       email: 'admin@example.com',
       role: 'admin',
     });
+    vi.spyOn(toast, 'success').mockImplementation(() => {});
+    vi.spyOn(toast, 'error').mockImplementation(() => {});
   });
 
   it('loads user and saved settings', async () => {
@@ -46,31 +47,29 @@ describe('Settings Page', () => {
 
     expect(await screen.findByDisplayValue('My Site')).toBeInTheDocument();
     expect(screen.getByDisplayValue('contact@mysite.com')).toBeInTheDocument();
-    expect(
-      await screen.findByDisplayValue('admin@example.com'),
-    ).toBeInTheDocument();
+    expect(await screen.findByDisplayValue('admin@example.com')).toBeInTheDocument();
     expect(getCurrentUser).toHaveBeenCalled();
   });
 
   it('updates state on user input and saves successfully', async () => {
     const user = userEvent.setup();
     vi.spyOn(safeStorage, 'getItem').mockReturnValue(null);
-    const setItemMock = vi
-      .spyOn(safeStorage, 'setItem')
-      .mockImplementation(() => {});
+    const setItemMock = vi.spyOn(safeStorage, 'setItem').mockImplementation(() => {});
 
     await act(async () => {
       render(<Settings />);
     });
 
     const nameInput = await screen.findByDisplayValue('BilletEvent');
-    await user.clear(nameInput);
-    await user.type(nameInput, 'New Name');
-
-    const saveBtn = screen.getByRole('button', {
-      name: /sauvegarder les paramètres/i,
+    await act(async () => {
+      await user.clear(nameInput);
+      await user.type(nameInput, 'New Name');
     });
-    await user.click(saveBtn);
+
+    const saveBtn = screen.getByRole('button', { name: /sauvegarder les paramètres/i });
+    await act(async () => {
+      await user.click(saveBtn);
+    });
 
     await waitFor(() =>
       expect(setItemMock).toHaveBeenCalledWith(
@@ -79,9 +78,7 @@ describe('Settings Page', () => {
       ),
     );
     await waitFor(() =>
-      expect(toast.success).toHaveBeenCalledWith(
-        'Paramètres sauvegardés avec succès',
-      ),
+      expect(toast.success).toHaveBeenCalledWith('Paramètres sauvegardés avec succès'),
     );
   });
 
@@ -93,11 +90,11 @@ describe('Settings Page', () => {
       render(<Settings />);
     });
 
-    const emailInput = await screen.findByDisplayValue(
-      'contact@billetevent.com',
-    );
-    await user.clear(emailInput);
-    await user.type(emailInput, 'invalid');
+    const emailInput = await screen.findByDisplayValue('contact@billetevent.com');
+    await act(async () => {
+      await user.clear(emailInput);
+      await user.type(emailInput, 'invalid');
+    });
 
     await waitFor(() => expect(emailInput).toBeInvalid());
   });
@@ -116,7 +113,9 @@ describe('Settings Page', () => {
     const saveBtn = await screen.findByRole('button', {
       name: /sauvegarder les paramètres/i,
     });
-    await user.click(saveBtn);
+    await act(async () => {
+      await user.click(saveBtn);
+    });
 
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith('Erreur lors de la sauvegarde'),

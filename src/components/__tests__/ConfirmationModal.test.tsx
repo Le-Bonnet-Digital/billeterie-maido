@@ -46,14 +46,11 @@ describe('ConfirmationModal Component', () => {
   it('should render activity information when provided', async () => {
     const propsWithDetails = {
       ...mockProps,
-      timeSlot: {
-        slot_time: '2024-01-01T10:00:00Z',
-      },
+      timeSlot: { slot_time: '2024-01-01T10:00:00Z' },
       activityName: 'Poney',
     };
 
     render(<ConfirmationModal {...propsWithDetails} />);
-
     await waitFor(() => expect(screen.getByText(/Poney/i)).toBeInTheDocument());
   });
 

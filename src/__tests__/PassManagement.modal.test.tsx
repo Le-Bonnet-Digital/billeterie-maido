@@ -2,19 +2,26 @@ import React from 'react';
 import { describe, it, expect, vi } from 'vitest';
 import userEvent from '@testing-library/user-event';
 import PassManagement from '../pages/admin/PassManagement';
-import { render, screen } from '../test/utils';
+import { render, screen, waitFor } from '../test/utils';
+import { act } from 'react-dom/test-utils';
 
 describe('PassManagement add/edit modal', () => {
   it('renders a scrollable dialog for long content', async () => {
-    render(<PassManagement />);
+    await act(async () => {
+      render(<PassManagement />);
+    });
 
     // Open the creation modal
-    const openBtn = await screen.findByRole('button', { name: /Nouveau Pass/i });
-    await userEvent.click(openBtn);
+    const openBtn = await screen.findByRole('button', {
+      name: /Nouveau Pass/i,
+    });
+    await act(async () => {
+      await userEvent.click(openBtn);
+    });
 
     // Dialog should be present with proper role
     const dialog = await screen.findByRole('dialog');
-    expect(dialog).toBeInTheDocument();
+    await waitFor(() => expect(dialog).toBeInTheDocument());
 
     // Container should constrain height and allow internal scroll
     // Max height enforced via inline style for compatibility
@@ -31,15 +38,21 @@ describe('PassManagement add/edit modal', () => {
 
   it('opens modal without maximum update depth warning', async () => {
     const errorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
-    render(<PassManagement />);
+    await act(async () => {
+      render(<PassManagement />);
+    });
 
-    const openBtn = await screen.findByRole('button', { name: /Nouveau Pass/i });
-    await userEvent.click(openBtn);
+    const openBtn = await screen.findByRole('button', {
+      name: /Nouveau Pass/i,
+    });
+    await act(async () => {
+      await userEvent.click(openBtn);
+    });
 
     await screen.findByRole('dialog');
 
     const hasWarning = errorSpy.mock.calls.some(([msg]) =>
-      String(msg).includes('Maximum update depth exceeded')
+      String(msg).includes('Maximum update depth exceeded'),
     );
     expect(hasWarning).toBe(false);
     errorSpy.mockRestore();
