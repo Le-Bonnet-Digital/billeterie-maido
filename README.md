@@ -139,6 +139,12 @@ Pour mettre à jour un environnement déjà configuré (dépendances, migrations
   supabase migration new <nom_de_migration>
   ```
 
+- Le schéma de la base de données est versionné dans `schema.sql`. Après chaque migration, mettez-le à jour et commitez-le :
+
+  ```bash
+  supabase db dump --schema public > schema.sql
+  ```
+
 ### Paiement Stripe
 
 Le processus de paiement s'appuie sur **Stripe Checkout**. La fonction Edge
