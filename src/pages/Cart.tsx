@@ -1,44 +1,49 @@
 import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import ConfirmationModal from '../components/ConfirmationModal';
+import { Link, useLocation } from 'react-router-dom';
 import CheckoutForm, { type CustomerData } from '../components/CheckoutForm';
-import { getCartItems, removeFromCart, calculateCartTotal, type CartItem } from '../lib/cart';
+import {
+  getCartItems,
+  removeFromCart,
+  calculateCartTotal,
+  clearCart,
+  type CartItem,
+} from '../lib/cart';
 import { supabase } from '../lib/supabase';
-import { wait } from '../lib/wait';
-import { ShoppingCart, Trash2, ArrowLeft, CreditCard, CheckSquare, Square } from 'lucide-react';
+import {
+  ShoppingCart,
+  Trash2,
+  ArrowLeft,
+  CreditCard,
+  CheckSquare,
+  Square,
+} from 'lucide-react';
 import { format } from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { logger } from '../lib/logger';
-import { safeStorage } from '../lib/storage';
-
-interface ConfirmationData {
-  reservationNumber: string;
-  email: string;
-  eventName: string;
-  passName: string;
-  price: number;
-  timeSlot?: { slot_time: string };
-  activityName?: string;
-}
-
-type InsertedReservation = {
-  reservation_number: string;
-  passes: { name: string; price: number } | Array<{ name: string; price: number }>;
-  time_slots: { slot_time: string } | Array<{ slot_time: string }> | null;
-};
 
 export default function Cart() {
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [acceptedTerms, setAcceptedTerms] = useState(false);
-  const [showConfirmation, setShowConfirmation] = useState(false);
-  const [confirmationData, setConfirmationData] = useState<ConfirmationData | null>(null);
   const [processingPayment, setProcessingPayment] = useState(false);
   const [showCheckoutForm, setShowCheckoutForm] = useState(false);
+  const location = useLocation();
 
   useEffect(() => {
     loadCart();
   }, []);
+
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    if (params.get('success')) {
+      toast.success('Paiement confirmé !');
+      clearCart().then(loadCart);
+      setAcceptedTerms(false);
+    }
+    if (params.get('canceled')) {
+      toast.error('Paiement annulé');
+    }
+  }, [location.search]);
 
   const loadCart = async () => {
     try {
@@ -65,114 +70,37 @@ export default function Cart() {
       toast.error('Vous devez accepter les conditions générales de vente');
       return;
     }
-    
+
     if (cartItems.length === 0) {
       toast.error('Votre panier est vide');
       return;
     }
-    
+
     setShowCheckoutForm(true);
   };
 
   const handleCustomerSubmit = async (customerData: CustomerData) => {
     setProcessingPayment(true);
-    
+
     try {
-      // Simuler le processus de paiement
-      const paymentDelay = 3000;
-      toast.loading('Traitement du paiement...', { duration: paymentDelay });
+      const { data, error } = await supabase.functions.invoke(
+        'create-checkout-session',
+        {
+          body: { cartItems, customer: customerData },
+        },
+      );
 
-      // Attendre pour simuler le paiement
-      await wait(paymentDelay);
-      
-      // Créer les réservations pour chaque article du panier
-      const reservations = [];
-      const reservationNumbers = new Set<string>();
-
-      for (const item of cartItems) {
-        const { data: acts, error: actsError } = await supabase
-          .from('cart_item_activities')
-          .select('event_activity_id, time_slot_id')
-          .eq('cart_item_id', item.id);
-        if (actsError) throw actsError;
-
-        const activities = acts && acts.length > 0 ? acts : [null];
-
-        for (const act of activities) {
-          const { data: reservation, error } = await supabase
-            .from('reservations')
-            .insert({
-              client_email: customerData.email,
-              pass_id: item.pass.id,
-              event_activity_id: act ? act.event_activity_id : null,
-              time_slot_id: act ? act.time_slot_id : null,
-              payment_status: 'paid'
-            })
-            .select(`
-            id,
-            reservation_number,
-            passes!inner (name, price),
-            time_slots (slot_time),
-            events!inner (name)
-          `)
-            .single();
-
-          if (error) throw error;
-          if (!reservation?.reservation_number) {
-            throw new Error('Reservation number generation failed');
-          }
-          if (reservationNumbers.has(reservation.reservation_number)) {
-            throw new Error('Duplicate reservation number detected');
-          }
-          reservationNumbers.add(reservation.reservation_number);
-          reservations.push(reservation);
-        }
+      if (error || !data?.url) {
+        throw error || new Error('Invalid session URL');
       }
-      
-      // Vider le panier
-      const sessionId = safeStorage.getItem('cart_session_id');
-      if (sessionId) {
-        await supabase
-          .from('cart_items')
-          .delete()
-          .eq('session_id', sessionId);
-      }
-      
-      // Afficher la confirmation pour la première réservation
-      if (reservations.length > 0) {
-        const firstReservation = reservations[0] as InsertedReservation;
-        const eventName = cartItems[0]?.pass ? 'Les Défis Lontan' : 'Événement'; // Nom par défaut
-        const passInfo = Array.isArray(firstReservation.passes) ? firstReservation.passes[0] : firstReservation.passes;
-        const timeSlotInfo = firstReservation.time_slots
-          ? (Array.isArray(firstReservation.time_slots) ? firstReservation.time_slots[0] : firstReservation.time_slots)
-          : undefined;
-        setConfirmationData({
-          reservationNumber: firstReservation.reservation_number,
-          email: customerData.email,
-          eventName: eventName,
-          passName: passInfo?.name ?? '',
-          price: passInfo?.price ?? 0,
-          timeSlot: timeSlotInfo ? { slot_time: timeSlotInfo.slot_time } : undefined,
-          activityName: undefined
-        });
-        setShowConfirmation(true);
-      }
-      
-      // Vider le panier local
-      setCartItems([]);
-      setAcceptedTerms(false);
-      setShowCheckoutForm(false);
-      
-      toast.success('Paiement réussi ! Réservation confirmée.');
-      
+
+      window.location.href = data.url as string;
     } catch (err) {
-      logger.error('Erreur lors du paiement', { error: err });
-      toast.error('Erreur lors du paiement. Veuillez réessayer.');
-    } finally {
+      logger.error('Erreur création session paiement', { error: err });
+      toast.error('Erreur lors de la redirection vers le paiement');
       setProcessingPayment(false);
     }
   };
-    
 
   const total = calculateCartTotal(cartItems);
 
@@ -191,7 +119,7 @@ export default function Cart() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Navigation */}
       <div className="mb-8">
-        <Link 
+        <Link
           to="/"
           className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
         >
@@ -215,7 +143,9 @@ export default function Cart() {
         /* Panier vide */
         <div className="bg-white rounded-lg shadow-sm p-12 text-center">
           <ShoppingCart className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Votre panier est vide</h2>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Votre panier est vide
+          </h2>
           <p className="text-gray-600 mb-6">
             Découvrez nos événements et ajoutez des billets à votre panier !
           </p>
@@ -231,9 +161,11 @@ export default function Cart() {
           {/* Articles du panier */}
           <div className="bg-white rounded-lg shadow-sm">
             <div className="p-6 border-b border-gray-200">
-              <h2 className="text-lg font-semibold text-gray-900">Vos billets</h2>
+              <h2 className="text-lg font-semibold text-gray-900">
+                Vos billets
+              </h2>
             </div>
-            
+
             <div className="divide-y divide-gray-200">
               {cartItems.map((item) => (
                 <div key={item.id} className="p-6">
@@ -245,13 +177,17 @@ export default function Cart() {
                       <p className="text-gray-600 text-sm mb-2">
                         {item.pass.description}
                       </p>
-                      
+
                       {item.timeSlot && (
                         <div className="flex items-center gap-2 text-sm text-blue-600 bg-blue-50 rounded-md px-3 py-1 inline-flex">
                           {item.eventActivity && (
                             <>
-                              <span className="text-lg">{item.eventActivity.activities.icon}</span>
-                              <span className="font-medium">{item.eventActivity.activities.name}</span>
+                              <span className="text-lg">
+                                {item.eventActivity.activities.icon}
+                              </span>
+                              <span className="font-medium">
+                                {item.eventActivity.activities.name}
+                              </span>
                             </>
                           )}
                           <span>•</span>
@@ -260,15 +196,19 @@ export default function Cart() {
                           </span>
                         </div>
                       )}
-                      
+
                       {item.eventActivity && !item.timeSlot && (
                         <div className="flex items-center gap-2 text-sm text-green-600 bg-green-50 rounded-md px-3 py-1 inline-flex">
-                          <span className="text-lg">{item.eventActivity.activities.icon}</span>
-                          <span className="font-medium">{item.eventActivity.activities.name}</span>
+                          <span className="text-lg">
+                            {item.eventActivity.activities.icon}
+                          </span>
+                          <span className="font-medium">
+                            {item.eventActivity.activities.name}
+                          </span>
                         </div>
                       )}
                     </div>
-                    
+
                     <div className="text-right ml-6">
                       <div className="text-lg font-semibold text-gray-900 mb-2">
                         {item.pass.price}€
@@ -289,8 +229,10 @@ export default function Cart() {
 
           {/* Récapitulatif */}
           <div className="bg-white rounded-lg shadow-sm p-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Récapitulatif</h2>
-            
+            <h2 className="text-lg font-semibold text-gray-900 mb-4">
+              Récapitulatif
+            </h2>
+
             <div className="space-y-2 mb-6">
               <div className="flex justify-between text-gray-600">
                 <span>Sous-total</span>
@@ -315,7 +257,10 @@ export default function Cart() {
                 )}
                 <span className="text-sm text-gray-700">
                   Je reconnais avoir lu et accepté les{' '}
-                  <Link to="/event/550e8400-e29b-41d4-a716-446655440000/cgv" className="text-blue-600 underline hover:text-blue-700">
+                  <Link
+                    to="/event/550e8400-e29b-41d4-a716-446655440000/cgv"
+                    className="text-blue-600 underline hover:text-blue-700"
+                  >
                     Conditions Générales de Vente
                   </Link>
                 </span>
@@ -333,31 +278,17 @@ export default function Cart() {
                 Procéder au paiement ({total.toFixed(2)}€)
               </button>
             ) : (
-              <CheckoutForm 
+              <CheckoutForm
                 onSubmit={handleCustomerSubmit}
                 loading={processingPayment}
               />
             )}
-            
+
             <p className="text-xs text-gray-500 text-center mt-2">
               Paiement 100% sécurisé par Stripe
             </p>
           </div>
         </div>
-      )}
-      
-      {/* Modal de confirmation */}
-      {confirmationData && (
-        <ConfirmationModal
-          isOpen={showConfirmation}
-          onClose={() => setShowConfirmation(false)}
-          reservationNumber={confirmationData.reservationNumber}
-          email={confirmationData.email}
-          eventName={confirmationData.eventName}
-          passName={confirmationData.passName}
-          price={confirmationData.price}
-          timeSlot={confirmationData.timeSlot}
-        />
       )}
     </div>
   );
