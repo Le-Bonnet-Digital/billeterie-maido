@@ -10,3 +10,9 @@ coverage/
 
 # (spécifique) node_modules sous les fonctions Edge Supabase
 supabase/functions/**/node_modules/
+
+# Répertoires Supabase et outils internes
+supabase/.temp/
+supabase/migrations/
+supabase/sql/
+.bolt/
