@@ -23,8 +23,8 @@ import Settings from '../Settings';
 describe('Settings Page', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.spyOn(toast, 'success').mockImplementation(() => {});
-    vi.spyOn(toast, 'error').mockImplementation(() => {});
+    vi.spyOn(toast, 'success').mockImplementation(() => 'ok');
+    vi.spyOn(toast, 'error').mockImplementation(() => 'err');
     return vi.mocked(getCurrentUser).mockResolvedValue({
       id: 'u1',
       email: 'admin@example.com',
