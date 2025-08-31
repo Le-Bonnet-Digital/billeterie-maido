@@ -139,6 +139,23 @@ Pour mettre à jour un environnement déjà configuré (dépendances, migrations
   supabase migration new <nom_de_migration>
   ```
 
+### Paiement Stripe
+
+Le processus de paiement s'appuie sur **Stripe Checkout**. La fonction Edge
+`create-checkout-session` génère un Payment Intent et redirige l'utilisateur vers
+la page hébergée par Stripe. Une fois le paiement confirmé, le webhook
+`stripe-webhook` crée les réservations correspondantes dans la base.
+
+Déployez les fonctions nécessaires via la CLI :
+
+```bash
+supabase functions deploy create-checkout-session
+supabase functions deploy stripe-webhook --no-verify-jwt
+```
+
+Les variables `STRIPE_SECRET` et `WEBHOOK_SECRET` doivent être définies pour que
+ces fonctions fonctionnent correctement.
+
 - Les variables d'environnement Supabase doivent être définies dans le fichier `.env` :
 
   ```env
