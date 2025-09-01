@@ -133,8 +133,8 @@ export default function TimeSlotManagement() {
             reservations_count: slot.reservations?.length || 0,
             event_activity: {
               id: slot.event_activities[0].id,
-              activity: slot.event_activities[0].activities,
-              event: slot.event_activities[0].events,
+              activity: slot.event_activities[0].activities?.[0],
+              event: slot.event_activities[0].events?.[0],
             },
           } as TimeSlotWithDetails;
         }),

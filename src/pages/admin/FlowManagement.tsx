@@ -131,7 +131,11 @@ export default function FlowManagement() {
               slot_time: slot.slot_time,
               capacity: slot.capacity,
               remaining_capacity: capacityData || 0,
-              event_activity: slot.event_activities[0],
+              event_activity: {
+                id: slot.event_activities[0].id,
+                requires_time_slot: slot.event_activities[0].requires_time_slot,
+                activity: slot.event_activities[0].activities?.[0],
+              },
               reservations: slot.reservations,
             };
           },
