@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import userEvent from '@testing-library/user-event';
-import React from 'react';
 import { render, screen, waitFor } from '../../../test/utils';
+import { useState } from 'react';
 import { act } from '@testing-library/react';
 import MarkdownEditor from '../MarkdownEditor';
 
 function Wrapper() {
-  const [value, setValue] = React.useState('');
+  const [value, setValue] = useState('');
   return (
     <MarkdownEditor
       label="Description"

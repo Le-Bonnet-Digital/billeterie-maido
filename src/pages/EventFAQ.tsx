@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ArrowLeft, HelpCircle } from 'lucide-react';
 import FAQAccordion from '../components/FAQAccordion';
@@ -31,8 +31,12 @@ export default function EventFAQ() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <HelpCircle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">FAQ introuvable</h2>
-          <p className="text-gray-600">La FAQ de cet événement n'est pas disponible.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            FAQ introuvable
+          </h2>
+          <p className="text-gray-600">
+            La FAQ de cet événement n'est pas disponible.
+          </p>
         </div>
       </div>
     );

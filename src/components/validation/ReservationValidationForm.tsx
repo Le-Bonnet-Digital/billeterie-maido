@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { CheckCircle, QrCode, XCircle } from 'lucide-react';
-import { validateReservation, type ValidationActivity } from '../../lib/validation';
+import {
+  validateReservation,
+  type ValidationActivity,
+} from '../../lib/validation';
 import { toast } from 'react-hot-toast';
 
 interface Props {
@@ -9,13 +12,17 @@ interface Props {
   help?: string;
 }
 
-export default function ReservationValidationForm({ activity, title, help }: Props) {
+export default function ReservationValidationForm({
+  activity,
+  title,
+  help,
+}: Props) {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
   const [loading, setLoading] = useState(false);
 
-  const onSubmit = async (e: React.FormEvent) => {
+  const onSubmit = async (e: FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatus('idle');
@@ -57,7 +64,10 @@ export default function ReservationValidationForm({ activity, title, help }: Pro
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
-          <p className="text-xs text-gray-500 mt-1">Un lecteur code-barres/QR agit comme un clavier: cliquez dans le champ et scannez.</p>
+          <p className="text-xs text-gray-500 mt-1">
+            Un lecteur code-barres/QR agit comme un clavier: cliquez dans le
+            champ et scannez.
+          </p>
         </div>
         <button
           type="submit"
@@ -68,12 +78,17 @@ export default function ReservationValidationForm({ activity, title, help }: Pro
         </button>
       </form>
       {status !== 'idle' && (
-        <div className={`mt-4 flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-          {status === 'success' ? <CheckCircle className="h-5 w-5" /> : <XCircle className="h-5 w-5" />}
+        <div
+          className={`mt-4 flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}
+        >
+          {status === 'success' ? (
+            <CheckCircle className="h-5 w-5" />
+          ) : (
+            <XCircle className="h-5 w-5" />
+          )}
           <span className="text-sm">{message}</span>
         </div>
       )}
     </div>
   );
 }
-

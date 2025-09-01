@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { ArrowLeft, FileText } from 'lucide-react';
@@ -59,8 +59,12 @@ export default function EventCGV() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <FileText className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">CGV introuvables</h2>
-          <p className="text-gray-600">Les conditions générales de cet événement ne sont pas disponibles.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            CGV introuvables
+          </h2>
+          <p className="text-gray-600">
+            Les conditions générales de cet événement ne sont pas disponibles.
+          </p>
         </div>
       </div>
     );
@@ -70,7 +74,7 @@ export default function EventCGV() {
     <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
       {/* Navigation */}
       <div className="mb-8">
-        <Link 
+        <Link
           to={`/event/${eventId}`}
           className="inline-flex items-center gap-2 text-blue-600 hover:text-blue-700 font-medium"
         >
@@ -83,7 +87,9 @@ export default function EventCGV() {
       <div className="bg-white rounded-lg shadow-sm p-8 mb-8">
         <div className="flex items-center gap-3 mb-4">
           <FileText className="h-8 w-8 text-blue-600" />
-          <h1 className="text-3xl font-bold text-gray-900">Conditions Générales de Vente</h1>
+          <h1 className="text-3xl font-bold text-gray-900">
+            Conditions Générales de Vente
+          </h1>
         </div>
         <p className="text-xl text-gray-600">{event.name}</p>
       </div>
@@ -102,7 +108,8 @@ export default function EventCGV() {
           Questions sur les conditions ?
         </h2>
         <p className="text-gray-600 mb-4">
-          Pour toute question concernant ces conditions générales de vente, contactez-nous.
+          Pour toute question concernant ces conditions générales de vente,
+          contactez-nous.
         </p>
         <a
           href="mailto:legal@billetevent.com"

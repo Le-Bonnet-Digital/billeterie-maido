@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmail } from '../lib/auth';
 import type { User } from '../lib/auth';
@@ -8,7 +8,13 @@ interface ProviderLoginProps {
   onLogin: (user: User) => void;
 }
 
-const ALLOWED: User['role'][] = ['pony_provider', 'archery_provider', 'luge_provider', 'atlm_collaborator', 'admin'];
+const ALLOWED: User['role'][] = [
+  'pony_provider',
+  'archery_provider',
+  'luge_provider',
+  'atlm_collaborator',
+  'admin',
+];
 
 export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
   const [email, setEmail] = useState('');
@@ -16,7 +22,7 @@ export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!email || !password) return;
     setLoading(true);
@@ -39,12 +45,21 @@ export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
           <div className="bg-blue-100 rounded-full p-4 w-16 h-16 mx-auto mb-4 flex items-center justify-center">
             <Lock className="h-8 w-8 text-blue-600" />
           </div>
-          <h2 className="text-3xl font-bold text-gray-900 mb-2">Espace Prestataire</h2>
-          <p className="text-gray-600">Connectez-vous pour valider les inscriptions</p>
+          <h2 className="text-3xl font-bold text-gray-900 mb-2">
+            Espace Prestataire
+          </h2>
+          <p className="text-gray-600">
+            Connectez-vous pour valider les inscriptions
+          </p>
         </div>
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-lg shadow-sm p-8 space-y-6"
+        >
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Adresse email</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Adresse email
+            </label>
             <div className="relative">
               <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -58,7 +73,9 @@ export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Mot de passe</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Mot de passe
+            </label>
             <div className="relative">
               <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
               <input
@@ -74,7 +91,11 @@ export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
           </div>
@@ -90,4 +111,3 @@ export default function ProviderLogin({ onLogin }: ProviderLoginProps) {
     </div>
   );
 }
-

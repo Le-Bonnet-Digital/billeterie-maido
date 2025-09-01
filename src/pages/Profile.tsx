@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getCurrentUser } from '../lib/auth';
 import type { User } from '../lib/auth';
 import { supabase } from '../lib/supabase';
@@ -46,7 +46,9 @@ export default function Profile() {
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <Shield className="w-10 h-10 text-gray-400 mx-auto mb-3" />
         <h1 className="text-2xl font-bold">Profil</h1>
-        <p className="text-gray-600 mt-2">Veuillez vous connecter pour consulter vos commandes.</p>
+        <p className="text-gray-600 mt-2">
+          Veuillez vous connecter pour consulter vos commandes.
+        </p>
       </div>
     );
   }
@@ -69,7 +71,9 @@ export default function Profile() {
         {loading ? (
           <div className="p-6">Chargement...</div>
         ) : reservations.length === 0 ? (
-          <div className="p-6 text-sm text-gray-600">Aucune réservation trouvée.</div>
+          <div className="p-6 text-sm text-gray-600">
+            Aucune réservation trouvée.
+          </div>
         ) : (
           <ul className="divide-y divide-gray-200">
             {reservations.map((r) => (
@@ -77,11 +81,17 @@ export default function Profile() {
                 <div className="flex items-center justify-between">
                   <div>
                     <div className="font-medium">{r.reservation_number}</div>
-                    <div className="text-sm text-gray-500">{new Date(r.created_at).toLocaleString()}</div>
+                    <div className="text-sm text-gray-500">
+                      {new Date(r.created_at).toLocaleString()}
+                    </div>
                   </div>
-                  <span className={`text-xs px-2 py-1 rounded-full ${
-                    r.payment_status === 'paid' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                  }`}>
+                  <span
+                    className={`text-xs px-2 py-1 rounded-full ${
+                      r.payment_status === 'paid'
+                        ? 'bg-green-100 text-green-700'
+                        : 'bg-yellow-100 text-yellow-700'
+                    }`}
+                  >
                     {r.payment_status}
                   </span>
                 </div>
@@ -93,4 +103,3 @@ export default function Profile() {
     </div>
   );
 }
-

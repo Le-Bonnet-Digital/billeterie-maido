@@ -1,6 +1,17 @@
-import React from 'react';
-import { DndContext, closestCenter, PointerSensor, useSensor, useSensors, DragEndEvent } from '@dnd-kit/core';
-import { arrayMove, SortableContext, useSortable, verticalListSortingStrategy } from '@dnd-kit/sortable';
+import {
+  DndContext,
+  closestCenter,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  arrayMove,
+  SortableContext,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
 import { CSS } from '@dnd-kit/utilities';
 import { GripVertical, Trash2, Plus } from 'lucide-react';
 import MarkdownEditor from './MarkdownEditor';
@@ -16,22 +27,42 @@ interface FAQEditorProps {
   onChange: (items: FAQFormItem[]) => void;
 }
 
-function SortableFAQItem({ item, onChange, onRemove }: { item: FAQFormItem; onChange: (item: FAQFormItem) => void; onRemove: () => void; }) {
-  const { attributes, listeners, setNodeRef, transform, transition } = useSortable({ id: item.id });
+function SortableFAQItem({
+  item,
+  onChange,
+  onRemove,
+}: {
+  item: FAQFormItem;
+  onChange: (item: FAQFormItem) => void;
+  onRemove: () => void;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition } =
+    useSortable({ id: item.id });
   const style = { transform: CSS.Transform.toString(transform), transition };
 
   const questionError = !item.question.trim();
   const answerError = item.answer.trim().length < 20;
 
   return (
-    <div ref={setNodeRef} style={style} className="border rounded-md p-4 bg-white">
+    <div
+      ref={setNodeRef}
+      style={style}
+      className="border rounded-md p-4 bg-white"
+    >
       <div className="flex items-start gap-2">
-        <button type="button" {...attributes} {...listeners} className="cursor-move pt-2 text-gray-400">
+        <button
+          type="button"
+          {...attributes}
+          {...listeners}
+          className="cursor-move pt-2 text-gray-400"
+        >
           <GripVertical className="h-5 w-5" />
         </button>
         <div className="flex-1 space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1">Question</label>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Question
+            </label>
             <input
               type="text"
               value={item.question}
@@ -39,7 +70,9 @@ function SortableFAQItem({ item, onChange, onRemove }: { item: FAQFormItem; onCh
               className="w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
             />
             {questionError && (
-              <p className="mt-1 text-sm text-red-600">La question ne peut pas être vide</p>
+              <p className="mt-1 text-sm text-red-600">
+                La question ne peut pas être vide
+              </p>
             )}
           </div>
           <MarkdownEditor
@@ -49,7 +82,9 @@ function SortableFAQItem({ item, onChange, onRemove }: { item: FAQFormItem; onCh
             rows={4}
           />
           {answerError && (
-            <p className="mt-1 text-sm text-red-600">La réponse doit contenir au moins 20 caractères</p>
+            <p className="mt-1 text-sm text-red-600">
+              La réponse doit contenir au moins 20 caractères
+            </p>
           )}
         </div>
         <button
@@ -81,10 +116,7 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
   };
 
   const addItem = () => {
-    onChange([
-      ...value,
-      { id: crypto.randomUUID(), question: '', answer: '' },
-    ]);
+    onChange([...value, { id: crypto.randomUUID(), question: '', answer: '' }]);
   };
 
   const removeItem = (id: string) => {
@@ -93,9 +125,18 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
 
   return (
     <div>
-      <label className="block text-sm font-medium text-gray-700 mb-2">FAQ</label>
-      <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-        <SortableContext items={value.map((i) => i.id)} strategy={verticalListSortingStrategy}>
+      <label className="block text-sm font-medium text-gray-700 mb-2">
+        FAQ
+      </label>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={closestCenter}
+        onDragEnd={handleDragEnd}
+      >
+        <SortableContext
+          items={value.map((i) => i.id)}
+          strategy={verticalListSortingStrategy}
+        >
           <div className="space-y-4">
             {value.map((item) => (
               <SortableFAQItem
@@ -119,4 +160,3 @@ export default function FAQEditor({ value, onChange }: FAQEditorProps) {
     </div>
   );
 }
-

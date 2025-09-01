@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { User, Mail, Phone, MapPin } from 'lucide-react';
 
 interface CheckoutFormProps {
@@ -24,22 +24,27 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
     phone: '',
     address: '',
     city: '',
-    postalCode: ''
+    postalCode: '',
   });
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     onSubmit(formData);
   };
 
   return (
     <div className="bg-white rounded-lg shadow-sm p-6">
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">Informations de Facturation</h2>
-      
+      <h2 className="text-lg font-semibold text-gray-900 mb-6">
+        Informations de Facturation
+      </h2>
+
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="firstName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="firstName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Prénom *
             </label>
             <div className="relative">
@@ -48,7 +53,9 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
                 id="firstName"
                 type="text"
                 value={formData.firstName}
-                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, firstName: e.target.value })
+                }
                 className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
@@ -56,14 +63,19 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
           </div>
 
           <div>
-            <label htmlFor="lastName" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="lastName"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Nom *
             </label>
             <input
               id="lastName"
               type="text"
               value={formData.lastName}
-              onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, lastName: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -71,7 +83,10 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
         </div>
 
         <div>
-          <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="email"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Adresse email *
           </label>
           <div className="relative">
@@ -80,7 +95,9 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
               id="email"
               type="email"
               value={formData.email}
-              onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, email: e.target.value })
+              }
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -88,7 +105,10 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
         </div>
 
         <div>
-          <label htmlFor="phone" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="phone"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Téléphone *
           </label>
           <div className="relative">
@@ -97,7 +117,9 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
               id="phone"
               type="tel"
               value={formData.phone}
-              onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, phone: e.target.value })
+              }
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               placeholder="0692 XX XX XX"
               required
@@ -106,7 +128,10 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
         </div>
 
         <div>
-          <label htmlFor="address" className="block text-sm font-medium text-gray-700 mb-1">
+          <label
+            htmlFor="address"
+            className="block text-sm font-medium text-gray-700 mb-1"
+          >
             Adresse *
           </label>
           <div className="relative">
@@ -115,7 +140,9 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
               id="address"
               type="text"
               value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, address: e.target.value })
+              }
               className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
@@ -124,28 +151,38 @@ export default function CheckoutForm({ onSubmit, loading }: CheckoutFormProps) {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <div>
-            <label htmlFor="city" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="city"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Ville *
             </label>
             <input
               id="city"
               type="text"
               value={formData.city}
-              onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, city: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               required
             />
           </div>
 
           <div>
-            <label htmlFor="postalCode" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="postalCode"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Code postal *
             </label>
             <input
               id="postalCode"
               type="text"
               value={formData.postalCode}
-              onChange={(e) => setFormData({ ...formData, postalCode: e.target.value })}
+              onChange={(e) =>
+                setFormData({ ...formData, postalCode: e.target.value })
+              }
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               pattern="[0-9]{5}"
               placeholder="97400"

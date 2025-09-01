@@ -1,4 +1,3 @@
-import React from 'react';
 import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 
@@ -60,7 +59,10 @@ export default function App() {
             <Route index element={<AdminDashboard />} />
             <Route path="users" element={<UserManagement />} />
             <Route path="events" element={<EventManagement />} />
-            <Route path="activity-variants" element={<ActivityVariantsManagement />} />
+            <Route
+              path="activity-variants"
+              element={<ActivityVariantsManagement />}
+            />
             <Route path="activities" element={<ActivityManagement />} />
             <Route path="passes" element={<PassManagement />} />
             <Route path="time-slots" element={<TimeSlotManagement />} />

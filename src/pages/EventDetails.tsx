@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { useParams } from 'react-router-dom';
 import { addToCart } from '../lib/cart';
 import { Calendar, Info, Plus, Minus } from 'lucide-react';
@@ -10,13 +10,16 @@ import { toast } from 'react-hot-toast';
 
 export default function EventDetails() {
   const { eventId } = useParams<{ eventId: string }>();
-  const { event, passes, loading, refresh, loadTimeSlotsForActivity } = useEventDetails(eventId);
+  const { event, passes, loading, refresh, loadTimeSlotsForActivity } =
+    useEventDetails(eventId);
   const [showPurchaseModal, setShowPurchaseModal] = useState(false);
   const [selectedPass, setSelectedPass] = useState<Pass | null>(null);
   const [selectedQuantity, setSelectedQuantity] = useState(1);
 
   // Type de pass (utilise pass_type si fourni, sinon heuristique sur le nom)
-  const classifyPassType = (p: Pass): 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney' | 'other' => {
+  const classifyPassType = (
+    p: Pass,
+  ): 'moins_8' | 'plus_8' | 'luge_seule' | 'baby_poney' | 'other' => {
     if (p.pass_type) return p.pass_type;
     const n = (p.name || '').toLowerCase();
     if (/baby/.test(n) && /poney/.test(n)) return 'baby_poney';
@@ -42,10 +45,17 @@ export default function EventDetails() {
   };
 
   const handlePurchase = async (
-    selectedSlots: { [key: number]: { [activityId: string]: string | undefined } },
+    selectedSlots: {
+      [key: number]: { [activityId: string]: string | undefined };
+    },
     attendees: {
-      [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean };
-    }
+      [key: number]: {
+        firstName?: string;
+        lastName?: string;
+        birthYear?: string;
+        ack?: boolean;
+      };
+    },
   ) => {
     if (!selectedPass) return;
     for (let i = 0; i < selectedQuantity; i++) {
@@ -66,7 +76,7 @@ export default function EventDetails() {
         1,
         undefined,
         undefined,
-        attendee
+        attendee,
       );
       if (!success) {
         toast.error(`Erreur lors de l'ajout du pass ${i + 1}`);
@@ -95,8 +105,12 @@ export default function EventDetails() {
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
           <Calendar className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">Événement introuvable</h2>
-          <p className="text-gray-600">Cet événement n'existe pas ou n'est plus disponible.</p>
+          <h2 className="text-xl font-semibold text-gray-900 mb-2">
+            Événement introuvable
+          </h2>
+          <p className="text-gray-600">
+            Cet événement n'existe pas ou n'est plus disponible.
+          </p>
         </div>
       </div>
     );
@@ -109,7 +123,9 @@ export default function EventDetails() {
         <div className="flex items-center gap-3 mb-4">
           <Calendar className="h-6 w-6 text-blue-600" />
           <span className="text-lg font-medium text-blue-600">
-            {format(new Date(event.event_date), 'EEEE d MMMM yyyy', { locale: fr })}
+            {format(new Date(event.event_date), 'EEEE d MMMM yyyy', {
+              locale: fr,
+            })}
           </span>
         </div>
 
@@ -119,8 +135,13 @@ export default function EventDetails() {
           <div className="flex items-start gap-3">
             <Info className="h-6 w-6 text-blue-600 mt-0.5" />
             <div>
-              <h2 className="font-semibold text-blue-900 mb-2">Informations Clés</h2>
-              <MarkdownRenderer className="text-blue-800" content={event.key_info_content} />
+              <h2 className="font-semibold text-blue-900 mb-2">
+                Informations Clés
+              </h2>
+              <MarkdownRenderer
+                className="text-blue-800"
+                content={event.key_info_content}
+              />
             </div>
           </div>
         </div>
@@ -132,33 +153,43 @@ export default function EventDetails() {
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
           {passes.map((pass) => (
-            <div key={pass.id} className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors">
+            <div
+              key={pass.id}
+              className="border border-gray-200 rounded-lg p-6 hover:border-blue-300 transition-colors"
+            >
               <div className="flex justify-between items-start mb-4">
-                <h3 className="text-xl font-semibold text-gray-900">{pass.name}</h3>
+                <h3 className="text-xl font-semibold text-gray-900">
+                  {pass.name}
+                </h3>
                 <div className="text-right">
-                  <div className="text-2xl font-bold text-blue-600">{pass.price}€</div>
+                  <div className="text-2xl font-bold text-blue-600">
+                    {pass.price}€
+                  </div>
                   <div className="text-sm text-gray-500">
                     {pass.initial_stock === null
                       ? 'Stock illimité'
                       : pass.remaining_stock === 0
-                      ? 'Épuisé'
-                      : `${pass.remaining_stock} restant(s)`}
+                        ? 'Épuisé'
+                        : `${pass.remaining_stock} restant(s)`}
                   </div>
                 </div>
               </div>
 
               <p className="text-gray-600 mb-6">{pass.description}</p>
-              {typeof pass.guaranteed_runs === 'number' && pass.guaranteed_runs > 0 && (
-                <div className="mb-4 text-xs font-medium text-green-700 bg-green-50 border border-green-200 inline-block px-2 py-1 rounded">
-                  Garantie {pass.guaranteed_runs} tour{pass.guaranteed_runs > 1 ? 's' : ''}
-                </div>
-              )}
+              {typeof pass.guaranteed_runs === 'number' &&
+                pass.guaranteed_runs > 0 && (
+                  <div className="mb-4 text-xs font-medium text-green-700 bg-green-50 border border-green-200 inline-block px-2 py-1 rounded">
+                    Garantie {pass.guaranteed_runs} tour
+                    {pass.guaranteed_runs > 1 ? 's' : ''}
+                  </div>
+                )}
 
               <button
                 onClick={() => handleAddToCart(pass)}
                 disabled={
                   pass.remaining_stock === 0 ||
-                  (classifyPassType(pass) === 'luge_seule' && !isLugeOnlyAvailable)
+                  (classifyPassType(pass) === 'luge_seule' &&
+                    !isLugeOnlyAvailable)
                 }
                 className="w-full bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
@@ -193,10 +224,21 @@ interface PurchaseModalProps {
   quantity: number;
   onQuantityChange: (quantity: number) => void;
   onPurchase: (
-    selectedSlots: { [key: number]: { [activityId: string]: string | undefined } },
-    attendees: { [key: number]: { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean } }
+    selectedSlots: {
+      [key: number]: { [activityId: string]: string | undefined };
+    },
+    attendees: {
+      [key: number]: {
+        firstName?: string;
+        lastName?: string;
+        birthYear?: string;
+        ack?: boolean;
+      };
+    },
   ) => void;
-  loadTimeSlots: (eventActivityId: string) => Promise<import('../lib/types').TimeSlot[]>;
+  loadTimeSlots: (
+    eventActivityId: string,
+  ) => Promise<import('../lib/types').TimeSlot[]>;
   conditionsMarkdown?: string;
   onClose: () => void;
 }
@@ -210,9 +252,23 @@ function PurchaseModal({
   conditionsMarkdown,
   onClose,
 }: PurchaseModalProps) {
-  const [slotsByActivity, setSlotsByActivity] = useState<Record<string, import('../lib/types').TimeSlot[]>>({});
-  const [selectedSlots, setSelectedSlots] = useState<Record<number, Record<string, string | undefined>>>({});
-  const [attendees, setAttendees] = useState<Record<number, { firstName?: string; lastName?: string; birthYear?: string; ack?: boolean }>>({});
+  const [slotsByActivity, setSlotsByActivity] = useState<
+    Record<string, import('../lib/types').TimeSlot[]>
+  >({});
+  const [selectedSlots, setSelectedSlots] = useState<
+    Record<number, Record<string, string | undefined>>
+  >({});
+  const [attendees, setAttendees] = useState<
+    Record<
+      number,
+      {
+        firstName?: string;
+        lastName?: string;
+        birthYear?: string;
+        ack?: boolean;
+      }
+    >
+  >({});
 
   const ensureSlotsLoaded = async (eventActivityId: string) => {
     if (!slotsByActivity[eventActivityId]) {
@@ -228,7 +284,7 @@ function PurchaseModal({
           return !!selectedSlots[i]?.[ea.id];
         }
         return true;
-      })
+      }),
     );
   }, [quantity, pass.event_activities, selectedSlots]);
 
@@ -242,7 +298,10 @@ function PurchaseModal({
             <h3 className="text-lg font-semibold text-gray-900">
               Configurer votre achat : {pass.name}
             </h3>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               ✕
             </button>
           </div>
@@ -251,7 +310,9 @@ function PurchaseModal({
         <div className="p-6 overflow-y-auto max-h-[60vh]">
           {/* Sélection de quantité */}
           <div className="mb-6">
-            <label className="block text-sm font-medium text-gray-700 mb-2">Quantité</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              Quantité
+            </label>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => onQuantityChange(Math.max(1, quantity - 1))}
@@ -272,14 +333,23 @@ function PurchaseModal({
           {/* Créneaux pour chaque pass et activité */}
           <div className="space-y-4">
             {Array.from({ length: quantity }, (_, index) => (
-              <div key={index} className="border border-gray-200 rounded-lg p-4">
-                <h4 className="font-medium text-gray-900 mb-3">Pass #{index + 1}</h4>
+              <div
+                key={index}
+                className="border border-gray-200 rounded-lg p-4"
+              >
+                <h4 className="font-medium text-gray-900 mb-3">
+                  Pass #{index + 1}
+                </h4>
 
                 {pass.event_activities.map((eventActivity) => (
                   <div key={eventActivity.id} className="mb-3">
                     <div className="flex items-center gap-3 mb-2">
-                      <span className="text-xl">{eventActivity.activity.icon}</span>
-                      <div className="font-medium">{eventActivity.activity.name}</div>
+                      <span className="text-xl">
+                        {eventActivity.activity.icon}
+                      </span>
+                      <div className="font-medium">
+                        {eventActivity.activity.name}
+                      </div>
                     </div>
                     {eventActivity.requires_time_slot && (
                       <select
@@ -288,7 +358,10 @@ function PurchaseModal({
                         onChange={(e) =>
                           setSelectedSlots((prev) => ({
                             ...prev,
-                            [index]: { ...(prev[index] || {}), [eventActivity.id]: e.target.value },
+                            [index]: {
+                              ...(prev[index] || {}),
+                              [eventActivity.id]: e.target.value,
+                            },
                           }))
                         }
                         onFocus={() => ensureSlotsLoaded(eventActivity.id)}
@@ -296,25 +369,36 @@ function PurchaseModal({
                         <option value="" disabled>
                           Choisir un créneau
                         </option>
-                        {(slotsByActivity[eventActivity.id] || []).map((slot) => (
-                          <option key={slot.id} value={slot.id}>
-                            {format(new Date(slot.slot_time), 'HH:mm — d MMM yyyy', { locale: fr })}
-                          </option>
-                        ))}
+                        {(slotsByActivity[eventActivity.id] || []).map(
+                          (slot) => (
+                            <option key={slot.id} value={slot.id}>
+                              {format(
+                                new Date(slot.slot_time),
+                                'HH:mm — d MMM yyyy',
+                                { locale: fr },
+                              )}
+                            </option>
+                          ),
+                        )}
                       </select>
                     )}
                   </div>
                 ))}
 
                 {/* Informations participant */}
-                <div className={`mt-4 grid grid-cols-1 gap-3 ${isBabyPoney ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}>
+                <div
+                  className={`mt-4 grid grid-cols-1 gap-3 ${isBabyPoney ? 'md:grid-cols-2' : 'md:grid-cols-3'}`}
+                >
                   <input
                     type="text"
                     placeholder="Prénom"
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={attendees[index]?.firstName || ''}
                     onChange={(e) =>
-                      setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], firstName: e.target.value } }))
+                      setAttendees((prev) => ({
+                        ...prev,
+                        [index]: { ...prev[index], firstName: e.target.value },
+                      }))
                     }
                   />
                   {!isBabyPoney && (
@@ -324,7 +408,10 @@ function PurchaseModal({
                       className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                       value={attendees[index]?.lastName || ''}
                       onChange={(e) =>
-                        setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], lastName: e.target.value } }))
+                        setAttendees((prev) => ({
+                          ...prev,
+                          [index]: { ...prev[index], lastName: e.target.value },
+                        }))
                       }
                     />
                   )}
@@ -334,7 +421,10 @@ function PurchaseModal({
                     className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     value={attendees[index]?.birthYear || ''}
                     onChange={(e) =>
-                      setAttendees((prev) => ({ ...prev, [index]: { ...prev[index], birthYear: e.target.value } }))
+                      setAttendees((prev) => ({
+                        ...prev,
+                        [index]: { ...prev[index], birthYear: e.target.value },
+                      }))
                     }
                   />
                 </div>
@@ -347,16 +437,23 @@ function PurchaseModal({
             <div className="mt-6 bg-blue-50 border border-blue-100 rounded-md p-4">
               <div className="flex items-start gap-2 mb-2">
                 <Info className="h-5 w-5 text-blue-600 mt-0.5" />
-                <span className="font-medium text-blue-900">Conditions d'accès</span>
+                <span className="font-medium text-blue-900">
+                  Conditions d'accès
+                </span>
               </div>
-              <MarkdownRenderer className="text-sm text-blue-900" content={conditionsMarkdown} />
+              <MarkdownRenderer
+                className="text-sm text-blue-900"
+                content={conditionsMarkdown}
+              />
             </div>
           )}
         </div>
 
         <div className="p-6 border-t border-gray-200">
           <div className="flex items-center justify-between mb-4">
-            <div className="text-lg font-semibold">Total: {(pass.price * quantity).toFixed(2)}€</div>
+            <div className="text-lg font-semibold">
+              Total: {(pass.price * quantity).toFixed(2)}€
+            </div>
           </div>
 
           <div className="flex gap-3">

@@ -1,4 +1,3 @@
-import React from 'react';
 import ReservationValidationForm from '../../components/validation/ReservationValidationForm';
 
 export default function PonyValidation() {
@@ -10,4 +9,3 @@ export default function PonyValidation() {
     />
   );
 }
-
