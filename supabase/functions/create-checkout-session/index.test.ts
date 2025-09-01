@@ -31,7 +31,15 @@ describe('create-checkout-session edge function', () => {
     await import('./index.ts');
   });
 
-  it('returns 405 for non POST', async () => {
+  it('handles CORS preflight', async () => {
+    const res = await handler(
+      new Request('http://localhost', { method: 'OPTIONS' }),
+    );
+    expect(res.status).toBe(200);
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
+  });
+
+  it('returns 405 for unsupported methods', async () => {
     const res = await handler(new Request('http://localhost')); // GET by default
     expect(res.status).toBe(405);
   });
@@ -59,5 +67,6 @@ describe('create-checkout-session edge function', () => {
     await expect(res.json()).resolves.toEqual({
       url: 'https://stripe.test/session',
     });
+    expect(res.headers.get('access-control-allow-origin')).toBe('*');
   });
 });

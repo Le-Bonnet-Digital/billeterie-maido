@@ -13,6 +13,12 @@ const stripe = new Stripe(getEnv('STRIPE_SECRET'), {
   apiVersion: '2023-10-16',
 });
 
+const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, apikey, content-type',
+};
+
 interface CartItem {
   pass: { id: string; name: string; price: number };
   eventActivity?: { id: string };
@@ -26,9 +32,19 @@ interface Customer {
 }
 
 serve(async (req: Request) => {
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', {
+      headers: {
+        ...corsHeaders,
+        'Access-Control-Allow-Methods': 'POST, OPTIONS',
+      },
+    });
+  }
+
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
+      headers: corsHeaders,
     });
   }
 
@@ -41,6 +57,7 @@ serve(async (req: Request) => {
     if (!cartItems || cartItems.length === 0 || !customer?.email) {
       return new Response(JSON.stringify({ error: 'Invalid payload' }), {
         status: 400,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       });
     }
 
@@ -67,11 +84,13 @@ serve(async (req: Request) => {
 
     return new Response(JSON.stringify({ url: session.url }), {
       status: 200,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   } catch (err) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return new Response(JSON.stringify({ error: message }), {
       status: 500,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 });
