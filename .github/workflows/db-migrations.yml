@@ -2,7 +2,7 @@ name: DB Migrations (Supabase)
 
 on:
   push:
-    branches: [ main ]         # ← se lance automatiquement à chaque push sur main
+    branches: [main]         # ← se lance automatiquement à chaque push sur main
   workflow_dispatch:           # ← lance manuellement si besoin
 
 concurrency:
