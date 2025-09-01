@@ -1,4 +1,10 @@
-import React, { useEffect, useState, useCallback, useMemo } from 'react';
+import {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  type FormEvent,
+} from 'react';
 import { supabase, isSupabaseConfigured } from '../../lib/supabase';
 import { Ticket, Plus, Edit, Trash2, Package, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -570,7 +576,7 @@ function PassFormModal({ pass, events, onClose, onSave }: PassFormModalProps) {
     }
   }, [formData.event_id, loadEventActivities]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
 
     if (!formData.event_id || !formData.name || formData.price <= 0) {

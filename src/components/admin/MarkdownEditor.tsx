@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type ChangeEvent } from 'react';
 import MarkdownRenderer from '../MarkdownRenderer';
 
 interface MarkdownEditorProps {
@@ -9,10 +9,16 @@ interface MarkdownEditorProps {
   id?: string;
 }
 
-export default function MarkdownEditor({ value, onChange, label, rows = 6, id }: MarkdownEditorProps) {
+export default function MarkdownEditor({
+  value,
+  onChange,
+  label,
+  rows = 6,
+  id,
+}: MarkdownEditorProps) {
   const [error, setError] = useState<string | null>(null);
 
-  const handleChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+  const handleChange = (e: ChangeEvent<HTMLTextAreaElement>) => {
     const newValue = e.target.value;
     onChange(newValue);
     if (!newValue.trim()) {
@@ -24,7 +30,12 @@ export default function MarkdownEditor({ value, onChange, label, rows = 6, id }:
 
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-gray-700 mb-1">{label}</label>
+      <label
+        htmlFor={id}
+        className="block text-sm font-medium text-gray-700 mb-1"
+      >
+        {label}
+      </label>
       <textarea
         id={id}
         value={value}
@@ -34,7 +45,9 @@ export default function MarkdownEditor({ value, onChange, label, rows = 6, id }:
       />
       {error && <p className="mt-1 text-sm text-red-600">{error}</p>}
       <div className="mt-4">
-        <p className="text-sm font-medium text-gray-700 mb-1">Prévisualisation</p>
+        <p className="text-sm font-medium text-gray-700 mb-1">
+          Prévisualisation
+        </p>
         <div className="border border-gray-200 rounded-md p-3">
           <MarkdownRenderer content={value} />
         </div>

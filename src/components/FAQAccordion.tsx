@@ -1,4 +1,3 @@
-import React from 'react';
 import { Disclosure } from '@headlessui/react';
 import { ChevronUp } from 'lucide-react';
 import MarkdownRenderer from './MarkdownRenderer';
@@ -15,7 +14,9 @@ interface FAQAccordionProps {
 export default function FAQAccordion({ faqs }: FAQAccordionProps) {
   if (!faqs || faqs.length === 0) {
     return (
-      <p className="text-gray-600">Aucune question n'est disponible pour cet événement.</p>
+      <p className="text-gray-600">
+        Aucune question n'est disponible pour cet événement.
+      </p>
     );
   }
 

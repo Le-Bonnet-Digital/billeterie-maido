@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { BarChart3, TrendingUp, Euro, Users, Download } from 'lucide-react';
 import {

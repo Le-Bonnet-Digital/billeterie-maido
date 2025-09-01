@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { Mail, Send, Users, FileText, X } from 'lucide-react';
 import { toast } from 'react-hot-toast';
@@ -47,7 +47,7 @@ Informations pratiques :
 
 Nous avons hâte de vous accueillir !
 
-L'équipe BilletEvent`
+L'équipe BilletEvent`,
     },
     {
       id: '2',
@@ -67,7 +67,7 @@ Votre billet est en pièce jointe de cet email.
 
 Merci pour votre confiance !
 
-L'équipe BilletEvent`
+L'équipe BilletEvent`,
     },
     {
       id: '3',
@@ -82,8 +82,8 @@ Nous vous contactons concernant l'événement "{EVENT_NAME}" pour lequel vous av
 Si vous avez des questions, n'hésitez pas à nous contacter.
 
 Cordialement,
-L'équipe BilletEvent`
-    }
+L'équipe BilletEvent`,
+    },
   ];
 
   const loadEvents = useCallback(async () => {
@@ -106,19 +106,21 @@ L'équipe BilletEvent`
     try {
       const { data, error } = await supabase
         .from('reservations')
-        .select(`
+        .select(
+          `
           client_email,
           passes!inner (
             event_id
           )
-        `)
+        `,
+        )
         .eq('passes.event_id', selectedEvent)
         .eq('payment_status', 'paid');
 
       if (error) throw error;
 
       // Compter les emails uniques
-      const uniqueEmails = new Set((data || []).map(r => r.client_email));
+      const uniqueEmails = new Set((data || []).map((r) => r.client_email));
       setRecipientCount(uniqueEmails.size);
     } catch (err) {
       logger.error('Erreur comptage destinataires', { error: err });
@@ -148,13 +150,13 @@ L'équipe BilletEvent`
 
     try {
       setSending(true);
-      
+
       // Simuler l'envoi d'email
       const sendDelay = 2000;
       await wait(sendDelay);
-      
+
       toast.success(`Email envoyé à ${recipientCount} destinataire(s)`);
-      
+
       // Réinitialiser le formulaire
       setEmailSubject('');
       setEmailContent('');
@@ -162,7 +164,7 @@ L'équipe BilletEvent`
       setRecipientCount(0);
     } catch (err) {
       logger.error('Erreur envoi email', { error: err });
-      toast.error('Erreur lors de l\'envoi');
+      toast.error("Erreur lors de l'envoi");
     } finally {
       setSending(false);
     }
@@ -179,7 +181,9 @@ L'équipe BilletEvent`
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Communication</h1>
-          <p className="text-gray-600">Envoyez des emails aux participants de vos événements</p>
+          <p className="text-gray-600">
+            Envoyez des emails aux participants de vos événements
+          </p>
         </div>
         <button
           onClick={() => setShowTemplateModal(true)}
@@ -192,8 +196,10 @@ L'équipe BilletEvent`
 
       {/* Formulaire d'envoi */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">Nouvel Email</h2>
-        
+        <h2 className="text-lg font-semibold text-gray-900 mb-6">
+          Nouvel Email
+        </h2>
+
         <div className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -208,7 +214,8 @@ L'équipe BilletEvent`
               <option value="">Sélectionner un événement</option>
               {events.map((event) => (
                 <option key={event.id} value={event.id}>
-                  {event.name} - {new Date(event.event_date).toLocaleDateString('fr-FR')}
+                  {event.name} -{' '}
+                  {new Date(event.event_date).toLocaleDateString('fr-FR')}
                 </option>
               ))}
             </select>
@@ -246,7 +253,8 @@ L'équipe BilletEvent`
               required
             />
             <p className="text-xs text-gray-500 mt-1">
-              Variables disponibles : {'{EVENT_NAME}'}, {'{EVENT_DATE}'}, {'{RESERVATION_NUMBER}'}, {'{PASS_NAME}'}
+              Variables disponibles : {'{EVENT_NAME}'}, {'{EVENT_DATE}'},{' '}
+              {'{RESERVATION_NUMBER}'}, {'{PASS_NAME}'}
             </p>
           </div>
 
@@ -254,16 +262,21 @@ L'équipe BilletEvent`
             <div className="flex items-center gap-2 text-sm text-gray-600">
               <Users className="h-4 w-4" />
               <span>
-                {recipientCount > 0 
+                {recipientCount > 0
                   ? `Prêt à envoyer à ${recipientCount} destinataire(s)`
-                  : 'Sélectionnez un événement pour voir les destinataires'
-                }
+                  : 'Sélectionnez un événement pour voir les destinataires'}
               </span>
             </div>
-            
+
             <button
               onClick={handleSendEmail}
-              disabled={!selectedEvent || !emailSubject || !emailContent || recipientCount === 0 || sending}
+              disabled={
+                !selectedEvent ||
+                !emailSubject ||
+                !emailContent ||
+                recipientCount === 0 ||
+                sending
+              }
               className="bg-blue-600 hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed text-white px-6 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
             >
               {sending ? (
@@ -284,7 +297,9 @@ L'équipe BilletEvent`
 
       {/* Historique des envois */}
       <div className="bg-white rounded-lg shadow-sm p-6">
-        <h2 className="text-lg font-semibold text-gray-900 mb-4">Historique des Envois</h2>
+        <h2 className="text-lg font-semibold text-gray-900 mb-4">
+          Historique des Envois
+        </h2>
         <div className="text-center py-8 text-gray-500">
           <Mail className="h-12 w-12 mx-auto mb-4 text-gray-300" />
           <p>Aucun email envoyé pour le moment</p>
@@ -303,21 +318,36 @@ L'équipe BilletEvent`
           >
             <div className="p-6 border-b border-gray-200">
               <div className="flex items-center justify-between">
-                <h2 id="email-templates-title" className="text-xl font-semibold text-gray-900">Modèles d'Email</h2>
-                <button onClick={() => setShowTemplateModal(false)} className="text-gray-400 hover:text-gray-600">
+                <h2
+                  id="email-templates-title"
+                  className="text-xl font-semibold text-gray-900"
+                >
+                  Modèles d'Email
+                </h2>
+                <button
+                  onClick={() => setShowTemplateModal(false)}
+                  className="text-gray-400 hover:text-gray-600"
+                >
                   <X className="h-6 w-6" />
                 </button>
               </div>
             </div>
-            
+
             <div className="p-6 overflow-y-auto max-h-[calc(80vh-140px)]">
               <div className="grid grid-cols-1 gap-4">
                 {emailTemplates.map((template) => (
-                  <div key={template.id} className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors">
+                  <div
+                    key={template.id}
+                    className="border border-gray-200 rounded-lg p-4 hover:border-blue-300 transition-colors"
+                  >
                     <div className="flex items-start justify-between mb-3">
                       <div>
-                        <h3 className="font-semibold text-gray-900">{template.name}</h3>
-                        <p className="text-sm text-gray-600">{template.subject}</p>
+                        <h3 className="font-semibold text-gray-900">
+                          {template.name}
+                        </h3>
+                        <p className="text-sm text-gray-600">
+                          {template.subject}
+                        </p>
                       </div>
                       <button
                         onClick={() => applyTemplate(template)}
@@ -327,7 +357,9 @@ L'équipe BilletEvent`
                       </button>
                     </div>
                     <div className="text-sm text-gray-700 bg-gray-50 rounded p-3 max-h-32 overflow-y-auto">
-                      <pre className="whitespace-pre-wrap font-sans">{template.content}</pre>
+                      <pre className="whitespace-pre-wrap font-sans">
+                        {template.content}
+                      </pre>
                     </div>
                   </div>
                 ))}

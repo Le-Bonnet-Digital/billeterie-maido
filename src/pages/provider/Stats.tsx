@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { logger } from '../../lib/logger';
 import { toast } from 'react-hot-toast';
@@ -58,21 +58,29 @@ export default function ProviderStats() {
     <div className="space-y-6">
       <div className="flex items-center gap-2">
         <BarChart3 className="h-5 w-5 text-blue-600" />
-        <h1 className="text-xl font-semibold">Statistiques (7 derniers jours)</h1>
+        <h1 className="text-xl font-semibold">
+          Statistiques (7 derniers jours)
+        </h1>
       </div>
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Activité</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Validations</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Activité
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Validations
+              </th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {rows.map((r) => (
               <tr key={r.key}>
                 <td className="px-6 py-4 text-sm text-gray-900">{r.label}</td>
-                <td className="px-6 py-4 text-sm text-gray-900">{counts[r.key] || 0}</td>
+                <td className="px-6 py-4 text-sm text-gray-900">
+                  {counts[r.key] || 0}
+                </td>
               </tr>
             ))}
           </tbody>

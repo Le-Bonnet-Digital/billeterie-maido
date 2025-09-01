@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { CheckCircle, X, Download, Mail } from 'lucide-react';
 import QRCode from 'qrcode';
 import { logger } from '../lib/logger';
@@ -26,17 +26,17 @@ export default function ConfirmationModal({
   passName,
   price,
   timeSlot,
-  activityName
+  activityName,
 }: ConfirmationModalProps) {
   const [qrDataUrl, setQrDataUrl] = useState('');
 
   useEffect(() => {
     let mounted = true;
     QRCode.toDataURL(reservationNumber)
-      .then(url => {
+      .then((url) => {
         if (mounted) setQrDataUrl(url);
       })
-      .catch(err => logger.error('Erreur génération QR', { error: err }));
+      .catch((err) => logger.error('Erreur génération QR', { error: err }));
     return () => {
       mounted = false;
     };
@@ -94,7 +94,9 @@ Présentez ce billet à l'entrée de l'événement.
 
           <div className="space-y-4 mb-6">
             <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm text-gray-600 mb-1">Numéro de réservation</div>
+              <div className="text-sm text-gray-600 mb-1">
+                Numéro de réservation
+              </div>
               <div className="font-mono text-lg font-semibold text-gray-900">
                 {reservationNumber}
               </div>
@@ -136,10 +138,13 @@ Présentez ce billet à l'entrée de l'événement.
                   <div className="flex justify-between">
                     <span className="text-gray-600">Horaire:</span>
                     <span className="font-medium">
-                      {new Date(timeSlot.slot_time).toLocaleTimeString('fr-FR', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      })}
+                      {new Date(timeSlot.slot_time).toLocaleTimeString(
+                        'fr-FR',
+                        {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        },
+                      )}
                     </span>
                   </div>
                 </>
@@ -155,7 +160,7 @@ Présentez ce billet à l'entrée de l'événement.
               <Download className="h-4 w-4" />
               Télécharger le Billet
             </button>
-            
+
             <div className="text-center">
               <div className="flex items-center justify-center gap-2 text-sm text-gray-600 mb-2">
                 <Mail className="h-4 w-4" />

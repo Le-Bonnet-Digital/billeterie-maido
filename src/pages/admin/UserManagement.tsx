@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { supabase } from '../../lib/supabase';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
@@ -13,7 +13,7 @@ const ROLES: Role[] = [
   'archery_provider',
   'luge_provider',
   'atlm_collaborator',
-  'client'
+  'client',
 ];
 
 interface UserRow {
@@ -41,7 +41,7 @@ export default function UserManagement() {
     })();
     // Chargement initial des utilisateurs
     void search();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -76,12 +76,12 @@ export default function UserManagement() {
   };
 
   const toggleSelectAll = () => {
-    setSelectedIds(allSelected ? [] : users.map(u => u.id));
+    setSelectedIds(allSelected ? [] : users.map((u) => u.id));
   };
 
   const toggleSelection = (id: string) => {
     setSelectedIds((ids) =>
-      ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id]
+      ids.includes(id) ? ids.filter((i) => i !== id) : [...ids, id],
     );
   };
 
@@ -100,7 +100,7 @@ export default function UserManagement() {
       logger.error('Erreur mise à jour rôle groupée', {
         error: err,
         ids: selectedIds,
-        role
+        role,
       });
       toast.error('Échec de la mise à jour');
     } finally {
@@ -122,7 +122,7 @@ export default function UserManagement() {
     } catch (err) {
       logger.error('Erreur suppression utilisateurs', {
         error: err,
-        ids: selectedIds
+        ids: selectedIds,
       });
       toast.error('Échec de la suppression');
     } finally {
@@ -133,9 +133,12 @@ export default function UserManagement() {
   const updateRole = async (id: string, role: Role) => {
     try {
       setSaving((s) => ({ ...s, [id]: true }));
-      const { error } = await supabase.from('users').update({ role }).eq('id', id);
+      const { error } = await supabase
+        .from('users')
+        .update({ role })
+        .eq('id', id);
       if (error) throw error;
-      setUsers((list) => list.map(u => (u.id === id ? { ...u, role } : u)));
+      setUsers((list) => list.map((u) => (u.id === id ? { ...u, role } : u)));
       toast.success('Rôle mis à jour');
     } catch (err) {
       logger.error('Erreur mise à jour rôle', { error: err, userId: id, role });
@@ -150,7 +153,9 @@ export default function UserManagement() {
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
           <Shield className="h-5 w-5 text-blue-600" />
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Utilisateurs</h1>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Gestion des Utilisateurs
+          </h1>
         </div>
       </div>
 
@@ -172,7 +177,9 @@ export default function UserManagement() {
         >
           <option value="">Tous</option>
           {ROLES.map((r) => (
-            <option key={r} value={r}>{r}</option>
+            <option key={r} value={r}>
+              {r}
+            </option>
           ))}
         </select>
         <button
@@ -193,7 +200,9 @@ export default function UserManagement() {
             aria-label="Nouveau rôle"
           >
             {ROLES.map((r) => (
-              <option key={r} value={r}>{r}</option>
+              <option key={r} value={r}>
+                {r}
+              </option>
             ))}
           </select>
           <button
@@ -227,8 +236,12 @@ export default function UserManagement() {
                   aria-label="Sélectionner tous les utilisateurs"
                 />
               </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Rôle</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Email
+              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                Rôle
+              </th>
               <th className="px-6 py-3"></th>
             </tr>
           </thead>
@@ -253,7 +266,9 @@ export default function UserManagement() {
                     aria-label={`Rôle de ${u.email}`}
                   >
                     {ROLES.map((r) => (
-                      <option key={r} value={r}>{r}</option>
+                      <option key={r} value={r}>
+                        {r}
+                      </option>
                     ))}
                   </select>
                 </td>
@@ -272,7 +287,10 @@ export default function UserManagement() {
             ))}
             {users.length === 0 && (
               <tr>
-                <td className="px-6 py-10 text-center text-sm text-gray-500" colSpan={4}>
+                <td
+                  className="px-6 py-10 text-center text-sm text-gray-500"
+                  colSpan={4}
+                >
                   Aucun utilisateur trouvé.
                 </td>
               </tr>
@@ -283,4 +301,3 @@ export default function UserManagement() {
     </div>
   );
 }
-

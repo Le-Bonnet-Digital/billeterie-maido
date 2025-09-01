@@ -1,11 +1,17 @@
-import React, { useEffect, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Outlet, Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, signOut } from '../../lib/auth';
 import type { User } from '../../lib/auth';
 import ProviderLogin from '../../components/ProviderLogin';
 import { QrCode, LogOut } from 'lucide-react';
 
-const ALLOWED: User['role'][] = ['pony_provider', 'archery_provider', 'luge_provider', 'atlm_collaborator', 'admin'];
+const ALLOWED: User['role'][] = [
+  'pony_provider',
+  'archery_provider',
+  'luge_provider',
+  'atlm_collaborator',
+  'admin',
+];
 
 export default function ProviderLayout() {
   const location = useLocation();
@@ -33,11 +39,37 @@ export default function ProviderLayout() {
   }
 
   const nav = (() => {
-    const items = [] as Array<{ to: string; label: string; roles?: User['role'][] }>;
-    items.push({ to: '/provider/pony', label: 'Poney', roles: ['pony_provider', 'admin', 'atlm_collaborator'] });
-    items.push({ to: '/provider/archery', label: "Tir à l'arc", roles: ['archery_provider', 'admin', 'atlm_collaborator'] });
-    items.push({ to: '/provider/luge', label: 'Luge', roles: ['luge_provider', 'admin', 'atlm_collaborator'] });
-    items.push({ to: '/provider/stats', label: 'Statistiques', roles: ['pony_provider','archery_provider','luge_provider','atlm_collaborator','admin'] });
+    const items = [] as Array<{
+      to: string;
+      label: string;
+      roles?: User['role'][];
+    }>;
+    items.push({
+      to: '/provider/pony',
+      label: 'Poney',
+      roles: ['pony_provider', 'admin', 'atlm_collaborator'],
+    });
+    items.push({
+      to: '/provider/archery',
+      label: "Tir à l'arc",
+      roles: ['archery_provider', 'admin', 'atlm_collaborator'],
+    });
+    items.push({
+      to: '/provider/luge',
+      label: 'Luge',
+      roles: ['luge_provider', 'admin', 'atlm_collaborator'],
+    });
+    items.push({
+      to: '/provider/stats',
+      label: 'Statistiques',
+      roles: [
+        'pony_provider',
+        'archery_provider',
+        'luge_provider',
+        'atlm_collaborator',
+        'admin',
+      ],
+    });
     return items.filter((n) => n.roles?.includes(user.role));
   })();
 
@@ -62,7 +94,10 @@ export default function ProviderLayout() {
               ))}
             </nav>
             <button
-              onClick={async () => { await signOut(); setUser(null); }}
+              onClick={async () => {
+                await signOut();
+                setUser(null);
+              }}
               className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
             >
               <LogOut className="h-4 w-4" />

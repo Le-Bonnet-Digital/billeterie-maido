@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState, type FormEvent } from 'react';
 import { Lock, Mail, Eye, EyeOff } from 'lucide-react';
 import { signInWithEmail } from '../lib/auth';
 import type { User } from '../lib/auth';
@@ -16,9 +16,9 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
   const [loading, setLoading] = useState(false);
   const showDemoInfo = import.meta.env.VITE_SHOW_TEST_CREDENTIALS === 'true';
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!email || !password) {
       return;
     }
@@ -26,11 +26,13 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
     try {
       setLoading(true);
       const user = await signInWithEmail(email, password);
-      
+
       if (user && user.role === 'admin') {
         onLogin(user);
       } else if (user) {
-        alert('Accès refusé. Seuls les administrateurs peuvent accéder au dashboard.');
+        alert(
+          'Accès refusé. Seuls les administrateurs peuvent accéder au dashboard.',
+        );
       }
     } catch (err) {
       logger.error('Erreur connexion', { error: err });
@@ -55,9 +57,15 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           </p>
         </div>
 
-        <form onSubmit={handleSubmit} className="bg-white rounded-lg shadow-sm p-8 space-y-6">
+        <form
+          onSubmit={handleSubmit}
+          className="bg-white rounded-lg shadow-sm p-8 space-y-6"
+        >
           <div>
-            <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="email"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Adresse email
             </label>
             <div className="relative">
@@ -75,7 +83,10 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
           </div>
 
           <div>
-            <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-1">
+            <label
+              htmlFor="password"
+              className="block text-sm font-medium text-gray-700 mb-1"
+            >
               Mot de passe
             </label>
             <div className="relative">
@@ -94,7 +105,11 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
                 onClick={() => setShowPassword(!showPassword)}
                 className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
               >
-                {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                {showPassword ? (
+                  <EyeOff className="h-5 w-5" />
+                ) : (
+                  <Eye className="h-5 w-5" />
+                )}
               </button>
             </div>
           </div>
@@ -117,7 +132,8 @@ export default function AdminLogin({ onLogin }: AdminLoginProps) {
         {showDemoInfo && (
           <div className="bg-blue-50 rounded-lg p-4 text-center">
             <p className="text-sm text-blue-800">
-              Environnement de démonstration : les identifiants de test sont fournis sur demande.
+              Environnement de démonstration : les identifiants de test sont
+              fournis sur demande.
             </p>
           </div>
         )}

@@ -1,11 +1,22 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useState, type FormEvent } from 'react';
 import { supabase } from '../../lib/supabase';
-import { Activity, Plus, Edit, Trash2, X, Image as ImageIcon } from 'lucide-react';
+import {
+  Activity,
+  Plus,
+  Edit,
+  Trash2,
+  X,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { toast } from 'react-hot-toast';
 import MarkdownRenderer from '../../components/MarkdownRenderer';
 import MarkdownEditor from '../../components/admin/MarkdownEditor';
 import { logger } from '../../lib/logger';
-import { processAndUploadPublicImage, deletePublicImage, validateImageFile } from '../../lib/upload';
+import {
+  processAndUploadPublicImage,
+  deletePublicImage,
+  validateImageFile,
+} from '../../lib/upload';
 
 interface ActivityType {
   id: string;
@@ -25,7 +36,9 @@ export default function ActivityManagement() {
   const [activities, setActivities] = useState<ActivityType[]>([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [editingActivity, setEditingActivity] = useState<ActivityType | null>(null);
+  const [editingActivity, setEditingActivity] = useState<ActivityType | null>(
+    null,
+  );
 
   const loadActivities = useCallback(async () => {
     try {
@@ -50,7 +63,12 @@ export default function ActivityManagement() {
   }, [loadActivities]);
 
   const handleDeleteActivity = async (activityId: string) => {
-    if (!confirm("Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l'utilisent.")) return;
+    if (
+      !confirm(
+        "Êtes-vous sûr de vouloir supprimer cette activité ? Cette action est irréversible et affectera tous les événements qui l'utilisent.",
+      )
+    )
+      return;
 
     try {
       const { error } = await supabase
@@ -59,7 +77,7 @@ export default function ActivityManagement() {
         .eq('id', activityId);
 
       if (error) throw error;
-      
+
       toast.success('Activité supprimée avec succès');
       loadActivities();
     } catch (err) {
@@ -80,10 +98,14 @@ export default function ActivityManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Activités</h1>
-          <p className="text-gray-600">Créez et gérez les types d'activités disponibles</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Gestion des Activités
+          </h1>
+          <p className="text-gray-600">
+            Créez et gérez les types d'activités disponibles
+          </p>
         </div>
-        <button 
+        <button
           onClick={() => setShowCreateModal(true)}
           className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium transition-colors flex items-center gap-2"
         >
@@ -95,18 +117,26 @@ export default function ActivityManagement() {
       {/* Statistiques */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-900">{activities.length}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {activities.length}
+          </div>
           <div className="text-sm text-gray-600">Total Activités</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-blue-600">
-            {activities.filter(a => a.name.toLowerCase().includes('poney')).length}
+            {
+              activities.filter((a) => a.name.toLowerCase().includes('poney'))
+                .length
+            }
           </div>
           <div className="text-sm text-gray-600">Activités Poney</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-green-600">
-            {activities.filter(a => a.name.toLowerCase().includes('tir')).length}
+            {
+              activities.filter((a) => a.name.toLowerCase().includes('tir'))
+                .length
+            }
           </div>
           <div className="text-sm text-gray-600">Activités Tir</div>
         </div>
@@ -115,32 +145,49 @@ export default function ActivityManagement() {
       {/* Liste des activités */}
       <div className="bg-white rounded-lg shadow-sm overflow-hidden">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-semibold text-gray-900">Activités ({activities.length})</h2>
+          <h2 className="text-lg font-semibold text-gray-900">
+            Activités ({activities.length})
+          </h2>
         </div>
 
         {activities.length === 0 ? (
           <div className="p-12 text-center">
             <Activity className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune activité</h3>
-            <p className="text-gray-600">Créez votre première activité pour commencer.</p>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Aucune activité
+            </h3>
+            <p className="text-gray-600">
+              Créez votre première activité pour commencer.
+            </p>
           </div>
         ) : (
           <div className="divide-y divide-gray-200">
             {activities.map((activity) => (
-              <div key={activity.id} className="p-6 hover:bg-gray-50 transition-colors">
+              <div
+                key={activity.id}
+                className="p-6 hover:bg-gray-50 transition-colors"
+              >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-4">
                     <div className="text-3xl">{activity.icon}</div>
                     <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{activity.name}</h3>
-                      <MarkdownRenderer content={activity.description} className="text-gray-600" />
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {activity.name}
+                      </h3>
+                      <MarkdownRenderer
+                        content={activity.description}
+                        className="text-gray-600"
+                      />
                       <div className="text-xs text-gray-500 mt-1">
-                        Parc: {activity.is_parc_product ? 'Activé' : 'Désactivé'}
-                        {activity.parc_category ? ` • Catégorie: ${activity.parc_category}` : ''}
+                        Parc:{' '}
+                        {activity.is_parc_product ? 'Activé' : 'Désactivé'}
+                        {activity.parc_category
+                          ? ` • Catégorie: ${activity.parc_category}`
+                          : ''}
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setEditingActivity(activity)}
@@ -148,7 +195,7 @@ export default function ActivityManagement() {
                     >
                       <Edit className="h-4 w-4" />
                     </button>
-                    
+
                     <button
                       onClick={() => handleDeleteActivity(activity.id)}
                       className="p-2 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
@@ -188,7 +235,11 @@ interface ActivityFormModalProps {
   onSave: () => void;
 }
 
-function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps) {
+function ActivityFormModal({
+  activity,
+  onClose,
+  onSave,
+}: ActivityFormModalProps) {
   const [formData, setFormData] = useState({
     name: activity?.name || '',
     description: activity?.description || '',
@@ -200,14 +251,18 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
     parc_requires_time_slot: activity?.parc_requires_time_slot ?? false,
   });
   const [imageFile, setImageFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(activity?.parc_image_url || null);
-  const [originalImageUrl] = useState<string | null>(activity?.parc_image_url || null);
+  const [imagePreview, setImagePreview] = useState<string | null>(
+    activity?.parc_image_url || null,
+  );
+  const [originalImageUrl] = useState<string | null>(
+    activity?.parc_image_url || null,
+  );
   const [deleteOnSave, setDeleteOnSave] = useState<boolean>(false);
   const [saving, setSaving] = useState(false);
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
-    
+
     if (!formData.name.trim()) {
       toast.error('Le nom est obligatoire');
       return;
@@ -215,20 +270,25 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
 
     try {
       setSaving(true);
-      
+
       if (activity) {
         // Mise à jour
         let parc_image_url: string | null | undefined = undefined;
         if (imageFile) {
           try {
-            const uploaded = await processAndUploadPublicImage('activities', imageFile, 'activities', {
-              minWidth: 1200,
-              minHeight: 600,
-              maxWidth: 1600,
-              maxHeight: 900,
-              mimeType: 'image/jpeg',
-              quality: 0.85,
-            });
+            const uploaded = await processAndUploadPublicImage(
+              'activities',
+              imageFile,
+              'activities',
+              {
+                minWidth: 1200,
+                minHeight: 600,
+                maxWidth: 1600,
+                maxHeight: 900,
+                mimeType: 'image/jpeg',
+                quality: 0.85,
+              },
+            );
             if (!uploaded) throw new Error("Échec de l'upload");
             parc_image_url = uploaded.publicUrl;
             if (originalImageUrl) {
@@ -265,14 +325,19 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
         let parc_image_url: string | null | undefined = undefined;
         if (imageFile) {
           try {
-            const uploaded = await processAndUploadPublicImage('activities', imageFile, 'activities', {
-              minWidth: 1200,
-              minHeight: 600,
-              maxWidth: 1600,
-              maxHeight: 900,
-              mimeType: 'image/jpeg',
-              quality: 0.85,
-            });
+            const uploaded = await processAndUploadPublicImage(
+              'activities',
+              imageFile,
+              'activities',
+              {
+                minWidth: 1200,
+                minHeight: 600,
+                maxWidth: 1600,
+                maxHeight: 900,
+                mimeType: 'image/jpeg',
+                quality: 0.85,
+              },
+            );
             if (!uploaded) throw new Error("Échec de l'upload");
             parc_image_url = uploaded.publicUrl;
           } catch (e: unknown) {
@@ -280,24 +345,22 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
             toast.error(msg || "Échec de l'upload de l'image");
           }
         }
-        const { error } = await supabase
-          .from('activities')
-          .insert({
-            name: formData.name,
-            description: formData.description,
-            icon: formData.icon,
-            is_parc_product: formData.is_parc_product,
-            parc_description: formData.parc_description || null,
-            parc_category: formData.parc_category || null,
-            parc_sort_order: formData.parc_sort_order,
-            parc_requires_time_slot: formData.parc_requires_time_slot,
-            ...(parc_image_url ? { parc_image_url } : {}),
-          });
+        const { error } = await supabase.from('activities').insert({
+          name: formData.name,
+          description: formData.description,
+          icon: formData.icon,
+          is_parc_product: formData.is_parc_product,
+          parc_description: formData.parc_description || null,
+          parc_category: formData.parc_category || null,
+          parc_sort_order: formData.parc_sort_order,
+          parc_requires_time_slot: formData.parc_requires_time_slot,
+          ...(parc_image_url ? { parc_image_url } : {}),
+        });
 
         if (error) throw error;
         toast.success('Activité créée avec succès');
       }
-      
+
       onSave();
     } catch (err) {
       logger.error('Erreur sauvegarde activité', { error: err });
@@ -307,7 +370,20 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
     }
   };
 
-  const commonIcons = ['🐴', '🏹', '🎯', '🎪', '🎨', '🎵', '🏃', '🚴', '🏊', '⚽', '🏀', '🎾'];
+  const commonIcons = [
+    '🐴',
+    '🏹',
+    '🎯',
+    '🎪',
+    '🎨',
+    '🎵',
+    '🏃',
+    '🚴',
+    '🏊',
+    '⚽',
+    '🏀',
+    '🎾',
+  ];
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50 overflow-y-auto">
@@ -317,7 +393,10 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
             <h2 className="text-xl font-semibold text-gray-900">
               {activity ? "Modifier l'Activité" : 'Créer une Activité'}
             </h2>
-            <button onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <button
+              onClick={onClose}
+              className="text-gray-400 hover:text-gray-600"
+            >
               <X className="h-6 w-6" />
             </button>
           </div>
@@ -330,7 +409,9 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
               <input
                 type="text"
                 value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, name: e.target.value })
+                }
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 required
               />
@@ -341,7 +422,9 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                 id="description"
                 label="Description"
                 value={formData.description}
-                onChange={(value) => setFormData({ ...formData, description: value })}
+                onChange={(value) =>
+                  setFormData({ ...formData, description: value })
+                }
                 rows={3}
               />
             </div>
@@ -357,7 +440,9 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                     type="button"
                     onClick={() => setFormData({ ...formData, icon })}
                     className={`p-2 text-xl border rounded-md hover:bg-gray-50 ${
-                      formData.icon === icon ? 'border-blue-500 bg-blue-50' : 'border-gray-300'
+                      formData.icon === icon
+                        ? 'border-blue-500 bg-blue-50'
+                        : 'border-gray-300'
                     }`}
                   >
                     {icon}
@@ -367,7 +452,9 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
               <input
                 type="text"
                 value={formData.icon}
-                onChange={(e) => setFormData({ ...formData, icon: e.target.value })}
+                onChange={(e) =>
+                  setFormData({ ...formData, icon: e.target.value })
+                }
                 placeholder="Ou saisissez un emoji"
                 className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               />
@@ -375,32 +462,53 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
 
             {/* Champs Parc */}
             <div className="border-t pt-4">
-              <h3 className="text-sm font-semibold text-gray-900 mb-2">Paramètres Parc</h3>
+              <h3 className="text-sm font-semibold text-gray-900 mb-2">
+                Paramètres Parc
+              </h3>
               <label className="inline-flex items-center gap-2 mb-3">
                 <input
                   type="checkbox"
                   checked={formData.is_parc_product}
-                  onChange={(e) => setFormData({ ...formData, is_parc_product: e.target.checked })}
+                  onChange={(e) =>
+                    setFormData({
+                      ...formData,
+                      is_parc_product: e.target.checked,
+                    })
+                  }
                   className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                 />
                 Activer cette activité dans la billetterie du Parc
               </label>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Catégorie (Parc)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Catégorie (Parc)
+                  </label>
                   <input
                     type="text"
                     value={formData.parc_category}
-                    onChange={(e) => setFormData({ ...formData, parc_category: e.target.value })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        parc_category: e.target.value,
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Ordre (Parc)</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Ordre (Parc)
+                  </label>
                   <input
                     type="number"
                     value={formData.parc_sort_order}
-                    onChange={(e) => setFormData({ ...formData, parc_sort_order: parseInt(e.target.value || '0') })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        parc_sort_order: parseInt(e.target.value || '0'),
+                      })
+                    }
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
                 </div>
@@ -410,7 +518,12 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                   <input
                     type="checkbox"
                     checked={formData.parc_requires_time_slot}
-                    onChange={(e) => setFormData({ ...formData, parc_requires_time_slot: e.target.checked })}
+                    onChange={(e) =>
+                      setFormData({
+                        ...formData,
+                        parc_requires_time_slot: e.target.checked,
+                      })
+                    }
                     className="h-4 w-4 text-blue-600 border-gray-300 rounded"
                   />
                   Créneau requis (Parc)
@@ -421,16 +534,24 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                   id="parc_description"
                   label="Description (Parc)"
                   value={formData.parc_description}
-                  onChange={(value) => setFormData({ ...formData, parc_description: value })}
+                  onChange={(value) =>
+                    setFormData({ ...formData, parc_description: value })
+                  }
                   rows={3}
                 />
               </div>
 
               <div className="mt-3">
-                <label className="block text-sm font-medium text-gray-700 mb-1">Image (Parc)</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Image (Parc)
+                </label>
                 {imagePreview && (
                   <div className="mb-2">
-                    <img src={imagePreview} alt="aperçu" className="h-24 rounded-md object-cover" />
+                    <img
+                      src={imagePreview}
+                      alt="aperçu"
+                      className="h-24 rounded-md object-cover"
+                    />
                   </div>
                 )}
                 <div className="flex items-center gap-2">
@@ -445,7 +566,10 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                         const f = e.target.files?.[0] || null;
                         if (f) {
                           const err = validateImageFile(f);
-                          if (err) { toast.error(err); return; }
+                          if (err) {
+                            toast.error(err);
+                            return;
+                          }
                           setImageFile(f);
                           setImagePreview(URL.createObjectURL(f));
                           setDeleteOnSave(false);
@@ -454,12 +578,22 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                     />
                   </label>
                   {imagePreview && (
-                    <button type="button" onClick={() => { setImagePreview(null); setImageFile(null); setDeleteOnSave(true); }} className="text-sm text-red-600 hover:text-red-700">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setImagePreview(null);
+                        setImageFile(null);
+                        setDeleteOnSave(true);
+                      }}
+                      className="text-sm text-red-600 hover:text-red-700"
+                    >
                       Supprimer l'image
                     </button>
                   )}
                 </div>
-                <p className="text-xs text-gray-500 mt-1">Formats recommandés: JPG/PNG, 1200×600 min.</p>
+                <p className="text-xs text-gray-500 mt-1">
+                  Formats recommandés: JPG/PNG, 1200×600 min.
+                </p>
               </div>
             </div>
 
@@ -476,7 +610,7 @@ function ActivityFormModal({ activity, onClose, onSave }: ActivityFormModalProps
                 disabled={saving}
                 className="flex-1 bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white px-4 py-2 rounded-md font-medium transition-colors"
               >
-                {saving ? 'Sauvegarde...' : (activity ? 'Modifier' : 'Créer')}
+                {saving ? 'Sauvegarde...' : activity ? 'Modifier' : 'Créer'}
               </button>
             </div>
           </form>

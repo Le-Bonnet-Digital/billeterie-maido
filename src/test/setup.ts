@@ -1,8 +1,8 @@
 import '@testing-library/jest-dom';
 import { vi, expect } from 'vitest';
-import React from 'react';
 import { toHaveNoViolations } from 'jest-axe';
 import { installConsoleFilters } from '../lib/consoleFilters';
+import { createElement, type ReactNode } from 'react';
 
 installConsoleFilters();
 
@@ -70,12 +70,14 @@ const createMockQueryBuilder = (): MockBuilder => {
     delete: vi.fn(() => mockBuilder),
     insert: vi.fn(() => mockBuilder),
     update: vi.fn(() => mockBuilder),
-    then: vi.fn((callback?: (arg: { data: unknown[]; error: null }) => unknown) => {
-      if (callback) {
-        return callback({ data: [], error: null });
-      }
-      return Promise.resolve({ data: [], error: null });
-    }),
+    then: vi.fn(
+      (callback?: (arg: { data: unknown[]; error: null }) => unknown) => {
+        if (callback) {
+          return callback({ data: [], error: null });
+        }
+        return Promise.resolve({ data: [], error: null });
+      },
+    ),
   };
 
   return mockBuilder;
@@ -86,13 +88,15 @@ vi.mock('../lib/supabase', () => ({
     from: vi.fn(() => createMockQueryBuilder()),
     rpc: vi.fn(() => Promise.resolve({ data: 10, error: null })),
     select: vi.fn(() => ({
-      count: vi.fn(() => Promise.resolve({ count: 0, error: null }))
+      count: vi.fn(() => Promise.resolve({ count: 0, error: null })),
     })),
     auth: {
       signUp: vi.fn(() => Promise.resolve({ data: null, error: null })),
       signIn: vi.fn(() => Promise.resolve({ data: null, error: null })),
       signOut: vi.fn(() => Promise.resolve({ error: null })),
-      getUser: vi.fn(() => Promise.resolve({ data: { user: null }, error: null })),
+      getUser: vi.fn(() =>
+        Promise.resolve({ data: { user: null }, error: null }),
+      ),
     },
   },
   isSupabaseConfigured: vi.fn(() => true),
@@ -106,9 +110,16 @@ vi.mock('react-router-dom', async () => {
     useNavigate: () => vi.fn(),
     useParams: () => ({ eventId: 'test-event-id' }),
     useLocation: () => ({ pathname: '/' }),
-    Link: ({ children, to, ...props }: { children: React.ReactNode; to: string; [key: string]: unknown }) =>
-      React.createElement('a', { href: to, ...props }, children),
-    Outlet: () => React.createElement('div', null, 'Outlet'),
+    Link: ({
+      children,
+      to,
+      ...props
+    }: {
+      children: ReactNode;
+      to: string;
+      [key: string]: unknown;
+    }) => createElement('a', { href: to, ...props }, children),
+    Outlet: () => createElement('div', null, 'Outlet'),
   };
 });
 
@@ -119,7 +130,7 @@ vi.mock('react-hot-toast', () => ({
     error: vi.fn(),
     loading: vi.fn(),
   },
-  Toaster: () => React.createElement('div', null, 'Toaster'),
+  Toaster: () => createElement('div', null, 'Toaster'),
 }));
 
 // Mock crypto for UUID generation
@@ -136,7 +147,10 @@ const localStorageMock = {
   removeItem: vi.fn(),
   clear: vi.fn(),
 };
-Object.defineProperty(window, 'localStorage', { value: localStorageMock, configurable: true });
+Object.defineProperty(window, 'localStorage', {
+  value: localStorageMock,
+  configurable: true,
+});
 
 // Mock HTMLAnchorElement.click for download tests
 Object.defineProperty(HTMLAnchorElement.prototype, 'click', {
@@ -149,4 +163,7 @@ class ResizeObserver {
   unobserve() {}
   disconnect() {}
 }
-Object.defineProperty(window, 'ResizeObserver', { value: ResizeObserver, configurable: true });
+Object.defineProperty(window, 'ResizeObserver', {
+  value: ResizeObserver,
+  configurable: true,
+});
