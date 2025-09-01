@@ -3,7 +3,8 @@ name: DB Migrations
 on:
   push:
     branches: [ main ]
-    paths: [ "supabase/migrations/**" ]
+    paths:
+      - "supabase/migrations/**"
   workflow_dispatch:
 
 jobs:
@@ -14,57 +15,28 @@ jobs:
 
       - uses: supabase/setup-cli@v1
         with:
-          version: latest
+          version: latest   # OK
 
-      # Vérifier que le secret n'est pas vide
-      - name: Ensure SUPABASE_DB_URL is present
+      # Construit une URL IPv4 à partir de ton secret SUPABASE_DB_URL (Session pooler)
+      - name: Build IPv4 DB URL
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
         run: |
-          if [ -z "${SUPABASE_DB_URL}" ]; then
-            echo "❌ SUPABASE_DB_URL is empty. Add it in GitHub → Settings → Secrets → Actions."
-            exit 1
-          fi
-          echo "✅ SUPABASE_DB_URL provided (length: ${#SUPABASE_DB_URL})"
-
-      # Résoudre l'IPv4 du host Supabase et construire une URL forçant l'IPv4
-      - name: Build IPv4 connection URL
-        env:
-          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
-        run: |
-          # Extraire le host de l'URL (entre '@' et ':5432')
-          HOST=$(printf "%s" "$SUPABASE_DB_URL" | sed -E 's/^.*@([^:/?]+):5432.*$/\1/')
-          if [ -z "$HOST" ]; then
-            echo "❌ Unable to extract host from SUPABASE_DB_URL"
-            exit 1
-          fi
-
-          # Récupérer la première IPv4 via getent (présent sur ubuntu-latest)
+          set -e
+          HOST=$(printf "%s" "$SUPABASE_DB_URL" | sed -E 's#^.*@([^:/?]+):5432.*$#\1#')
+          if [ -z "$HOST" ]; then echo "❌ Unable to extract host"; exit 1; fi
           IPV4=$(getent ahostsv4 "$HOST" | awk '{print $1; exit}')
-          if [ -z "$IPV4" ]; then
-            echo "❌ No IPv4 found for $HOST"
-            exit 1
-          fi
-          echo "🔎 $HOST → IPv4 = $IPV4"
-
-          # Ajouter hostaddr=<IPv4> (et sslmode=require s'il manque)
+          if [ -z "$IPV4" ]; then echo "❌ No IPv4 found for $HOST"; exit 1; fi
           URL="$SUPABASE_DB_URL"
-          case "$URL" in
-            *\?*) SEP="&" ;;
-            *)    SEP="?" ;;
-          esac
+          if [[ "$URL" == *\?* ]]; then SEP="&"; else SEP="?"; fi
+          if [[ "$URL" != *sslmode=* ]]; then URL="${URL}${SEP}sslmode=require"; SEP="&"; fi
+          echo "DB_URL_V4=${URL}${SEP}hostaddr=${IPV4}" >> $GITHUB_ENV
 
-          case "$URL" in
-            *sslmode=*) URL_SSL="$URL" ;;
-            *)          URL_SSL="${URL}${SEP}sslmode=require"; SEP="&" ;;
-          esac
+      # (Optionnel) aperçu des changements à appliquer
+      # Si ta version du CLI supporte --dry-run
+      - name: Preview migrations (dry run)
+        run: supabase db push --db-url "${DB_URL_V4}" --non-interactive --dry-run || true
 
-          DB_URL_V4="${URL_SSL}${SEP}hostaddr=${IPV4}"
-          echo "DB_URL_V4=$DB_URL_V4" >> $GITHUB_ENV
-          echo "✅ Will use IPv4-forced URL."
-
-      - name: Show pending migrations
-        run: supabase migration status --db-url "${DB_URL_V4}" || true
-
+      # Appliquer les migrations
       - name: Apply migrations
-        run: supabase migration up --db-url "${DB_URL_V4}" --include-all --yes
+        run: supabase db push --db-url "${DB_URL_V4}" --non-interactive
