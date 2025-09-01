@@ -43,7 +43,8 @@ export default function ReservationManagement() {
       setLoading(true);
       const { data, error } = await supabase
         .from('reservations')
-        .select(`
+        .select(
+          `
           id,
           reservation_number,
           client_email,
@@ -64,11 +65,24 @@ export default function ReservationManagement() {
               )
             )
           )
-        `)
+        `,
+        )
         .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setReservations(data || []);
+      type RawReservation = Omit<Reservation, 'passes' | 'time_slots'> & {
+        passes: Reservation['passes'][];
+        time_slots?: Reservation['time_slots'][];
+      };
+
+      const shaped: Reservation[] = (
+        (data ?? []) as unknown as RawReservation[]
+      ).map((r: RawReservation) => ({
+        ...r,
+        passes: r.passes[0],
+        time_slots: r.time_slots?.[0],
+      }));
+      setReservations(shaped);
     } catch (err) {
       logger.error('Erreur chargement réservations', { error: err });
       toast.error('Erreur lors du chargement des réservations');
@@ -77,13 +91,18 @@ export default function ReservationManagement() {
     }
   };
 
-  const filteredReservations = reservations.filter(reservation => {
-    const matchesSearch = 
-      reservation.client_email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      reservation.reservation_number.toLowerCase().includes(searchTerm.toLowerCase());
-    
-    const matchesStatus = statusFilter === 'all' || reservation.payment_status === statusFilter;
-    
+  const filteredReservations = reservations.filter((reservation) => {
+    const matchesSearch =
+      reservation.client_email
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase()) ||
+      reservation.reservation_number
+        .toLowerCase()
+        .includes(searchTerm.toLowerCase());
+
+    const matchesStatus =
+      statusFilter === 'all' || reservation.payment_status === statusFilter;
+
     return matchesSearch && matchesStatus;
   });
 
@@ -91,12 +110,14 @@ export default function ReservationManagement() {
     const statusConfig = {
       paid: { label: 'Payé', color: 'bg-green-100 text-green-800' },
       pending: { label: 'En attente', color: 'bg-yellow-100 text-yellow-800' },
-      refunded: { label: 'Remboursé', color: 'bg-red-100 text-red-800' }
+      refunded: { label: 'Remboursé', color: 'bg-red-100 text-red-800' },
     };
 
     const config = statusConfig[status as keyof typeof statusConfig];
     return (
-      <span className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+      <span
+        className={`px-2 py-1 rounded-full text-xs font-medium ${config.color}`}
+      >
         {config.label}
       </span>
     );
@@ -104,18 +125,32 @@ export default function ReservationManagement() {
 
   const exportReservations = () => {
     const csvContent = [
-      ['Numéro', 'Email', 'Événement', 'Pass', 'Activité', 'Horaire', 'Prix', 'Statut', 'Date'].join(','),
-      ...filteredReservations.map(res => [
-        res.reservation_number,
-        res.client_email,
-        res.passes.events.name,
-        res.passes.name,
-        res.time_slots?.event_activities?.activities?.name || 'Aucune',
-        res.time_slots ? format(new Date(res.time_slots.slot_time), 'HH:mm') : 'Aucun',
-        `${res.passes.price}€`,
-        res.payment_status,
-        format(new Date(res.created_at), 'dd/MM/yyyy HH:mm')
-      ].join(','))
+      [
+        'Numéro',
+        'Email',
+        'Événement',
+        'Pass',
+        'Activité',
+        'Horaire',
+        'Prix',
+        'Statut',
+        'Date',
+      ].join(','),
+      ...filteredReservations.map((res) =>
+        [
+          res.reservation_number,
+          res.client_email,
+          res.passes.events.name,
+          res.passes.name,
+          res.time_slots?.event_activities?.activities?.name || 'Aucune',
+          res.time_slots
+            ? format(new Date(res.time_slots.slot_time), 'HH:mm')
+            : 'Aucun',
+          `${res.passes.price}€`,
+          res.payment_status,
+          format(new Date(res.created_at), 'dd/MM/yyyy HH:mm'),
+        ].join(','),
+      ),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -125,7 +160,7 @@ export default function ReservationManagement() {
     a.download = `reservations-${format(new Date(), 'yyyy-MM-dd')}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     toast.success('Export CSV téléchargé');
   };
 
@@ -141,8 +176,12 @@ export default function ReservationManagement() {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Gestion des Réservations</h1>
-          <p className="text-gray-600">Suivez et gérez toutes les réservations</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Gestion des Réservations
+          </h1>
+          <p className="text-gray-600">
+            Suivez et gérez toutes les réservations
+          </p>
         </div>
         <button
           onClick={exportReservations}
@@ -168,7 +207,7 @@ export default function ReservationManagement() {
               />
             </div>
           </div>
-          
+
           <div className="sm:w-48">
             <select
               value={statusFilter}
@@ -187,24 +226,33 @@ export default function ReservationManagement() {
       {/* Statistiques rapides */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <div className="bg-white rounded-lg shadow-sm p-4">
-          <div className="text-2xl font-bold text-gray-900">{reservations.length}</div>
+          <div className="text-2xl font-bold text-gray-900">
+            {reservations.length}
+          </div>
           <div className="text-sm text-gray-600">Total réservations</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-green-600">
-            {reservations.filter(r => r.payment_status === 'paid').length}
+            {reservations.filter((r) => r.payment_status === 'paid').length}
           </div>
           <div className="text-sm text-gray-600">Payées</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-yellow-600">
-            {reservations.filter(r => r.payment_status === 'pending').length}
+            {reservations.filter((r) => r.payment_status === 'pending').length}
           </div>
           <div className="text-sm text-gray-600">En attente</div>
         </div>
         <div className="bg-white rounded-lg shadow-sm p-4">
           <div className="text-2xl font-bold text-gray-900">
-            {reservations.reduce((sum, r) => sum + (r.payment_status === 'paid' ? r.passes.price : 0), 0).toFixed(2)}€
+            {reservations
+              .reduce(
+                (sum, r) =>
+                  sum + (r.payment_status === 'paid' ? r.passes.price : 0),
+                0,
+              )
+              .toFixed(2)}
+            €
           </div>
           <div className="text-sm text-gray-600">Chiffre d'affaires</div>
         </div>
@@ -221,12 +269,13 @@ export default function ReservationManagement() {
         {filteredReservations.length === 0 ? (
           <div className="p-12 text-center">
             <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune réservation</h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-2">
+              Aucune réservation
+            </h3>
             <p className="text-gray-600">
-              {searchTerm || statusFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all'
                 ? 'Aucune réservation ne correspond à vos critères.'
-                : 'Aucune réservation n\'a encore été effectuée.'
-              }
+                : "Aucune réservation n'a encore été effectuée."}
             </p>
           </div>
         ) : (
@@ -272,19 +321,27 @@ export default function ReservationManagement() {
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{reservation.client_email}</div>
+                      <div className="text-sm text-gray-900">
+                        {reservation.client_email}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{reservation.passes.name}</div>
+                      <div className="text-sm text-gray-900">
+                        {reservation.passes.name}
+                      </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       {reservation.time_slots ? (
                         <div className="text-sm">
                           <div className="font-medium text-gray-900">
-                            {reservation.time_slots.event_activities?.activities?.name || 'Activité inconnue'}
+                            {reservation.time_slots.event_activities?.activities
+                              ?.name || 'Activité inconnue'}
                           </div>
                           <div className="text-gray-500">
-                            {format(new Date(reservation.time_slots.slot_time), 'HH:mm')}
+                            {format(
+                              new Date(reservation.time_slots.slot_time),
+                              'HH:mm',
+                            )}
                           </div>
                         </div>
                       ) : (
@@ -300,7 +357,10 @@ export default function ReservationManagement() {
                       {getStatusBadge(reservation.payment_status)}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {format(new Date(reservation.created_at), 'dd/MM/yyyy HH:mm')}
+                      {format(
+                        new Date(reservation.created_at),
+                        'dd/MM/yyyy HH:mm',
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <button
