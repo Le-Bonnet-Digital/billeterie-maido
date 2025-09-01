@@ -11,7 +11,7 @@ Ce document définit les règles à suivre pour contribuer au projet. **Chaque c
 - Utiliser `npm` pour l'installation et l'exécution des scripts.
 - Ne jamais committer de fichiers `.env` ou d'autres secrets.
 
-## Commandes :
+## Commandes
 
 - Installer les dépendances : `npm install`
 - Lancer le serveur de développement : `npm run dev`
