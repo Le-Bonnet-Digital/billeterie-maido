@@ -418,7 +418,7 @@ export default function Reports() {
                   fill="#8884d8"
                   dataKey="count"
                 >
-                  {reportData.activityStats.map((entry, index) => (
+                  {reportData.activityStats.map((_, index) => (
                     <Cell
                       key={`cell-${index}`}
                       fill={COLORS[index % COLORS.length]}
