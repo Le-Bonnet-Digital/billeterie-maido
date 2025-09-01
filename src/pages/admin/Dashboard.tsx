@@ -15,7 +15,7 @@ interface DashboardStats {
 interface ReservationWithPass {
   passes: {
     price: number;
-  };
+  }[];
 }
 
 export default function AdminDashboard() {
@@ -63,7 +63,7 @@ export default function AdminDashboard() {
       let revenue = 0;
       if (!revenueError) {
         revenue = reservations.reduce((total, reservation) => {
-          return total + (reservation.passes?.price || 0);
+          return total + (reservation.passes?.[0]?.price || 0);
         }, 0);
       }
 

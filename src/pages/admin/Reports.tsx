@@ -133,7 +133,7 @@ export default function Reports() {
       const activityStatsMap = new Map();
       reservationsData.forEach((r) => {
         const activityName =
-          r.time_slots?.[0]?.event_activities?.activities?.name;
+          r.time_slots?.[0]?.event_activities?.[0]?.activities?.[0]?.name;
         if (activityName) {
           if (!activityStatsMap.has(activityName)) {
             activityStatsMap.set(activityName, {
