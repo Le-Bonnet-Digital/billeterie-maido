@@ -10,7 +10,6 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-
     steps:
       - uses: actions/checkout@v4
 
@@ -18,19 +17,22 @@ jobs:
         with:
           version: latest
 
-      # Lie le projet Supabase avec ton repo via le token
-      - name: Link Supabase project
+      # 1) Login avec le token (à créer dans Supabase: Avatar → Account → Access Tokens)
+      - name: Supabase login
         env:
           SUPABASE_ACCESS_TOKEN: ${{ secrets.SUPABASE_ACCESS_TOKEN }}
-          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
-          supabase link --project-ref "$SUPABASE_PROJECT_REF" --access-token "$SUPABASE_ACCESS_TOKEN"
+          if [ -z "$SUPABASE_ACCESS_TOKEN" ]; then
+            echo "❌ Missing SUPABASE_ACCESS_TOKEN (repo → Settings → Secrets → Actions)"; exit 1
+          fi
+          supabase login --token "$SUPABASE_ACCESS_TOKEN"
+          echo "✅ Logged in to Supabase CLI"
 
-      # (OPTIONNEL) Synchroniser des secrets runtime pour tes fonctions
-      # Renseigne ces secrets dans GitHub si tu veux piloter depuis CI:
-      # SB_URL, SB_SERVICE_ROLE_KEY, STRIPE_SECRET, WEBHOOK_SECRET, RESEND_API_KEY, FROM_EMAIL
+      # 2) (Optionnel) Synchroniser des secrets runtime des fonctions depuis GitHub vers Supabase
+      #    Laisse vide si tu préfères les gérer directement dans Supabase Studio.
       - name: Sync Edge Function secrets (optional)
         env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
           SB_URL:              ${{ secrets.SB_URL }}
           SB_SERVICE_ROLE_KEY: ${{ secrets.SB_SERVICE_ROLE_KEY }}
           STRIPE_SECRET:       ${{ secrets.STRIPE_SECRET }}
@@ -38,30 +40,38 @@ jobs:
           RESEND_API_KEY:      ${{ secrets.RESEND_API_KEY }}
           FROM_EMAIL:          ${{ secrets.FROM_EMAIL }}
         run: |
-          set -e
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "❌ Missing SUPABASE_PROJECT_REF secret"; exit 1
+          fi
           tmp="$(mktemp)"
-          [ -n "$SB_URL" ] && echo "SB_URL=$SB_URL" >> "$tmp"
-          [ -n "$SB_SERVICE_ROLE_KEY" ] && echo "SB_SERVICE_ROLE_KEY=$SB_SERVICE_ROLE_KEY" >> "$tmp"
-          [ -n "$STRIPE_SECRET" ] && echo "STRIPE_SECRET=$STRIPE_SECRET" >> "$tmp"
-          [ -n "$WEBHOOK_SECRET" ] && echo "WEBHOOK_SECRET=$WEBHOOK_SECRET" >> "$tmp"
-          [ -n "$RESEND_API_KEY" ] && echo "RESEND_API_KEY=$RESEND_API_KEY" >> "$tmp"
-          [ -n "$FROM_EMAIL" ] && echo "FROM_EMAIL=$FROM_EMAIL" >> "$tmp"
+          [ -n "$SB_URL" ]                && echo "SB_URL=$SB_URL" >> "$tmp"
+          [ -n "$SB_SERVICE_ROLE_KEY" ]   && echo "SB_SERVICE_ROLE_KEY=$SB_SERVICE_ROLE_KEY" >> "$tmp"
+          [ -n "$STRIPE_SECRET" ]         && echo "STRIPE_SECRET=$STRIPE_SECRET" >> "$tmp"
+          [ -n "$WEBHOOK_SECRET" ]        && echo "WEBHOOK_SECRET=$WEBHOOK_SECRET" >> "$tmp"
+          [ -n "$RESEND_API_KEY" ]        && echo "RESEND_API_KEY=$RESEND_API_KEY" >> "$tmp"
+          [ -n "$FROM_EMAIL" ]            && echo "FROM_EMAIL=$FROM_EMAIL" >> "$tmp"
+
           if [ -s "$tmp" ]; then
-            cat "$tmp" | supabase secrets set --env-file -
+            cat "$tmp" | supabase secrets set --env-file - --project-ref "$SUPABASE_PROJECT_REF"
             echo "✅ Function secrets updated in Supabase."
           else
-            echo "ℹ️ No secrets provided from GitHub; skipping."
+            echo "ℹ️ No secrets provided from GitHub; skipping secrets sync."
           fi
           rm -f "$tmp"
 
-      # Déploie TOUTES les fonctions présentes sous supabase/functions/*
+      # 3) Déployer toutes les fonctions présentes sous supabase/functions/*
       - name: Deploy all functions
+        env:
+          SUPABASE_PROJECT_REF: ${{ secrets.SUPABASE_PROJECT_REF }}
         run: |
+          if [ -z "$SUPABASE_PROJECT_REF" ]; then
+            echo "❌ Missing SUPABASE_PROJECT_REF secret"; exit 1
+          fi
           set -e
           shopt -s nullglob
           for d in supabase/functions/*/ ; do
             fn="$(basename "$d")"
             echo "🚀 Deploying: $fn"
-            supabase functions deploy "$fn"
+            supabase functions deploy "$fn" --project-ref "$SUPABASE_PROJECT_REF"
           done
           echo "✅ All functions deployed."
