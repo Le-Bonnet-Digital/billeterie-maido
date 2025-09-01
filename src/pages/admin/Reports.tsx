@@ -1,8 +1,25 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { supabase } from '../../lib/supabase';
 import { BarChart3, TrendingUp, Euro, Users, Download } from 'lucide-react';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { format, startOfMonth, endOfMonth, eachDayOfInterval, subMonths } from 'date-fns';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import {
+  format,
+  startOfMonth,
+  endOfMonth,
+  eachDayOfInterval,
+  subMonths,
+} from 'date-fns';
 import { toast } from 'react-hot-toast';
 import { logger } from '../../lib/logger';
 
@@ -32,7 +49,7 @@ export default function Reports() {
   const [loading, setLoading] = useState(true);
   const [dateRange, setDateRange] = useState({
     start: format(startOfMonth(subMonths(new Date(), 1)), 'yyyy-MM-dd'),
-    end: format(endOfMonth(new Date()), 'yyyy-MM-dd')
+    end: format(endOfMonth(new Date()), 'yyyy-MM-dd'),
   });
 
   const loadReportData = useCallback(async () => {
@@ -42,7 +59,8 @@ export default function Reports() {
       // Charger les réservations payées dans la période
       const { data: reservations, error } = await supabase
         .from('reservations')
-        .select(`
+        .select(
+          `
           id,
           created_at,
           payment_status,
@@ -55,7 +73,8 @@ export default function Reports() {
               activities (name)
             )
           )
-        `)
+        `,
+        )
         .eq('payment_status', 'paid')
         .gte('created_at', `${dateRange.start}T00:00:00Z`)
         .lte('created_at', `${dateRange.end}T23:59:59Z`)
@@ -66,51 +85,63 @@ export default function Reports() {
       const reservationsData = reservations || [];
 
       // Calculer les statistiques globales
-      const totalRevenue = reservationsData.reduce((sum, r) => sum + r.passes.price, 0);
+      const totalRevenue = reservationsData.reduce((sum, r) => {
+        const pass = r.passes?.[0];
+        return sum + (pass?.price ?? 0);
+      }, 0);
       const totalReservations = reservationsData.length;
-      const averageTicketPrice = totalReservations > 0 ? totalRevenue / totalReservations : 0;
+      const averageTicketPrice =
+        totalReservations > 0 ? totalRevenue / totalReservations : 0;
 
       // Statistiques par jour
       const dailyStats = eachDayOfInterval({
         start: new Date(dateRange.start),
-        end: new Date(dateRange.end)
-      }).map(date => {
-        const dayReservations = reservationsData.filter(r => 
-          format(new Date(r.created_at), 'yyyy-MM-dd') === format(date, 'yyyy-MM-dd')
+        end: new Date(dateRange.end),
+      }).map((date) => {
+        const dayReservations = reservationsData.filter(
+          (r) =>
+            format(new Date(r.created_at), 'yyyy-MM-dd') ===
+            format(date, 'yyyy-MM-dd'),
         );
-        
+
         return {
           date: format(date, 'dd/MM'),
           reservations: dayReservations.length,
-          revenue: dayReservations.reduce((sum, r) => sum + r.passes.price, 0)
+          revenue: dayReservations.reduce((sum, r) => {
+            const pass = r.passes?.[0];
+            return sum + (pass?.price ?? 0);
+          }, 0),
         };
       });
 
       // Statistiques par pass
       const passStatsMap = new Map();
-      reservationsData.forEach(r => {
-        const passName = r.passes.name;
+      reservationsData.forEach((r) => {
+        const pass = r.passes?.[0];
+        if (!pass) return;
+        const passName = pass.name;
         if (!passStatsMap.has(passName)) {
           passStatsMap.set(passName, { name: passName, count: 0, revenue: 0 });
         }
         const stats = passStatsMap.get(passName);
         stats.count++;
-        stats.revenue += r.passes.price;
+        stats.revenue += pass.price;
       });
       const passStats = Array.from(passStatsMap.values());
 
       // Statistiques par activité
       const activityStatsMap = new Map();
-      reservationsData.forEach(r => {
-        if (r.time_slots) {
-          const activityName = r.time_slots.event_activities?.activities?.name;
-          if (activityName) {
-            const activity = activityName;
-            if (!activityStatsMap.has(activity)) {
-              activityStatsMap.set(activity, { activity, count: 0 });
-            }
-            activityStatsMap.get(activity).count++;
+      reservationsData.forEach((r) => {
+        const activityName =
+          r.time_slots?.[0]?.event_activities?.activities?.name;
+        if (activityName) {
+          if (!activityStatsMap.has(activityName)) {
+            activityStatsMap.set(activityName, {
+              activity: activityName,
+              count: 0,
+            });
           }
+          activityStatsMap.get(activityName).count++;
         }
       });
       const activityStats = Array.from(activityStatsMap.values());
@@ -122,7 +153,7 @@ export default function Reports() {
         conversionRate: 85, // Simulé
         dailyStats,
         passStats,
-        activityStats
+        activityStats,
       });
     } catch (err) {
       logger.error('Erreur chargement rapports', { error: err });
@@ -143,18 +174,24 @@ export default function Reports() {
       ['Rapport de Ventes', `Du ${dateRange.start} au ${dateRange.end}`],
       [''],
       ['Statistiques Globales'],
-      ['Chiffre d\'affaires total', `${reportData.totalRevenue.toFixed(2)}€`],
+      ["Chiffre d'affaires total", `${reportData.totalRevenue.toFixed(2)}€`],
       ['Nombre de réservations', reportData.totalReservations.toString()],
       ['Prix moyen par billet', `${reportData.averageTicketPrice.toFixed(2)}€`],
       [''],
       ['Ventes par Pass'],
-      ['Pass', 'Quantité', 'Chiffre d\'affaires'],
-      ...reportData.passStats.map(p => [p.name, p.count.toString(), `${p.revenue.toFixed(2)}€`]),
+      ['Pass', 'Quantité', "Chiffre d'affaires"],
+      ...reportData.passStats.map((p) => [
+        p.name,
+        p.count.toString(),
+        `${p.revenue.toFixed(2)}€`,
+      ]),
       [''],
       ['Répartition par Activité'],
       ['Activité', 'Réservations'],
-      ...reportData.activityStats.map(a => [a.activity, a.count.toString()])
-    ].map(row => row.join(',')).join('\n');
+      ...reportData.activityStats.map((a) => [a.activity, a.count.toString()]),
+    ]
+      .map((row) => row.join(','))
+      .join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
     const url = window.URL.createObjectURL(blob);
@@ -163,7 +200,7 @@ export default function Reports() {
     a.download = `rapport-${dateRange.start}-${dateRange.end}.csv`;
     a.click();
     window.URL.revokeObjectURL(url);
-    
+
     toast.success('Rapport exporté avec succès');
   };
 
@@ -181,8 +218,12 @@ export default function Reports() {
     return (
       <div className="text-center py-12">
         <BarChart3 className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-        <h3 className="text-lg font-medium text-gray-900 mb-2">Aucune donnée</h3>
-        <p className="text-gray-600">Aucune donnée disponible pour cette période.</p>
+        <h3 className="text-lg font-medium text-gray-900 mb-2">
+          Aucune donnée
+        </h3>
+        <p className="text-gray-600">
+          Aucune donnée disponible pour cette période.
+        </p>
       </div>
     );
   }
@@ -190,15 +231,19 @@ export default function Reports() {
   const isTest = process.env.NODE_ENV === 'test';
   const chartSize = {
     width: isTest ? 300 : '100%',
-    height: isTest ? 256 : '100%'
+    height: isTest ? 256 : '100%',
   } as const;
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Rapports et Analyses</h1>
-          <p className="text-gray-600">Analysez les performances de vos événements</p>
+          <h1 className="text-2xl font-bold text-gray-900">
+            Rapports et Analyses
+          </h1>
+          <p className="text-gray-600">
+            Analysez les performances de vos événements
+          </p>
         </div>
         <button
           onClick={exportReport}
@@ -223,7 +268,9 @@ export default function Reports() {
               id="startDate"
               type="date"
               value={dateRange.start}
-              onChange={(e) => setDateRange({ ...dateRange, start: e.target.value })}
+              onChange={(e) =>
+                setDateRange({ ...dateRange, start: e.target.value })
+              }
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -238,7 +285,9 @@ export default function Reports() {
               id="endDate"
               type="date"
               value={dateRange.end}
-              onChange={(e) => setDateRange({ ...dateRange, end: e.target.value })}
+              onChange={(e) =>
+                setDateRange({ ...dateRange, end: e.target.value })
+              }
               className="px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             />
           </div>
@@ -250,8 +299,12 @@ export default function Reports() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Chiffre d'affaires</p>
-              <p className="text-2xl font-semibold text-gray-900">{reportData.totalRevenue.toFixed(2)}€</p>
+              <p className="text-sm font-medium text-gray-600">
+                Chiffre d'affaires
+              </p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {reportData.totalRevenue.toFixed(2)}€
+              </p>
             </div>
             <div className="bg-green-100 p-3 rounded-full">
               <Euro className="h-6 w-6 text-green-600" />
@@ -263,7 +316,9 @@ export default function Reports() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Réservations</p>
-              <p className="text-2xl font-semibold text-gray-900">{reportData.totalReservations}</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {reportData.totalReservations}
+              </p>
             </div>
             <div className="bg-blue-100 p-3 rounded-full">
               <Users className="h-6 w-6 text-blue-600" />
@@ -275,7 +330,9 @@ export default function Reports() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">Prix moyen</p>
-              <p className="text-2xl font-semibold text-gray-900">{reportData.averageTicketPrice.toFixed(2)}€</p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {reportData.averageTicketPrice.toFixed(2)}€
+              </p>
             </div>
             <div className="bg-purple-100 p-3 rounded-full">
               <TrendingUp className="h-6 w-6 text-purple-600" />
@@ -286,8 +343,12 @@ export default function Reports() {
         <div className="bg-white rounded-lg shadow-sm p-6">
           <div className="flex items-center justify-between">
             <div>
-              <p className="text-sm font-medium text-gray-600">Taux de conversion</p>
-              <p className="text-2xl font-semibold text-gray-900">{reportData.conversionRate}%</p>
+              <p className="text-sm font-medium text-gray-600">
+                Taux de conversion
+              </p>
+              <p className="text-2xl font-semibold text-gray-900">
+                {reportData.conversionRate}%
+              </p>
             </div>
             <div className="bg-yellow-100 p-3 rounded-full">
               <BarChart3 className="h-6 w-6 text-yellow-600" />
@@ -300,20 +361,33 @@ export default function Reports() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Évolution des ventes */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Évolution des Ventes</h3>
-          <div className="h-64" style={isTest ? { width: chartSize.width, height: chartSize.height } : undefined}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Évolution des Ventes
+          </h3>
+          <div
+            className="h-64"
+            style={
+              isTest
+                ? { width: chartSize.width, height: chartSize.height }
+                : undefined
+            }
+          >
             <ResponsiveContainer {...chartSize}>
               <BarChart data={reportData.dailyStats}>
                 <CartesianGrid strokeDasharray="3 3" />
                 <XAxis dataKey="date" />
                 <YAxis />
-                <Tooltip 
+                <Tooltip
                   formatter={(value, name) => [
                     name === 'revenue' ? `${value}€` : value,
-                    name === 'revenue' ? 'Chiffre d\'affaires' : 'Réservations'
+                    name === 'revenue' ? "Chiffre d'affaires" : 'Réservations',
                   ]}
                 />
-                <Bar dataKey="reservations" fill="#3B82F6" name="reservations" />
+                <Bar
+                  dataKey="reservations"
+                  fill="#3B82F6"
+                  name="reservations"
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -321,8 +395,17 @@ export default function Reports() {
 
         {/* Répartition par activité */}
         <div className="bg-white rounded-lg shadow-sm p-6">
-          <h3 className="text-lg font-semibold text-gray-900 mb-4">Répartition par Activité</h3>
-          <div className="h-64" style={isTest ? { width: chartSize.width, height: chartSize.height } : undefined}>
+          <h3 className="text-lg font-semibold text-gray-900 mb-4">
+            Répartition par Activité
+          </h3>
+          <div
+            className="h-64"
+            style={
+              isTest
+                ? { width: chartSize.width, height: chartSize.height }
+                : undefined
+            }
+          >
             <ResponsiveContainer {...chartSize}>
               <PieChart>
                 <Pie
@@ -336,7 +419,10 @@ export default function Reports() {
                   dataKey="count"
                 >
                   {reportData.activityStats.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />
@@ -349,7 +435,9 @@ export default function Reports() {
       {/* Tableau des pass les plus vendus */}
       <div className="bg-white rounded-lg shadow-sm">
         <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-semibold text-gray-900">Performance des Pass</h3>
+          <h3 className="text-lg font-semibold text-gray-900">
+            Performance des Pass
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
@@ -373,17 +461,27 @@ export default function Reports() {
               {reportData.passStats.map((pass, index) => (
                 <tr key={index}>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{pass.name}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {pass.name}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">{pass.count}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{pass.revenue.toFixed(2)}€</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      {pass.revenue.toFixed(2)}€
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm text-gray-900">
-                      {reportData.totalRevenue > 0 ? ((pass.revenue / reportData.totalRevenue) * 100).toFixed(1) : '0'}%
+                      {reportData.totalRevenue > 0
+                        ? (
+                            (pass.revenue / reportData.totalRevenue) *
+                            100
+                          ).toFixed(1)
+                        : '0'}
+                      %
                     </div>
                   </td>
                 </tr>
