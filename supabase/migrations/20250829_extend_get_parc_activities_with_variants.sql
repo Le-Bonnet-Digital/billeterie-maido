@@ -46,6 +46,5 @@ as $$
   where a.is_parc_product = true
   order by a.parc_sort_order, a.name;
 $$;
-
 comment on function public.get_parc_activities_with_variants() is
   'Returns park activities and their variants; now includes activities.parc_description for UI chips.';

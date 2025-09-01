@@ -42,7 +42,6 @@ BEGIN
     NULL;
   END;
 END $$;
-
 -- Try to validate the constraint if no legacy rows remain (ignore failures)
 DO $$
 BEGIN
@@ -52,7 +51,6 @@ BEGIN
     NULL; -- keep NOT VALID until old rows are cleaned
   END;
 END $$;
-
 -- Optional: quick self-check (no-op if permissions restrict SELECT)
 -- SELECT conname, pg_get_constraintdef(oid)
--- FROM pg_constraint WHERE conrelid = 'public.cart_items'::regclass AND contype='c';
+-- FROM pg_constraint WHERE conrelid = 'public.cart_items'::regclass AND contype='c';;

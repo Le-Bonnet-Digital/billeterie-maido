@@ -21,7 +21,6 @@ BEGIN
     ADD CONSTRAINT users_role_check
     CHECK (role IN ('admin', 'pony_provider', 'archery_provider', 'luge_provider', 'atlm_collaborator', 'client'));
 END $$;
-
 -- 2) Reservation validations table
 CREATE TABLE IF NOT EXISTS reservation_validations (
   id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -30,13 +29,10 @@ CREATE TABLE IF NOT EXISTS reservation_validations (
   validated_by uuid NOT NULL REFERENCES users(id),
   validated_at timestamptz NOT NULL DEFAULT now()
 );
-
 ALTER TABLE reservation_validations ENABLE ROW LEVEL SECURITY;
-
 -- 3) Policies: providers and admins can view/insert validations
 DROP POLICY IF EXISTS "Providers can insert validations" ON reservation_validations;
 DROP POLICY IF EXISTS "Providers can read validations" ON reservation_validations;
-
 CREATE POLICY "Providers can insert validations" ON reservation_validations
   FOR INSERT TO authenticated
   WITH CHECK (
@@ -46,7 +42,6 @@ CREATE POLICY "Providers can insert validations" ON reservation_validations
       AND u.role IN ('admin','pony_provider','archery_provider','luge_provider','atlm_collaborator')
     )
   );
-
 CREATE POLICY "Providers can read validations" ON reservation_validations
   FOR SELECT TO authenticated
   USING (

@@ -1,59 +1,7 @@
-/*
-  # Fix pass deletion policies
-
-  1. Security Updates
-    - Update RLS policies for passes table to allow DELETE operations for admins
-    - Ensure proper cascade deletion for related records
-
-  2. Changes
-    - Add DELETE policy for passes table
-    - Update existing policies if needed
-*/
-
--- Drop existing policies for passes table
-DROP POLICY IF EXISTS "Admins can manage passes" ON passes;
-DROP POLICY IF EXISTS "Anyone can view passes for published events" ON passes;
-
--- Recreate policies with proper permissions
-CREATE POLICY "Admins can manage passes"
-  ON passes
-  FOR ALL
-  TO public
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  );
-
-CREATE POLICY "Anyone can view passes for published events"
-  ON passes
-  FOR SELECT
-  TO public
-  USING (
-    EXISTS (
-      SELECT 1 FROM events e
-      WHERE e.id = passes.event_id 
-      AND e.status = 'published'
-    )
-  );
-
--- Ensure proper function exists for role checking
-CREATE OR REPLACE FUNCTION public.role()
-RETURNS text
-LANGUAGE sql
-SECURITY DEFINER
-AS $$
-  SELECT COALESCE(
-    (SELECT users.role FROM users WHERE users.id = auth.uid()),
-    'client'::text
-  );
-$$;
+\n\n-- Drop existing policies for passes table\nDROP POLICY IF EXISTS "Admins can manage passes" ON passes;
+\nDROP POLICY IF EXISTS "Anyone can view passes for published events" ON passes;
+\n\n-- Recreate policies with proper permissions\nCREATE POLICY "Admins can manage passes"\n  ON passes\n  FOR ALL\n  TO public\n  USING (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  )\n  WITH CHECK (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  );
+\n\nCREATE POLICY "Anyone can view passes for published events"\n  ON passes\n  FOR SELECT\n  TO public\n  USING (\n    EXISTS (\n      SELECT 1 FROM events e\n      WHERE e.id = passes.event_id \n      AND e.status = 'published'\n    )\n  );
+\n\n-- Ensure proper function exists for role checking\nCREATE OR REPLACE FUNCTION public.role()\nRETURNS text\nLANGUAGE sql\nSECURITY DEFINER\nAS $$\n  SELECT COALESCE(\n    (SELECT users.role FROM users WHERE users.id = auth.uid()),\n    'client'::text\n  );
+\n$$;
+;

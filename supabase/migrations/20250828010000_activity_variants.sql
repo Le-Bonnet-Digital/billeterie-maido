@@ -6,7 +6,6 @@ ALTER TABLE activities
   ADD COLUMN IF NOT EXISTS parc_category text,
   ADD COLUMN IF NOT EXISTS parc_sort_order integer DEFAULT 0,
   ADD COLUMN IF NOT EXISTS parc_requires_time_slot boolean DEFAULT false;
-
 CREATE TABLE IF NOT EXISTS activity_variants (
   id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   activity_id uuid NOT NULL REFERENCES activities(id) ON DELETE CASCADE,
@@ -18,21 +17,16 @@ CREATE TABLE IF NOT EXISTS activity_variants (
   created_at timestamptz DEFAULT now(),
   UNIQUE(activity_id, name)
 );
-
 ALTER TABLE activity_variants ENABLE ROW LEVEL SECURITY;
-
 DROP POLICY IF EXISTS "Public read variants" ON activity_variants;
 CREATE POLICY "Public read variants"
   ON activity_variants FOR SELECT TO public USING (true);
-
 DROP POLICY IF EXISTS "Admins manage variants" ON activity_variants;
 CREATE POLICY "Admins manage variants"
   ON activity_variants FOR ALL TO authenticated
   USING (EXISTS (SELECT 1 FROM users WHERE id = auth.uid() AND role = 'admin'));
-
 CREATE INDEX IF NOT EXISTS idx_activity_variants_activity ON activity_variants(activity_id);
 CREATE INDEX IF NOT EXISTS idx_activity_variants_active_order ON activity_variants(is_active, sort_order);
-
 -- Remaining stock for a single variant based on its own stock minus reservations
 DROP FUNCTION IF EXISTS get_activity_variant_remaining_stock(uuid);
 CREATE OR REPLACE FUNCTION get_activity_variant_remaining_stock(variant_uuid uuid)
@@ -56,7 +50,6 @@ BEGIN
   END IF;
 END;
 $$ LANGUAGE plpgsql STABLE;
-
 -- List parc activities with variants and remaining stock
 DROP FUNCTION IF EXISTS get_parc_activities_with_variants();
 CREATE OR REPLACE FUNCTION get_parc_activities_with_variants()
@@ -83,4 +76,3 @@ RETURNS json AS $$
   FROM activities a
   WHERE a.is_parc_product = true;
 $$ LANGUAGE sql STABLE;
-

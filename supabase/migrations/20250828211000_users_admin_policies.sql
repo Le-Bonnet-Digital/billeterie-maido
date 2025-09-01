@@ -6,7 +6,6 @@
 -- Read/update all users for admins
 DROP POLICY IF EXISTS "Admins can read all users" ON users;
 DROP POLICY IF EXISTS "Admins can update users" ON users;
-
 CREATE POLICY "Admins can read all users"
   ON users
   FOR SELECT
@@ -17,7 +16,6 @@ CREATE POLICY "Admins can read all users"
       WHERE u.id = auth.uid() AND u.role = 'admin'
     )
   );
-
 -- Update users for admins
 CREATE POLICY "Admins can update users"
   ON users

@@ -1,71 +1,7 @@
-/*
-  # Fix RLS policies for time slots management
-
-  1. Security Updates
-    - Update time_slots policies to use correct user role checking
-    - Ensure admins can properly delete time slots and related reservations
-    - Fix policy conditions to check roles from users table instead of auth.role()
-
-  2. Changes
-    - Drop existing policies that use auth.role()
-    - Create new policies that check user role from users table
-    - Ensure proper cascade deletion permissions
-*/
-
--- Drop existing policies for time_slots
-DROP POLICY IF EXISTS "Admins can manage time slots" ON time_slots;
-DROP POLICY IF EXISTS "Anyone can view time slots for published events" ON time_slots;
-
--- Create new policies for time_slots that check the users table
-CREATE POLICY "Admins can manage time slots"
-  ON time_slots
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  );
-
-CREATE POLICY "Anyone can view time slots for published events"
-  ON time_slots
-  FOR SELECT
-  TO public
-  USING (
-    EXISTS (
-      SELECT 1 FROM events e
-      WHERE e.id = time_slots.event_id 
-      AND e.status = 'published'
-    )
-  );
-
--- Also update reservations policies to ensure admins can delete reservations
-DROP POLICY IF EXISTS "Admins can manage all reservations" ON reservations;
-
-CREATE POLICY "Admins can manage all reservations"
-  ON reservations
-  FOR ALL
-  TO authenticated
-  USING (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  )
-  WITH CHECK (
-    EXISTS (
-      SELECT 1 FROM users 
-      WHERE users.id = auth.uid() 
-      AND users.role = 'admin'
-    )
-  );
+\n\n-- Drop existing policies for time_slots\nDROP POLICY IF EXISTS "Admins can manage time slots" ON time_slots;
+\nDROP POLICY IF EXISTS "Anyone can view time slots for published events" ON time_slots;
+\n\n-- Create new policies for time_slots that check the users table\nCREATE POLICY "Admins can manage time slots"\n  ON time_slots\n  FOR ALL\n  TO authenticated\n  USING (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  )\n  WITH CHECK (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  );
+\n\nCREATE POLICY "Anyone can view time slots for published events"\n  ON time_slots\n  FOR SELECT\n  TO public\n  USING (\n    EXISTS (\n      SELECT 1 FROM events e\n      WHERE e.id = time_slots.event_id \n      AND e.status = 'published'\n    )\n  );
+\n\n-- Also update reservations policies to ensure admins can delete reservations\nDROP POLICY IF EXISTS "Admins can manage all reservations" ON reservations;
+\n\nCREATE POLICY "Admins can manage all reservations"\n  ON reservations\n  FOR ALL\n  TO authenticated\n  USING (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  )\n  WITH CHECK (\n    EXISTS (\n      SELECT 1 FROM users \n      WHERE users.id = auth.uid() \n      AND users.role = 'admin'\n    )\n  );
+;

@@ -5,7 +5,6 @@ CREATE TABLE IF NOT EXISTS cart_item_activities (
   event_activity_id uuid NOT NULL REFERENCES event_activities(id) ON DELETE CASCADE,
   time_slot_id uuid REFERENCES time_slots(id) ON DELETE CASCADE
 );
-
 ALTER TABLE cart_item_activities ENABLE ROW LEVEL SECURITY;
 CREATE POLICY "Anyone can manage their cart item activities"
   ON cart_item_activities FOR ALL

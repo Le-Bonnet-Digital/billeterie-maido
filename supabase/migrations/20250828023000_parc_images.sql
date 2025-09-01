@@ -1,10 +1,8 @@
 -- Images for Parc activities and variants
 ALTER TABLE activities
   ADD COLUMN IF NOT EXISTS parc_image_url text;
-
 ALTER TABLE activity_variants
   ADD COLUMN IF NOT EXISTS image_url text;
-
 -- Recreate RPC to include image urls in payload
 DROP FUNCTION IF EXISTS get_parc_activities_with_variants();
 CREATE OR REPLACE FUNCTION get_parc_activities_with_variants()
@@ -33,4 +31,3 @@ RETURNS json AS $$
   FROM activities a
   WHERE a.is_parc_product = true;
 $$ LANGUAGE sql STABLE;
-

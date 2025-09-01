@@ -30,7 +30,6 @@ CREATE POLICY "Admins can manage events"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Passes
 DROP POLICY IF EXISTS "Admins can manage passes" ON public.passes;
 CREATE POLICY "Admins can manage passes"
@@ -49,7 +48,6 @@ CREATE POLICY "Admins can manage passes"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Time Slots
 DROP POLICY IF EXISTS "Admins can manage time slots" ON public.time_slots;
 CREATE POLICY "Admins can manage time slots"
@@ -68,7 +66,6 @@ CREATE POLICY "Admins can manage time slots"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Event Activities (if present)
 DROP POLICY IF EXISTS "Admins can manage event activities" ON public.event_activities;
 CREATE POLICY "Admins can manage event activities"
@@ -87,7 +84,6 @@ CREATE POLICY "Admins can manage event activities"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Activities (if present)
 DROP POLICY IF EXISTS "Admins can manage activities" ON public.activities;
 CREATE POLICY "Admins can manage activities"
@@ -106,7 +102,6 @@ CREATE POLICY "Admins can manage activities"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Reservations (admin full management only; read by email remains app-side)
 DROP POLICY IF EXISTS "Admins can manage all reservations" ON public.reservations;
 CREATE POLICY "Admins can manage all reservations"
@@ -125,7 +120,6 @@ CREATE POLICY "Admins can manage all reservations"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 -- Shop (if present)
 DROP POLICY IF EXISTS "Admins can manage shops" ON public.shops;
 CREATE POLICY "Admins can manage shops"
@@ -144,7 +138,6 @@ CREATE POLICY "Admins can manage shops"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
 DROP POLICY IF EXISTS "Admins can manage shop products" ON public.shop_products;
 CREATE POLICY "Admins can manage shop products"
   ON public.shop_products
@@ -162,4 +155,3 @@ CREATE POLICY "Admins can manage shop products"
       WHERE users.id = auth.uid() AND users.role = 'admin'
     )
   );
-
