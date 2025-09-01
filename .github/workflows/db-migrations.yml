@@ -3,8 +3,7 @@ name: DB Migrations
 on:
   push:
     branches: [ main ]
-    paths:
-      - "supabase/migrations/**"
+    paths: [ "supabase/migrations/**" ]
   workflow_dispatch:
 
 jobs:
@@ -12,10 +11,27 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+
       - uses: supabase/setup-cli@v1
         with:
           version: latest
+
+      - name: Ensure SUPABASE_DB_URL is present
+        run: |
+          if [ -z "${SUPABASE_DB_URL}" ]; then
+            echo "❌ SUPABASE_DB_URL is empty. Add it in GitHub → Settings → Secrets → Actions."
+            exit 1
+          fi
+          echo "✅ SUPABASE_DB_URL provided (length: ${#SUPABASE_DB_URL})"
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
       - name: Show pending migrations
-        run: supabase migration status --db-url "${{ secrets.SUPABASE_DB_URL }}" || true
+        run: supabase migration status --db-url "${SUPABASE_DB_URL}" || true
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+
       - name: Apply migrations
-        run: supabase migration up --db-url "${{ secrets.SUPABASE_DB_URL }}" --include-all --yes
+        run: supabase migration up --db-url "${SUPABASE_DB_URL}" --include-all --yes
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
