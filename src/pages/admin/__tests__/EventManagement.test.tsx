@@ -52,8 +52,8 @@ describe('EventManagement', () => {
   });
 
   it('should not output debug logs in production mode', async () => {
-    vi.stubEnv('DEV', 'false');
-    vi.stubEnv('PROD', 'true');
+    vi.stubEnv('DEV', false);
+    vi.stubEnv('PROD', true);
     vi.stubEnv('MODE', 'production'); // reste une chaîne
     vi.stubEnv('VITE_DEBUG', 'true');
 
