@@ -79,5 +79,3 @@ status: pending | waiting_PO | done
   details: "…"
   action: none | fix
 ```
-
-> **Note** : les hooks locaux (pre‑commit) devront vérifier la présence/complétude de `INTERACTIONS.yaml` **au lieu** de chercher une entrée dans `PO_NOTES.md`. (À mettre à jour dans `.githooks/pre-commit.ps1`).
