@@ -10,7 +10,7 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: Ready
+status: InProgress
 owner: serverless
 links:
   - api: ./src/shared/contracts/checkout.ts

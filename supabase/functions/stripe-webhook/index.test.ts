@@ -2,8 +2,13 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 let handler: (req: Request) => Promise<Response>;
 
-const insertMock = vi.fn();
-const fromMock = vi.fn(() => ({ insert: insertMock }));
+const insertSessionMock = vi.fn();
+const insertReservationMock = vi.fn();
+const fromMock = vi.fn((table: string) =>
+  table === 'stripe_sessions'
+    ? { insert: insertSessionMock }
+    : { insert: insertReservationMock },
+);
 const supabaseClient = { from: fromMock };
 
 const constructEventMock = vi.fn();
@@ -60,6 +65,7 @@ describe('stripe-webhook edge function', () => {
       type: 'checkout.session.completed',
       data: {
         object: {
+          id: 'sess_1',
           metadata: {
             cart: JSON.stringify([{ pass: { id: '1' }, quantity: 1 }]),
             customer: JSON.stringify({ email: 'a@b.c' }),
@@ -67,7 +73,8 @@ describe('stripe-webhook edge function', () => {
         },
       },
     });
-    insertMock.mockResolvedValue({ error: null });
+    insertSessionMock.mockResolvedValue({ error: null });
+    insertReservationMock.mockResolvedValue({ error: null });
     await import('./index.ts');
     const res = await handler(
       new Request('http://localhost', {
@@ -77,6 +84,33 @@ describe('stripe-webhook edge function', () => {
       }),
     );
     expect(res.status).toBe(200);
-    expect(insertMock).toHaveBeenCalled();
+    expect(insertSessionMock).toHaveBeenCalled();
+    expect(insertReservationMock).toHaveBeenCalled();
+  });
+
+  it('skips processing when session already handled', async () => {
+    constructEventMock.mockReturnValue({
+      type: 'checkout.session.completed',
+      data: {
+        object: {
+          id: 'sess_1',
+          metadata: {
+            cart: JSON.stringify([{ pass: { id: '1' }, quantity: 1 }]),
+            customer: JSON.stringify({ email: 'a@b.c' }),
+          },
+        },
+      },
+    });
+    insertSessionMock.mockResolvedValue({ error: { code: '23505' } });
+    await import('./index.ts');
+    const res = await handler(
+      new Request('http://localhost', {
+        method: 'POST',
+        headers: { 'Stripe-Signature': 'sig' },
+        body: '{}',
+      }),
+    );
+    expect(res.status).toBe(200);
+    expect(insertReservationMock).not.toHaveBeenCalled();
   });
 });
