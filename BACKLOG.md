@@ -85,8 +85,8 @@ persona: client
 title: Parcourir offres & passes
 value: choisir facilement
 priority: P1
-status: Selected
-owner: frontend
+status: Done
+owner: qa
 sp: 3
 sprint: 1
 type: feature
@@ -104,8 +104,8 @@ persona: client
 title: Panier + CGV
 value: préparer ma commande
 priority: P1
-status: Selected
-owner: frontend
+status: Done
+owner: qa
 sp: 3
 sprint: 1
 type: feature

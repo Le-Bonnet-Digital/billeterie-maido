@@ -46,11 +46,11 @@
 ```yaml
 sprint_id: 1
 highlights: |
-  - Sprint initialisé ; planification et préflight réalisés
+  - US-10 et US-11 livrées (liste des passes, panier avec CGV)
 risks_or_todo: |
-  - Implémentation des US-10 et US-11
+  - RAS
 interaction_log: ./docs/sprints/S1/INTERACTIONS.yaml
-status: pending
+status: review
 ```
 
 ---

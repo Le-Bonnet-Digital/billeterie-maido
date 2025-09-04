@@ -5,10 +5,13 @@
   topic: Sprint S1 — validation prod
   did: |
     - Initialisation du sprint S1
-    - Préflight documenté
+    - Implémentation US-10 (liste pass avec activités) et US-11 (panier avec CGV)
+    - Tests unitaires OK
   ask: |
     Tester en prod :
-    1) n/a
-  context: env: n/a ; PR: Sprint S1
+    1) Vérifier l'affichage des pass avec "Créneau requis"
+    2) Vérifier que le paiement reste désactivé tant que les CGV ne sont pas cochées
+  context: env: http://localhost:5173 ; PR: Sprint S1
   status: pending
+  note: sprint history updated
 

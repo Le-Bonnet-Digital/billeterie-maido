@@ -10,10 +10,10 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID    | Title                     | SP  | Owner    | Status   |
-| ----- | ------------------------- | --- | -------- | -------- |
-| US-10 | Parcourir offres & passes | 3   | frontend | Selected |
-| US-11 | Panier + CGV              | 3   | frontend | Selected |
+| ID    | Title                     | SP  | Owner | Status |
+| ----- | ------------------------- | --- | ----- | ------ |
+| US-10 | Parcourir offres & passes | 3   | qa    | Done   |
+| US-11 | Panier + CGV              | 3   | qa    | Done   |
 
 ## 3) Légende statuts
 

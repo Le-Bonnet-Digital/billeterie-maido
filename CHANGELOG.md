@@ -8,15 +8,16 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Ajouté
 
-* Sprint en cours S<N>: fonctionnalités en développement
+- Affichage des activités des passes avec badge "Créneau requis"
+- Panier: paiement désactivé tant que les CGV ne sont pas acceptées
 
 ### Modifié
 
-* …
+- …
 
 ### Corrigé
 
-* …
+- …
 
 ---
 
@@ -24,21 +25,21 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Ajouté
 
-* Setup projet (README, AGENTS.md, QUALITY-GATES.md, QA\_CHECKLIST.md, BACKLOG.md, PO\_NOTES.md)
-* Husky pre-commit guard (.husky/pre-commit)
-* Templates sprint (`/docs/templates/*`)
-* `schema.sql` initial
+- Setup projet (README, AGENTS.md, QUALITY-GATES.md, QA_CHECKLIST.md, BACKLOG.md, PO_NOTES.md)
+- Husky pre-commit guard (.husky/pre-commit)
+- Templates sprint (`/docs/templates/*`)
+- `schema.sql` initial
 
 ### Modifié
 
-* N/A
+- N/A
 
 ### Corrigé
 
-* N/A
+- N/A
 
 ---
 
 ## \[Sprint S<N>] — YYYY-MM-DD
 
-*(à compléter par ChatGPT lors de la clôture de chaque sprint)*
+_(à compléter par ChatGPT lors de la clôture de chaque sprint)_

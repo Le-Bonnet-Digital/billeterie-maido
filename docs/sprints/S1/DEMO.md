@@ -3,30 +3,30 @@
 ## 1) Contexte
 
 - **Sprint**: S1
-- **Scope démo**: US présentées (IDs + titre)
-- **Environnement**: local / stage / prod (URL)
-- **Prerequis**: seed exécuté ? comptes de test ?
+- **Scope démo**: US-10 Parcourir offres & passes ; US-11 Panier + CGV
+- **Environnement**: local
+- **Prerequis**: seed exécuté, compte client test
 
 ## 2) Scénario de démo (pas-à-pas)
 
 > Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
 
-1. Ouvrir … (URL)
-2. Choisir le pass …
-3. Ajouter au panier …
-4. Payer via Checkout … (retour /success)
-5. Recevoir l’email de confirmation (n° + QR)
-6. Scanner le QR côté activité … (refus du double scan)
+1. Ouvrir `http://localhost:5173`
+2. Accéder à un événement et voir la liste des pass avec activités et badge "Créneau requis"
+3. Ajouter un pass au panier
+4. Ouvrir le panier et constater le total
+5. Tenter de payer sans accepter les CGV (bouton désactivé)
+6. Cocher les CGV puis procéder au paiement (simulé)
 
 ## 3) Données de test
 
-- **Comptes**: `customer_demo@example.com` / `***` (si nécessaire)
-- **Pass/événements**: …
+- **Comptes**: `customer_demo@example.com` / `***`
+- **Pass/événements**: billets seedés
 - **Codes de test**: Stripe test cards (4242 …)
 
 ## 4) Résultats attendus
 
-- **API**: codes HTTP corrects (200/201/4xx) ; logs sans PII
+- **API**: codes HTTP corrects
 - **UI**: affichage succès/erreur ; a11y/perf ≥ 90 (Lighthouse)
 - **Data**: réservation créée, paiement `PAID`, validations comptées
 
@@ -38,7 +38,7 @@
 
 ## 6) Limitations connues / dérogations
 
-- …
+- Aucune
 
 ## 7) Suivi
 

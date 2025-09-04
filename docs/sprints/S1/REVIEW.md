@@ -3,30 +3,31 @@
 ## 1) Contexte
 
 - **Sprint**: S1
-- **Date review**: …
+- **Date review**: 2025-09-04
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Bilan du sprint
 
-- **Capacité engagée**: … SP
-- **SP livrés**: … SP
-- **Focus factor**: … (livrés/engagés)
+- **Capacité engagée**: 6 SP
+- **SP livrés**: 6 SP
+- **Focus factor**: 1.0 (livrés/engagés)
+- **Temps par US**:
+  - US-10: ~1m12
+  - US-11: ~2m02
 
 ## 3) Objectifs atteints
 
-- US-.. ✔️
-- US-.. ❌ (Spillover)
+- US-10 ✔️
+- US-11 ✔️
 
 ## 4) Dérogations / écarts
 
-- US-.. : … (raison, impact)
-- Qualité: Lighthouse à 85 (cause: …)
-- Schéma BDD: `unchanged` justifié (aucune modif réelle)
+- Aucune dérogation
 
 ## 5) Feedback PO
 
-- Validation prod: OK/KO
-- Retours fonctionnels: …
+- Validation prod: en attente
+- Retours fonctionnels: n/a
 
 ## 6) Actions d’amélioration (reportées en rétro)
 
