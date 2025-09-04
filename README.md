@@ -37,7 +37,7 @@ supabase functions serve
 
 ### Rafraîchir le schéma BDD (`schema.sql`)
 
-> À exécuter **sur demande de ChatGPT** (Gate 0 – Préflight)
+> À exécuter **par le PO** sur demande de ChatGPT (Gate 0 – Préflight). ChatGPT **ne lance pas** de migrations.
 
 * **Supabase/Postgres** :
 
@@ -53,31 +53,30 @@ sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
 
 ---
 
-## 3) Hooks locaux (garde‑fous)
+## 3) Hooks locaux (Husky)
 
-> L’environnement ne lance pas GitHub Actions. Les contrôles se font **en local** via un hook `pre-commit` PowerShell.
+> L’environnement ne lance pas GitHub Actions. Les contrôles se font **en local** via un hook `pre-commit` Husky.
 
 ### Installation (une fois)
 
 ```powershell
-# Activer le dossier de hooks du repo
-git config core.hooksPath .githooks
-
-# Autoriser l’exécution des scripts PowerShell pour l’utilisateur courant
-Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+# Activer Husky (si non fait)
+npx husky install
+# Activer le hook fourni
+# (placez le script dans .husky/pre-commit et donnez-lui les droits d'exécution)
 ```
 
-### Ce que vérifie `.githooks/pre-commit.ps1`
+### Ce que vérifie `.husky/pre-commit`
 
-* Artefacts sprint présents : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md}`
+* Artefacts sprint présents : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`
 * `PREFLIGHT.md` contient **Code audit**, **DB audit** et **schema.sql RefreshedAt (ISO)** ou **`unchanged` justifié**
-* `PO_NOTES.md/INTERACTIONS` a une entrée **Sprint S<N>** (tests prod à exécuter)
+* `INTERACTIONS.yaml` du sprint est **stagé** et contient `topic: Sprint S<N> — …`
 * `BACKLOG.md` :
 
-  * US **livrées** en `Done` ; `Spillover` exclues de la démo
   * US `origin: auto` en `Done` → **`links.api`**, **≥ 2 AC**, **note sécurité/RLS**
   * US `Done` → `sp` et `type` présents
 * Si **migrations** modifiées → `schema.sql` mis à jour **ou** justification `unchanged` dans `PREFLIGHT.md`
+* `git-secrets --scan` si dispo, puis `npm run lint && npm test && lint-staged`
 
 > Si un point échoue, **le commit est bloqué**. Corrigez puis recommittez.
 
@@ -88,8 +87,8 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 1. **Déclencheur** : « **Passe au sprint suivant** »
 2. **Gate 0 — Pré‑vol** : remplir `PREFLIGHT.md` (audit code + BDD, `schema.sql`)
 3. **Planification** : estimer en **SP** (1,2,3,5,8,13), capacité = vélocité×0.8 (+10% improvements) → `PLAN.md`
-4. **Exécution** : A→B→C→D, mise à jour continue de `BOARD.md` (**Selected → InSprint → Done → Spillover**)
-5. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `PO_NOTES.md`
+4. **Exécution** : A→B→C→D, mise à jour `BOARD.md` (**Selected → InSprint → Done → Spillover**)
+5. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `/docs/sprints/S<N>/INTERACTIONS.yaml`
 6. **PR unique** : `work → main`, titre `Sprint S<N>: …`
 
 **Rappels**
@@ -97,6 +96,7 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 * Branche **unique** : `work`
 * **Une seule PR** en fin de sprint
 * **Pré‑vol obligatoire** ; `schema.sql` **à jour** (ou `unchanged` justifié)
+* **Migrations** : ChatGPT **documente** ; le **PO** les **applique**
 
 ---
 
@@ -108,14 +108,14 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 * `type` : `feature | improvement | fix` ; `origin` : `po | auto`
 * `links.api` : chemin d’un contrat d’API/DTO (placeholder accepté pour `origin: auto`)
 
-**Autogrooming** : si aucune US **Ready**, ChatGPT génère des US depuis `PO_NOTES.md/NEW_FEATURES` (ou discovery), avec **≥2 AC**, **note sécurité/RLS**, `links.api` placeholder.
+**Autogrooming** : si aucune US **Ready**, ChatGPT génère des US (MVP) avec **≥2 AC**, **note sécurité/RLS**, `links.api` placeholder.
 
 ---
 
 ## 6) Qualité & sécurité
 
-* **Quality Gates** : voir `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
-* **DoD** : CI verte, couverture ≥ 80% des nouvelles lignes, docs à jour (`DEMO/REVIEW/RETRO`), sécurité OK
+* **Quality Gates** : `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
+* **DoD** : CI locale verte, couverture ≥ 80% des nouvelles lignes, docs à jour, sécurité OK
 * **Sécurité** :
 
   * Jamais de secrets en repo/PR
@@ -128,14 +128,15 @@ Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 ## 7) Arborescence utile
 
 ```
-/docs/templates/           # Modèles PLAN/BOARD/DEMO/REVIEW/RETRO/PREFLIGHT
+/docs/templates/           # Modèles PLAN/BOARD/DEMO/REVIEW/RETRO/PREFLIGHT/INTERACTIONS
 /docs/sprints/S<N>/        # Artefacts du sprint courant
 /src/shared/contracts/     # Contrats d’API/DTO
 supabase/migrations/       # Migrations (si Supabase)
 Infrastructure/**/Migrations/ # EF (si SQL Server)
-.githooks/pre-commit.ps1   # Garde-fou local (obligatoire)
+schema.sql                 # Snapshot schéma (mis à jour par le PO)
+.husky/pre-commit          # Garde-fou local (obligatoire)
 BACKLOG.md                 # US (statuts, SP, sprint, origin)
-PO_NOTES.md                # Rôle PO, inputs, interactions, rétro
+PO_NOTES.md                # Instructions stables PO
 QUALITY-GATES.md           # Gates 0/A/B/C/D/S
 DoD.md                     # Definition of Done
 ```
@@ -144,13 +145,13 @@ DoD.md                     # Definition of Done
 
 ## 8) Dépannage
 
-* **Commit bloqué** : lire le message du hook, compléter l’artefact manquant (PREFLIGHT/DEMO/… ou PO\_NOTES)
+* **Commit bloqué** : lire le message du hook, compléter l’artefact manquant (PREFLIGHT/DEMO/… ou INTERACTIONS)
 * **Migrations modifiées** : mettre à jour `schema.sql` ou justifier `unchanged` dans `PREFLIGHT.md`
 * **Lighthouse < 90** : optimiser images, lazy‑load, réduire JS bloquant, corriger a11y (labels/contraste)
 
 ---
 
-## 9) Contact & rôle du PO
+## 9) Rôle du PO
 
-* Le **PO** fournit **OK/KO**, **secrets/clé API**, et **orientations** dans `PO_NOTES.md`.
+* Le **PO** fournit **OK/KO**, **secrets/clé API**, et **exécute** les actions listées par ChatGPT dans `ACTIONS_PO`.
 * ChatGPT gère **grooming**, **planification**, **exécution** et **documentation** du sprint timeboxé.
