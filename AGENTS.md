@@ -1,132 +1,94 @@
 # AGENTS.md — Billeterie Maïdo (MVP serverless)
 
-## 0) Objet
+## Objet
 
-Manuel d’exécution pour l’agent (Codex) afin d’enchaîner la prochaine tâche sans clarification. Sources de vérité : `PO_NOTES.md` (instructions PO) → `BACKLOG.md` (user stories & statuts).
+Manuel d’exécution pour **ChatGPT**. Lorsqu’on dit « **Passe au sprint suivant** », ChatGPT crée son environnement isolé **sur la branche `work`**, lit ce fichier, puis exécute **un sprint timeboxé 25 minutes** en jouant les rôles internes (PM, Scrum Master, Serverless/Backend, Data, Front, QA, Code Review). Aucune autre branche ni autre environnement ne doit être créé.
 
-## 1) Portée & Contexte
+## Contrats d’exécution
 
-* Produit : Billetterie serverless (passes/billets, créneaux, paiement Stripe, validation sur site luge/poney/tir, back‑office admin).
-* Stack : Supabase (Postgres/Auth/Edge Functions), React/TypeScript, Stripe Checkout + Webhooks, provider email.
+* **Branche** : unique, `work`.
+* **PR** : **une seule PR** en fin de sprint : `work → main`, titre `Sprint S<N>: <résumé>`.
+* **Timebox** : 25 min maximum. **Deadline interne à 22 min** pour figer le code et compléter la doc (review, rétro, PO\_NOTES).
+* **Autonomie produit** : ChatGPT **propose, crée et sélectionne les US nécessaires** à l’atteinte du MVP avec **qualité irréprochable**. Il ne dépend pas du PO pour rédiger les US.
+* **Rôle du PO** : se limite à fournir **OK/KO**, **secrets/clé API**, et **orientations** dans `PO_NOTES.md`.
+* **Qualité** : respecter `QUALITY-GATES.md` et `DoD.md`.
+* **Sécurité** : aucun secret en repo ; Stripe webhook **signé** & **idempotent** ; **RLS** testées par rôle ; headers sécurité ; rate‑limit endpoints publics.
 
-## 2) Rôles & Responsabilités
+## Mode Sprint (commande : « Passe au sprint suivant »)
 
-* **PO (Julien)** : priorisation, critères d’acceptation, validations finales. Rédige/édite `PO_NOTES.md`.
-* **Codex – Serverless/Backend** : contrats d’API (Zod), Edge/Cloud Functions (checkout, stripe-webhook, validate-ticket, resend, find-booking), idempotence, sécurité, observabilité.
-* **Codex – Data Engineer** : schéma SQL, RLS/policies, fonctions PL/pgSQL (capacité, numérotation), index, vues/rapports.
-* **Codex – Front-End/Designer** : UX/UI responsive & a11y, intégration contrats/types, états d’erreur, performance.
-* **Codex – QA/Testeur** : E2E (Playwright/Cypress), tests charge ciblés (k6), tests rôle/RLS, checklist release.
+1. **Bootstrap & minuteur**
 
-## 3) Flux d’exécution (one-piece flow)
+   * Démarrer un **minuteur interne** 25 min ; checkpoint à **T+10** et **T+22**.
+   * Créer (si absent) le dossier `/docs/sprints/S<N>/` et initialiser les fichiers depuis templates : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`.
+2. **Intégration review & rétro (apprentissage)**
 
-1. Lire `PO_NOTES.md`, puis `BACKLOG.md`.
-2. Prendre la première US avec `status: Ready` et priorité la plus haute.
-3. Créer la branche `feat/US-XX-slug`.
-4. Exécuter la user story en tranches verticales avec **gates** :
+   * Lire `PO_NOTES.md` → `SPRINT_HISTORY` et `RETRO/improvements` ; appliquer les améliorations (met à jour `QUALITY-GATES.md` si nécessaire).
+3. **Collecte & grooming automatique**
 
-   * **Gate A — Serverless/Backend** : contrats Zod + fonctions + tests intégration + logs.
-   * **Gate B — Data** : migrations SQL + **RLS** + fonctions SQL + tests concurrence.
-   * **Gate C — Front** : intégration UI, a11y/perf ≥ 90, VRT, états d’erreur.
-   * **Gate D — QA** : E2E (happy + 2 erreurs), tests rôle/RLS, charge ciblée (si critique).
-5. Ouvrir PR et appliquer les labels : `InProgress` → `InReview` → `QA` → merge.
-6. Synchroniser automatiquement `BACKLOG.md` (statuts) et `CHANGELOG.md` (entrée) via workflow.
-7. Déployer stage → smoke → prod. Consigner l’interaction dans `PO_NOTES.md`.
+   * Lire `BACKLOG.md` (US `Ready`), `PO_NOTES.md/SPRINT_INPUT`, `README.md`, `DoD.md`, `QUALITY-GATES.md`.
+   * **Si aucune US n’est en `Ready`** :
 
-## 4) Format d’une user story (BACKLOG.md)
+     * Première source : `PO_NOTES.md/NEW_FEATURES` → **générer** des US.
+     * Si `NEW_FEATURES` est vide ou insuffisant : **discovery produit** → proposer des US alignées MVP, consigner dans `PO_NOTES.md/NEW_FEATURES`, puis les **créer** dans `BACKLOG.md`.
+     * Chaque US auto‑générée comporte :
 
-```yaml
-id: US-XX
-persona: client | parc | prestataire | admin
-title: <titre>
-value: <bénéfice>
-priority: P1|P2|P3
-status: Ready|InProgress|InReview|QA|Done
-owner: serverless|data|frontend|qa
-links:
-  - design: ./design/<fichier>.md
-  - api: ./src/shared/contracts/<fichier>.ts
-  - spec: ./specs/<fichier>.md
-ac:
-  - <critère 1>
-  - <critère 2>
-notes:
-  - <contexte / sécurité / RLS>
-```
+       * `id`, `title`, `value`, `priority`, `type` ;
+       * **AC minimum (≥ 2)** ;
+       * **note sécurité/RLS** ;
+       * `links.api` **placeholder** (contrat d’API à compléter) ;
+       * `origin: auto`.
+   * Marquer ces nouvelles US en `Ready`.
+4. **Estimation & capacité**
 
-## 5) Definition of Ready (DoR)
+   * Estimer chaque US en **story points** `sp ∈ {1,2,3,5,8,13}`.
+   * Calculer **vélocité** : moyenne des `delivered_sp` des 3 derniers sprints (sinon 8 par défaut).
+   * **Capacité engagée** = `floor(vélocité × 0.8)` ; réserver \~10 % aux **improvements**.
+5. **Planification sprint**
 
-* US rédigée (En tant que…, je veux…, afin de…).
-* AC listés, sécurité/RLS mentionnées si pertinent.
-* Contrat d’API créé (ou placeholder) + schéma cible esquissé.
-* Données de seed définies.
+   * Sélectionner des US jusqu’à la **capacité** ; marquer `status: Selected`, `sprint: N`, `sp: x` dans `BACKLOG.md` et reporter dans `PLAN.md`.
+   * Initialiser `BOARD.md` avec `Selected`.
+6. **Exécution (A→B→C→D) – sans PR intermédiaire**
 
-## 6) Definition of Done (DoD)
+   * Avancer chaque US : `Selected` → `InSprint` → `Done`.
+   * Passer les **gates** : A (Serverless) → B (Data/RLS) → C (Front) → D (QA/E2E).
+   * Mettre à jour `owner` de l’US (serverless→data→frontend→qa) et `/docs/sprints/S<N>/BOARD.md`.
+   * Si dépassement : basculer l’US en `Spillover` (report sprint suivant).
+7. **Checkpoint T+22 (gel)**
 
-* Contrats/DTO Zod stables + tests unitaires/intégration verts.
-* Migrations SQL + **RLS** + tests rôle OK.
-* UI intégrée ; Lighthouse a11y & perf ≥ 90 ; VRT OK.
-* E2E verts (happy path + 2 erreurs) ; tests charge ciblés si endpoint critique.
-* Logs structurés + alertes (webhook Stripe) en place.
-* CI verte (lint/test/build). Aucune fuite de secrets.
-* Docs à jour : `RUNBOOK.md`, `CHANGELOG.md`.
+   * **Geler le code**. Compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`.
+   * Mettre à jour `PO_NOTES.md/INTERACTIONS` (tests prod à exécuter, horodaté).
+8. **Clôture & PR unique**
 
-## 7) Conventions & Arborescence
+   * Calculer `committed_sp` vs `delivered_sp` et écrire `SPRINT_HISTORY` dans `PO_NOTES.md`.
+   * Ouvrir **une PR** `work → main` : `Sprint S<N>: <résumé>`.
+   * Les US livrées passent `Merged` **après** merge de la PR.
 
-```
-/supabase/migrations
-/supabase/seed
-/supabase/functions/<fn>/index.ts
-/src/shared/contracts/*.ts
-/src/shared/stripe/*.ts
-/src/app/*
-/specs/*
-/tests/e2e/*
-BACKLOG.md
-CHANGELOG.md
-QA_CHECKLIST.md
-PO_NOTES.md
-AGENTS.md
-```
+## Statuts Backlog & champs US
 
-* Branches : `feat/US-XX-…` ; Commits : Conventional Commits.
+`status: Ready | Selected | InSprint | Done | Spillover | Merged`  ·  `sp: 1|2|3|5|8|13`  ·  `sprint: <N|null>`  ·  `type: feature|improvement|fix`  ·  `origin: po|auto`
 
-## 8) Sécurité & RLS
+## Garde‑fous (PR ne doit pas passer si…)
 
-* Rôles JWT : `admin`, `parc`, `pony_provider`, `archery_provider`, `atlm_collaborator`, `customer`.
-* Policies :
+* **Bloquants** avant merge :
 
-  * Client → accès à ses réservations uniquement.
-  * Prestataire → accès validations de son activité uniquement.
-  * Admin → accès global (policy ou rôle DB dédié).
-* Idempotence : Stripe webhooks (table déduplication), validations billet (PK composite `reservation_id+activity`).
-* Rate‑limit sur endpoints publics (find-booking, resend). Headers sécurité (CSP, HSTS, no‑sniff, referrer‑policy).
+  1. Présence des fichiers `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md}`.
+  2. `PO_NOTES.md/INTERACTIONS` contient une entrée horodatée **pour S<N>** avec **tests prod** à exécuter.
+  3. `BACKLOG.md` :
 
-## 9) CI/CD & Synchronisation backlog
+     * toute US **livrée** est en `Done` ;
+     * toute US **auto‑générée** (`origin: auto`) possède **≥ 2 AC**, une **note sécurité/RLS**, et un **`links.api` placeholder** ;
+     * chaque US `Done` a bien un `sp` et un `type`.
+  4. `CHANGELOG.md` : une entrée **\[Unreleased]** résume le contenu du sprint.
+  5. CI verte (lint, build, tests, Lighthouse si Front), couverture ≥ 80 % des nouvelles lignes.
+* Si un garde‑fou manque, **échouer la PR** (`sprint-guard.yml`).
 
-* Protection `main` : PR obligatoire + checks CI.
-* Workflow `backlog-sync` : labels PR → `status` US dans `BACKLOG.md` et entrée `CHANGELOG.md`.
-* Secrets via GitHub Secrets : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE`, `MAIL_API_KEY`, `APP_BASE_URL`.
+## Qualité attendue (extraits)
 
-## 10) Ordre recommandé des sprints
+* **Gate A — Serverless/Backend** : contrats Zod, validation d’entrée, idempotence (webhooks/validations), tests unit/inté, logs structurés.
+* **Gate B — Data** : migrations versionnées + rollback, **RLS** testées par rôle, index/contraintes, fonctions SQL atomiques + tests concurrence.
+* **Gate C — Front** : UI responsive, i18n si prévu, Lighthouse a11y & perf ≥ 90, états loading/empty/error/success, VRT OK.
+* **Gate D — QA** : E2E (happy + 2 erreurs), tests rôle/RLS, test charge ciblé si critique, `QA_CHECKLIST.md` coché.
 
-* Sprint 0 (enablers) → Utilisateur → Parc (luge) → Prestataires (poney/arc) → Admin.
-* À l’intérieur de chaque sprint : slice vertical A→B→C→D ; WIP ≤ 2 US.
+## Dérogations
 
-## 11) Processus « Prochaine tâche »
-
-1. Lire `PO_NOTES.md` et appliquer ses décisions au backlog.
-2. Sélectionner la 1ʳᵉ US `Ready` prioritaire.
-3. Brancher `feat/US-XX-slug` et exécuter A→B→C→D.
-4. Mettre à jour `owner` de l’US, labels PR, et preuves des gates.
-5. À la demande de validation prod, ajouter une entrée horodatée dans `PO_NOTES.md/INTERACTIONS` (tests à réaliser, contexte PR/env).
-6. Après réponse du PO :
-
-   * `OK` → passer l’US à `Done`, alimenter `CHANGELOG.md`.
-   * `KO` → créer/mettre à jour une US de fix (P1 si bloquant) et relancer le cycle.
-
-## 12) Preuves attendues par gate
-
-* **Gate A** : fichier contrat Zod, validations d’entrée, fonctions edge, logs structurés, tests unit/inté.
-* **Gate B** : migrations versionnées (avec rollback), RLS testées, index/constraints, fonctions SQL atomiques + tests concurrence.
-* **Gate C** : UI responsive, états *loading/empty/error/success*, a11y & perf ≥ 90, VRT OK, intégration contrats.
-* **Gate D** : E2E (happy + erreurs), tests rôle/RLS, tests charge ciblés si critique, `QA_CHECKLIST.md` coché.
+Toute dérogation (scope, qualité, sécurité) doit être notée dans `/docs/sprints/S<N>/REVIEW.md` **et** dans `PO_NOTES.md/RETRO.improvements` avec une action corrective planifiée.
