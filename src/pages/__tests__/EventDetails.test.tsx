@@ -48,6 +48,52 @@ describe('EventDetails Page', () => {
     expect(screen.getByText(/événement introuvable/i)).toBeInTheDocument();
   });
 
+  it('displays activities and slot requirement', () => {
+    vi.mocked(useEventDetails).mockReturnValue({
+      event: {
+        id: 'event',
+        name: 'Event',
+        event_date: '2024-12-25',
+        key_info_content: 'Info',
+      },
+      passes: [
+        {
+          id: 'pass',
+          name: 'Pass',
+          price: 10,
+          description: 'desc',
+          initial_stock: 10,
+          remaining_stock: 5,
+          event_activities: [
+            {
+              id: 'a1',
+              activity: { name: 'Luge', description: '', icon: '🛷' },
+              stock_limit: null,
+              requires_time_slot: true,
+            },
+            {
+              id: 'a2',
+              activity: { name: 'Poney', description: '', icon: '🐴' },
+              stock_limit: null,
+              requires_time_slot: false,
+            },
+          ],
+        },
+      ],
+      eventActivities: [],
+      loading: false,
+      error: null,
+      loadTimeSlotsForActivity: vi.fn(),
+      refresh: vi.fn(),
+    } as unknown as ReturnType<typeof useEventDetails>);
+
+    render(<EventDetails />);
+
+    expect(screen.getByText('Luge')).toBeInTheDocument();
+    expect(screen.getByText('Poney')).toBeInTheDocument();
+    expect(screen.getByText(/créneau requis/i)).toBeInTheDocument();
+  });
+
   it('adds pass with predefined activities to cart through modal', async () => {
     const refresh = vi.fn();
     vi.mocked(useEventDetails).mockReturnValue({

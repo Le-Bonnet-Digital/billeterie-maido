@@ -1,0 +1,17 @@
+# INTERACTIONS — Sprint S1
+
+- who: ChatGPT
+  when: 2025-09-04T22:39:15+00:00
+  topic: Sprint S1 — validation prod
+  did: |
+    - Initialisation du sprint S1
+    - Implémentation US-10 (liste pass avec activités) et US-11 (panier avec CGV)
+    - Tests unitaires OK
+  ask: |
+    Tester en prod :
+    1) Vérifier l'affichage des pass avec "Créneau requis"
+    2) Vérifier que le paiement reste désactivé tant que les CGV ne sont pas cochées
+  context: env: http://localhost:5173 ; PR: Sprint S1
+  status: pending
+  note: sprint history updated
+

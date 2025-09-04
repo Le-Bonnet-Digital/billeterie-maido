@@ -175,7 +175,32 @@ export default function EventDetails() {
                 </div>
               </div>
 
-              <p className="text-gray-600 mb-6">{pass.description}</p>
+              <p className="text-gray-600 mb-4">{pass.description}</p>
+
+              {/* Activités incluses */}
+              {pass.event_activities.length > 0 && (
+                <ul className="mb-4 space-y-1">
+                  {pass.event_activities.map((ea) => (
+                    <li
+                      key={ea.id}
+                      className="flex items-center gap-2 text-sm text-gray-700"
+                    >
+                      <span className="text-base" aria-hidden="true">
+                        {ea.activity.icon}
+                      </span>
+                      <span>{ea.activity.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              )}
+
+              {/* Badge créneau requis */}
+              {pass.event_activities.some((ea) => ea.requires_time_slot) && (
+                <div className="mb-4 text-xs font-medium text-blue-700 bg-blue-50 border border-blue-200 inline-block px-2 py-1 rounded">
+                  Créneau requis
+                </div>
+              )}
+
               {typeof pass.guaranteed_runs === 'number' &&
                 pass.guaranteed_runs > 0 && (
                   <div className="mb-4 text-xs font-medium text-green-700 bg-green-50 border border-green-200 inline-block px-2 py-1 rounded">

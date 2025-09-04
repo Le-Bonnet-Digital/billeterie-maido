@@ -85,10 +85,10 @@ persona: client
 title: Parcourir offres & passes
 value: choisir facilement
 priority: P1
-status: Ready
-owner: frontend
+status: Done
+owner: qa
 sp: 3
-sprint: null
+sprint: 1
 type: feature
 origin: po
 ac:
@@ -104,10 +104,10 @@ persona: client
 title: Panier + CGV
 value: préparer ma commande
 priority: P1
-status: Ready
-owner: frontend
+status: Done
+owner: qa
 sp: 3
-sprint: null
+sprint: 1
 type: feature
 origin: po
 ac:
@@ -282,9 +282,9 @@ ac:
 
 ## Règles pour US auto‑générées (par ChatGPT)
 
-* Ajouter `origin: auto`
-* **≥ 2 AC** obligatoires
-* Une **note sécurité/RLS** dans `notes:`
-* Un lien `links.api` (placeholder accepté)
+- Ajouter `origin: auto`
+- **≥ 2 AC** obligatoires
+- Une **note sécurité/RLS** dans `notes:`
+- Un lien `links.api` (placeholder accepté)
 
 > Le hook Husky vérifie ces règles pour toute US `origin: auto` passée en `Done`.

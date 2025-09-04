@@ -59,4 +59,32 @@ describe('Cart Page', () => {
       expect(screen.getByText('25€')).toBeInTheDocument();
     });
   });
+
+  it('disables payment until CGV accepted', async () => {
+    const { getCartItems, calculateCartTotal } = await import('../../lib/cart');
+
+    vi.mocked(getCartItems).mockResolvedValue([
+      {
+        id: '1',
+        pass: { id: '1', name: 'Pass', price: 10, description: 'Desc' },
+        quantity: 1,
+      },
+    ]);
+    vi.mocked(calculateCartTotal).mockReturnValue(10);
+
+    render(<Cart />);
+
+    const payButton = await screen.findByRole('button', {
+      name: /procéder au paiement/i,
+    });
+
+    expect(payButton).toBeDisabled();
+
+    const termsButton = screen.getByRole('button', {
+      name: /conditions générales de vente/i,
+    });
+    termsButton.click();
+
+    await waitFor(() => expect(payButton).toBeEnabled());
+  });
 });
