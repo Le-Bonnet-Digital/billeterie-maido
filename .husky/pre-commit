@@ -1,14 +1,69 @@
 #!/usr/bin/env sh
+. "$(dirname -- "$0")/_/husky.sh"
+
 export PATH="$PWD/node_modules/.bin:$PATH"
-BRANCH=$(git rev-parse --abbrev-ref HEAD)
-if [ "$BRANCH" != "main" ]; then
-  if ! git diff --cached --name-only | grep -q "^PO_NOTES.md$"; then
-    echo "PO_NOTES.md must be updated and staged."
-    exit 1
-  fi
-fi
-if command -v git-secrets >/dev/null 2>&1; then
-  git-secrets --scan
+
+BRANCH="$(git rev-parse --abbrev-ref HEAD)"
+
+# Ne pas bloquer main (mais lancer qualité si dispo)
+if [ "$BRANCH" = "main" ]; then
+  command -v git-secrets >/dev/null 2>&1 && git-secrets --scan
+  npm run -s lint && npm test && lint-staged
+  exit $?
 fi
 
-npm run lint && npm test && lint-staged
+# 1) Sprint courant = dernier dossier docs/sprints/S<N>/
+SPRINT_DIR="$(ls -d docs/sprints/S*/ 2>/dev/null | sort -V | tail -n1)"
+if [ -z "$SPRINT_DIR" ]; then
+  echo "❌ Aucun sprint trouvé (docs/sprints/S<N>/)." >&2
+  exit 1
+fi
+SNAME="${SPRINT_DIR%/}"
+SNAME="${SNAME##*/}"         # ex: S3
+SN="${SNAME#S}"              # ex: 3
+echo "🧭 Sprint courant: $SNAME"
+
+# 2) Artefacts requis (existence fichiers)
+REQ="PLAN.md BOARD.md DEMO.md REVIEW.md RETRO.md PREFLIGHT.md INTERACTIONS.yaml"
+for f in $REQ; do
+  if [ ! -f "$SPRINT_DIR$f" ]; then
+    echo "❌ Fichier manquant: $SPRINT_DIR$f" >&2
+    exit 1
+  fi
+done
+
+# 3) INTERACTIONS.yaml doit être stagé (PO/ChatGPT ont journalisé le sprint)
+if ! git diff --cached --name-only | grep -q "^${SPRINT_DIR}INTERACTIONS.yaml$"; then
+  echo "❌ ${SPRINT_DIR}INTERACTIONS.yaml doit être mis à jour et 'staged' avant le commit." >&2
+  exit 1
+fi
+# et contenir le bon topic Sprint S<N>
+if ! grep -E "topic:.*Sprint S${SN}" -q "${SPRINT_DIR}INTERACTIONS.yaml"; then
+  echo "❌ ${SPRINT_DIR}INTERACTIONS.yaml doit contenir 'topic: Sprint S${SN} — …'." >&2
+  exit 1
+fi
+
+# 4) PREFLIGHT minimal: Code audit + DB audit + RefreshedAt|unchanged
+PREF="${SPRINT_DIR}PREFLIGHT.md"
+grep -qi "Code audit" "$PREF" || { echo "❌ PREFLIGHT.md: section 'Code audit' manquante." >&2; exit 1; }
+grep -qi "DB audit"   "$PREF" || { echo "❌ PREFLIGHT.md: section 'DB audit' manquante." >&2;   exit 1; }
+( grep -q "RefreshedAt" "$PREF" || grep -qi "unchanged" "$PREF" ) || {
+  echo "❌ PREFLIGHT.md: préciser 'schema.sql RefreshedAt (ISO)' ou justifier 'unchanged'." >&2; exit 1;
+}
+
+# 5) Si des migrations sont STAGÉES → exiger schema.sql stagé OU justification 'unchanged'
+STAGED="$(git diff --cached --name-only)"
+if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migrations/|migrations/)'; then
+  if ! echo "$STAGED" | grep -q '^schema.sql$'; then
+    if ! grep -qi "unchanged" "$PREF"; then
+      echo "❌ Migrations modifiées mais 'schema.sql' non mis à jour et PREFLIGHT sans justification 'unchanged'." >&2
+      exit 1
+    fi
+  fi
+  echo "ℹ️ Des migrations sont présentes dans le commit. **ChatGPT ne les applique pas**."
+  echo "   ➜ Applique-les manuellement après merge (ex: supabase db reset/apply, EF Core update, etc.)."
+fi
+
+# 6) Sécurité & qualité locales
+command -v git-secrets >/dev/null 2>&1 && git-secrets --scan
+npm run -s lint && npm test && lint-staged
