@@ -19,8 +19,8 @@ if [ -z "$SPRINT_DIR" ]; then
   exit 1
 fi
 SNAME="${SPRINT_DIR%/}"
-SNAME="${SNAME##*/}"         # ex: S3
-SN="${SNAME#S}"              # ex: 3
+SNAME="${SNAME##*/}"
+SN="${SNAME#S}"
 echo "🧭 Sprint courant: $SNAME"
 
 # 2) Artefacts requis (existence fichiers)
@@ -32,12 +32,11 @@ for f in $REQ; do
   fi
 done
 
-# 3) INTERACTIONS.yaml doit être stagé (PO/ChatGPT ont journalisé le sprint)
+# 3) INTERACTIONS.yaml doit être stagé et contenir le bon topic
 if ! git diff --cached --name-only | grep -q "^${SPRINT_DIR}INTERACTIONS.yaml$"; then
   echo "❌ ${SPRINT_DIR}INTERACTIONS.yaml doit être mis à jour et 'staged' avant le commit." >&2
   exit 1
 fi
-# et contenir le bon topic Sprint S<N>
 if ! grep -E "topic:.*Sprint S${SN}" -q "${SPRINT_DIR}INTERACTIONS.yaml"; then
   echo "❌ ${SPRINT_DIR}INTERACTIONS.yaml doit contenir 'topic: Sprint S${SN} — …'." >&2
   exit 1
@@ -46,12 +45,12 @@ fi
 # 4) PREFLIGHT minimal: Code audit + DB audit + RefreshedAt|unchanged
 PREF="${SPRINT_DIR}PREFLIGHT.md"
 grep -qi "Code audit" "$PREF" || { echo "❌ PREFLIGHT.md: section 'Code audit' manquante." >&2; exit 1; }
-grep -qi "DB audit"   "$PREF" || { echo "❌ PREFLIGHT.md: section 'DB audit' manquante." >&2;   exit 1; }
+grep -qi "DB audit" "$PREF"   || { echo "❌ PREFLIGHT.md: section 'DB audit' manquante." >&2;   exit 1; }
 ( grep -q "RefreshedAt" "$PREF" || grep -qi "unchanged" "$PREF" ) || {
   echo "❌ PREFLIGHT.md: préciser 'schema.sql RefreshedAt (ISO)' ou justifier 'unchanged'." >&2; exit 1;
 }
 
-# 5) Si des migrations sont STAGÉES → exiger schema.sql stagé OU justification 'unchanged'
+# 5) Si migrations STAGÉES → exiger schema.sql stagé OU justification 'unchanged'
 STAGED="$(git diff --cached --name-only)"
 if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migrations/|migrations/)'; then
   if ! echo "$STAGED" | grep -q '^schema.sql$'; then
@@ -60,7 +59,7 @@ if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migration
       exit 1
     fi
   fi
-  echo "ℹ️ Des migrations sont présentes dans le commit. **ChatGPT ne les applique pas**."
+  echo "ℹ️ Des migrations sont présentes dans le commit. ChatGPT ne les applique pas."
   echo "   ➜ Applique-les manuellement après merge (ex: supabase db reset/apply, EF Core update, etc.)."
 fi
 
