@@ -1,94 +1,89 @@
-# QA\_CHECKLIST — Billeterie Maïdo
+# QUALITY-GATES — Billeterie Maïdo
 
-À utiliser par Codex (QA) et le PO pour valider qu’une US est prête à passer en `Done`.
+> **But** : critères de passage obligatoires par gate. Chaque case **doit être cochée** avant de passer à la suivante. Les preuves sont référencées dans `/docs/sprints/S<N>/*`.
 
-## Généraux (toutes US)
+---
 
-* [ ] CI verte (lint, tests unitaires/intégration, build)
-* [ ] Aucune fuite de secrets (diff vérifié)
-* [ ] Logs structurés présents (corrélation id)
-* [ ] Headers sécurité (CSP/HSTS/no-sniff/referrer-policy)
-* [ ] RLS/roles : tests d’accès passés
+## Gate 0 — Préflight (code + BDD)
 
-## Sprint 0 — Enablers
+**Objectif** : vérifier l’existant et figer le plan minimal.
 
-**US-00 (Stripe)**
+* [ ] `/docs/sprints/S<N>/PREFLIGHT.md` rempli (sections 1→8)
+* [ ] **Code audit** : doublons / code mort listés + décision (supprimer/refactor ≤ timebox)
+* [ ] **DB audit** : tables/colonnes, RLS/policies, fonctions, **écarts** et migrations envisagées
+* [ ] **`schema.sql`** : `RefreshedAt` (ISO) **ou** `unchanged` **justifié**
+* [ ] **Plan d’action** (nettoyages/refactors ≤ timebox) défini
 
-* [ ] Redirection Checkout OK (dev)
-* [ ] Webhook Stripe vérifié (signature) → `payment_status='PAID'`
-* [ ] Idempotence : relecture d’event → état inchangé
-* [ ] Email confirmation envoyé (log ou réel)
+**Preuves** : `PREFLIGHT.md` ; diff `schema.sql` si rafraîchi
 
-**US-01 (Auth/RLS)**
+---
 
-* [ ] Client ne voit que ses réservations
-* [ ] Prestataire ne voit que ses validations
-* [ ] Admin voit toutes les réservations
+## Gate A — Serverless/Backend
 
-**US-02 (Capacité)**
+**Objectif** : contrats stables, logique robuste, idempotence.
 
-* [ ] Tests concurrence (2 paiements simultanés) → 1 seul succès
+* [ ] Contrats d’API/DTO (validation entrée – Zod/FluentValidation) + erreurs normalisées
+* [ ] Idempotence (webhooks/validations) + déduplication
+* [ ] Tests **unitaires & intégration** verts (incl. erreurs)
+* [ ] Logs structurés (correlation id), pas de PII
 
-## Sprint Utilisateur
+**Preuves** : fichiers contrats, tests, extraits logs / README section API
 
-**US-10**
+---
 
-* [ ] Liste passes (nom, prix, description)
-* [ ] Affichage « créneau requis » si applicable
+## Gate B — Data
 
-**US-11**
+**Objectif** : intégrité & sécurité des données.
 
-* [ ] Panier add/remove, total en temps réel
-* [ ] Paiement bloqué si CGV non cochées
+* [ ] **Migrations** versionnées + scripts de rollback
+* [ ] **RLS/policies** testées par rôle (fixtures auto/seed)
+* [ ] Index/constraints en place (PK/UK/FK, unique, check)
+* [ ] Fonctions SQL atomiques + **tests de concurrence** (verrouillage / sérialisation)
 
-**US-12**
+**Preuves** : migrations, tests RLS/concurrence, `schema.sql` ou justification
 
-* [ ] Paiement OK → page success ; cancel → panier intact
-* [ ] Email reçu avec n° réservation + QR
+---
 
-**US-13**
+## Gate C — Front
 
-* [ ] Formulaire email + CAPTCHA
-* [ ] Renvoi email si réservation trouvée
+**Objectif** : UX accessible et performante.
 
-## Sprint Parc (Luge)
+* [ ] UI responsive ; i18n si prévu ; états `loading/empty/error/success`
+* [ ] Lighthouse **a11y & perf ≥ 90** (capture rapport)
+* [ ] VRT OK (si configuré) ; intégration contrats (types sûrs)
 
-**US-20**
+**Preuves** : captures Lighthouse, snapshots VRT, checklists a11y
 
-* [ ] Scan/saisie code valide → succès
-* [ ] Seconde validation refusée (message clair)
+---
 
-**US-21**
+## Gate D — QA / E2E
 
-* [ ] Compteur du jour Luge affiche total correct
+**Objectif** : valider le flux bout‑en‑bout et les garde‑fous sécurité.
 
-## Sprint Prestataires
+* [ ] E2E **happy path** + **≥ 2 cas d’erreur** critiques
+* [ ] Tests rôle/RLS ; **charge ciblée** si endpoint critique
+* [ ] `QA_CHECKLIST.md` coché
 
-**US-30 / US-31**
+**Preuves** : rapports tests (E2E/charge), `QA_CHECKLIST.md`
 
-* [ ] Poney ne voit pas Tir, et inversement
-* [ ] Scan valide/invalide → retour approprié
+---
 
-**US-32**
+## Gate S — Clôture Sprint (timebox 25 min)
 
-* [ ] Tableau validations 7j par activité correct
+**Objectif** : livrer, documenter, préparer la validation PO et la rétro.
 
-## Sprint Admin
+* [ ] `PLAN.md` (capacité & SP) à jour
+* [ ] `BOARD.md` à jour (`Selected → InSprint → Done → Spillover`)
+* [ ] `DEMO.md`, `REVIEW.md`, `RETRO.md` présents et complétés à **T+22**
+* [ ] `/docs/sprints/S<N>/INTERACTIONS.yaml` contient l’entrée **Sprint S<N>** (tests prod)
+* [ ] `CHANGELOG.md` **\[Unreleased]** mis à jour
 
-**US-40**
+**Preuves** : fichiers sprint, `INTERACTIONS.yaml`
 
-* [ ] CRUD événements/passes/slots fonctionnel
+---
 
-**US-41**
+## Conditions d’échec (bloquantes pre‑commit)
 
-* [ ] Liste réservations filtrable + export CSV correct
-
-**US-42**
-
-* [ ] Reporting CA total, ventes par pass, courbe journalière correct
-
-## Validation finale PO
-
-* [ ] Scénarios critiques testés en prod sans erreur
-* [ ] Métriques/logs conformes
-* [ ] GO/NO-GO noté dans `PO_NOTES.md`
+* Une des cases ci‑dessus non cochée → **commit bloqué** par `.husky/pre-commit`
+* US `origin: auto` en `Done` **sans** `links.api` **ou** **< 2 AC** **ou** **sans note sécurité/RLS** → **commit bloqué**
+* Migrations modifiées **sans** mise à jour de `schema.sql` **et sans** justification `unchanged` dans `PREFLIGHT.md` → **commit bloqué**
