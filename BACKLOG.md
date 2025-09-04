@@ -1,5 +1,7 @@
 # BACKLOG — Billeterie Maïdo (MVP)
 
+> Statuts US: `Ready | Selected | InSprint | Done | Spillover | Merged`  ·  Champs: `sp`, `sprint`, `type` (feature|improvement|fix), `origin` (po|auto)
+
 ## Sprint 0 — Enablers
 
 ### US-00
@@ -10,8 +12,12 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: InProgress
+status: Ready
 owner: serverless
+sp: 5
+sprint: null
+type: feature
+origin: po
 links:
   - api: ./src/shared/contracts/checkout.ts
 ac:
@@ -32,6 +38,10 @@ value: cloisonnement des données
 priority: P1
 status: Ready
 owner: data
+sp: 5
+sprint: null
+type: feature
+origin: po
 ac:
   - Rôles JWT: admin, parc, atlm_collaborator, pony_provider, archery_provider, customer
   - Policies conformes + tests d’accès automatisés
@@ -47,6 +57,10 @@ value: éviter la surréservation
 priority: P1
 status: Ready
 owner: data
+sp: 5
+sprint: null
+type: feature
+origin: po
 ac:
   - Fonction SQL reserve_slot(slot_id,reservation_id,qty) transactionnelle
   - Test concurrence → 1 seule passe
@@ -64,6 +78,10 @@ value: choisir facilement
 priority: P1
 status: Ready
 owner: frontend
+sp: 3
+sprint: null
+type: feature
+origin: po
 ac:
   - Liste passes: nom, prix, description, activités incluses
   - Affichage “créneau requis” si applicable
@@ -79,6 +97,10 @@ value: préparer ma commande
 priority: P1
 status: Ready
 owner: frontend
+sp: 3
+sprint: null
+type: feature
+origin: po
 ac:
   - Ajouter/retirer billets, total en temps réel
   - Paiement désactivé tant que CGV non cochées
@@ -94,6 +116,10 @@ value: finaliser mon achat
 priority: P1
 status: Ready
 owner: serverless
+sp: 5
+sprint: null
+type: feature
+origin: po
 links:
   - api: ./src/shared/contracts/checkout.ts
 ac:
@@ -111,6 +137,10 @@ value: récupérer mon billet
 priority: P2
 status: Ready
 owner: serverless
+sp: 3
+sprint: null
+type: feature
+origin: po
 ac:
   - Formulaire email + CAPTCHA
   - Renvoi d’email si trouvé, message si non trouvé
@@ -128,6 +158,10 @@ value: admettre rapidement
 priority: P1
 status: Ready
 owner: serverless
+sp: 5
+sprint: null
+type: feature
+origin: po
 ac:
   - Saisie/scan code → succès/erreur claire
   - Anti-doublon (PK reservation_id+LUGE)
@@ -143,6 +177,10 @@ value: suivre le flux
 priority: P2
 status: Ready
 owner: data
+sp: 2
+sprint: null
+type: feature
+origin: po
 ac:
   - Vue compteur validés aujourd’hui (agrégat simple)
 ```
@@ -159,6 +197,10 @@ value: contrôler l’accès
 priority: P1
 status: Ready
 owner: serverless
+sp: 3
+sprint: null
+type: feature
+origin: po
 ac:
   - Scan/saisie code → succès/erreur
   - RLS prestataire: accès PONEY uniquement
@@ -174,6 +216,10 @@ value: contrôler l’accès
 priority: P1
 status: Ready
 owner: serverless
+sp: 3
+sprint: null
+type: feature
+origin: po
 ac:
   - Scan/saisie code → succès/erreur
   - RLS prestataire: accès ARCHERY uniquement
@@ -189,6 +235,10 @@ value: visualiser l’affluence
 priority: P3
 status: Ready
 owner: data
+sp: 2
+sprint: null
+type: feature
+origin: po
 ac:
   - Tableau validations J-6..J filtrable par activité
 ```
@@ -205,6 +255,10 @@ value: configurer l’offre
 priority: P1
 status: Ready
 owner: data
+sp: 8
+sprint: null
+type: feature
+origin: po
 ac:
   - Créer/modifier événements, passes (prix), slots (capacité, horaire)
 ```
@@ -219,6 +273,10 @@ value: assistance & analyse
 priority: P1
 status: Ready
 owner: frontend
+sp: 5
+sprint: null
+type: feature
+origin: po
 ac:
   - Filtrer par statut/période/email
   - Export CSV
@@ -234,6 +292,10 @@ value: pilotage
 priority: P2
 status: Ready
 owner: data
+sp: 5
+sprint: null
+type: feature
+origin: po
 ac:
   - CA total période, ventes par pass, courbe journalière
 ```
