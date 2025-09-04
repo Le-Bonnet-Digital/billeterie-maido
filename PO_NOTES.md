@@ -1,76 +1,83 @@
-# PO\_NOTES — Journal PO ⇄ Codex
+# PO\_NOTES — Billeterie Maïdo (minimal)
 
-## Règles d’usage
+> **But** : instructions stables pour ChatGPT + un en‑tête très court du sprint courant.
+> **Les interactions détaillées ne sont plus ici** → elles sont stockées **par sprint** dans `/docs/sprints/S<N>/INTERACTIONS.yaml`.
 
-* Codex lit ce fichier **avant chaque tâche** et **après chaque PR**.
-* Chaque interaction est **horodatée (ISO 8601)** et ajoutée dans **INTERACTIONS**.
-* Le PO répond **dans la même liste** (OK/KO + détails). Codex adapte le backlog en conséquence.
+---
 
-## DECISIONS
+## 1) INSTRUCTIONS (pour ChatGPT)
 
-* 2025-09-04 : Priorité P1 → Sprint 0 puis Sprint Utilisateur.
+* Sprint **timebox 25 min** (gel **T+22**), **branche `work`**, **PR unique** fin de sprint.
+* Toujours préparer/tenir à jour les artefacts `/docs/sprints/S<N>/` : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`, **`INTERACTIONS.yaml`**.
+* **Journal d’interaction** :
 
-## NEW\_FEATURES (idées à convertir en US)
+  * Écrire dans `/docs/sprints/S<N>/INTERACTIONS.yaml` une **entrée horodatée** (voir gabarit ci‑dessous) avec :
 
-* \[IDEA] Ticket famille (2A+2E) tarif groupé.
+    * `did` (ce qui a été fait/livré),
+    * `ask` (tests prod simples pour PO),
+    * `context` (URLs, identifiants de test si besoin), `status: pending`.
+  * Le **PO** répond **dans le même fichier** avec une nouvelle entrée (`who: PO`, `reply: OK|KO`, `details`).
+* **ACTIONS\_PO** : lister ci‑dessous (dans cette page) **uniquement** les actions manuelles à exécuter (secrets, snapshot `schema.sql`, lancer un script de seed). Tout le reste est **automatisé par ChatGPT** (grooming, selection US, seeds/fixtures, etc.).
 
-## BLOCKERS
+---
 
-* Aucun.
+## 2) ACTIONS\_PO (renseigné par ChatGPT si nécessaire)
 
-## INTERACTIONS
+> Le PO exécute seulement ce qui est listé ici.
+
+* **Secrets/API** : mettre à jour `.env.local` (ex: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `MAIL_API_KEY`, …)
+* **Snapshot schéma** :
+
+  * Supabase/Postgres
+
+    ```powershell
+    supabase db dump --schema public -f schema.sql
+    ```
+  * SQL Server
+
+    ```powershell
+    sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
+    ```
+* **Jeux de données / Seed** : utiliser la commande fournie par ChatGPT (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`).
+
+---
+
+## 3) SPRINT COURANT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-- who: Codex
+sprint_id: <N>
+highlights: |
+  - …
+risks_or_todo: |
+  - …
+interaction_log: ./docs/sprints/S<N>/INTERACTIONS.yaml
+status: pending | waiting_PO | done
+```
+
+---
+
+## Gabarit — `/docs/sprints/S<N>/INTERACTIONS.yaml`
+
+```yaml
+- who: ChatGPT
   when: 2025-09-04T15:00:00+02:00
-  topic: US-12 — Paiement + Confirmation
+  topic: Sprint S<N> — validation prod
+  did: |
+    - Implémenté : …
+    - Gates passées : …
   ask: |
-    Merci de vérifier en PROD :
-    1) Achat d’un pass → Stripe → retour /success.
-    2) Réception email avec n° de réservation + QR.
-    3) Paiement visible dans Dashboard Stripe.
-  context: PR #123, env: https://stage.example.app
+    Tester en prod :
+    1) …
+    2) …
+  context: env: https://stage.example.app ; PR: Sprint S<N>
   status: pending
 
 - who: PO
   when: 2025-09-04T16:20:00+02:00
-  reply: KO
-  details: |
-    1) Redirection OK.
-    2) Email non reçu (vérifié spam). Log 500 sur l’envoi.
-  action: fix
-
-- who: Codex
-  when: 2025-09-04T17:10:00+02:00
-  topic: US-12 — Fix email
-  ask: |
-    Refaire un achat en PROD et confirmer réception email (<1 min). Si échec, indiquer heure exacte.
-  context: PR #124, change: retry + log provider
-  status: pending
-- who: Codex
-  when: 2025-09-04T17:30:00+02:00
-  topic: US-00 — Paiement Stripe + webhook idempotent
-  ask: |
-    Tester un paiement simple et vérifier qu'aucune double réservation n'est créée si le webhook est rejoué.
-  context: PR TBD, env: https://stage.example.app
-  status: pending
+  topic: Sprint S<N> — validation prod
+  reply: OK | KO
+  details: "…"
+  action: none | fix
 ```
 
-## FORMAT (à recopier)
-
-```yaml
-- who: Codex|PO
-  when: <YYYY-MM-DDThh:mm:ss±hh:mm>
-  topic: <US-XX — titre>                # Codex uniquement
-  ask: |                                # Codex → ce que le PO doit tester en prod
-    <liste courte d’étapes>
-  context: PR #<id>, env: <url>, change: <optionnel>
-  status: pending|resolved              # Codex met à jour
-
-- who: PO
-  when: <ISO>
-  reply: OK|KO
-  details: |
-    <observations / bugs / demandes>
-  action: next|fix|new-US               # instruction à Codex
-```
+> **Note** : les hooks locaux (pre‑commit) devront vérifier la présence/complétude de `INTERACTIONS.yaml` **au lieu** de chercher une entrée dans `PO_NOTES.md`. (À mettre à jour dans `.githooks/pre-commit.ps1`).
