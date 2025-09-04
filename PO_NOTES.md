@@ -1,55 +1,56 @@
-# PO\_NOTES — Billeterie Maïdo (minimal)
+# PO_NOTES — Billeterie Maïdo (minimal)
 
 > **Usage**
 >
-> * **ChatGPT** écrit ici seulement les **instructions stables** et un **en‑tête de sprint**.
-> * Les **interactions détaillées** sont stockées **par sprint** dans `/docs/sprints/S<N>/INTERACTIONS.yaml`.
+> - **ChatGPT** écrit ici seulement les **instructions stables** et un **en‑tête de sprint**.
+> - Les **interactions détaillées** sont stockées **par sprint** dans `/docs/sprints/S<N>/INTERACTIONS.yaml`.
 
 ---
 
 ## 1) INSTRUCTIONS (pour ChatGPT)
 
-* Sprint **timebox 25 min** (gel **T+22**), **branche `work`**, **PR unique** fin de sprint.
-* Artefacts sprint à tenir à jour : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`.
-* **Journal d’interaction** :
+- Sprint **timebox 25 min** (gel **T+22**), **branche `work`**, **PR unique** fin de sprint.
+- Artefacts sprint à tenir à jour : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`.
+- **Journal d’interaction** :
+  - Écrire dans `INTERACTIONS.yaml` une **entrée horodatée** avec : `did` (fait/livré), `ask` (tests prod PO), `context` (URLs, comptes de test), `status: pending`.
+  - Le **PO** répond **dans le même fichier** (`who: PO`, `reply: OK|KO`, `details`).
 
-  * Écrire dans `INTERACTIONS.yaml` une **entrée horodatée** avec : `did` (fait/livré), `ask` (tests prod PO), `context` (URLs, comptes de test), `status: pending`.
-  * Le **PO** répond **dans le même fichier** (`who: PO`, `reply: OK|KO`, `details`).
-* **Seeds & fixtures** : ChatGPT **génère/maintient** les scripts/fixtures et fournit **une commande** (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`). Le PO **exécute la commande** si demandé.
-* **Migrations & schéma** : ChatGPT **propose** les migrations et documente les commandes. Le **PO** les **applique** si validées. `schema.sql` est **rafraîchi par le PO** ou noté `unchanged` (justifié) dans `PREFLIGHT.md`.
+- **Seeds & fixtures** : ChatGPT **génère/maintient** les scripts/fixtures et fournit **une commande** (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`). Le PO **exécute la commande** si demandé.
+- **Migrations & schéma** : ChatGPT **propose** les migrations et documente les commandes. Le **PO** les **applique** si validées. `schema.sql` est **rafraîchi par le PO** ou noté `unchanged` (justifié) dans `PREFLIGHT.md`.
 
 ---
 
-## 2) ACTIONS\_PO (à exécuter seulement si listé par ChatGPT)
+## 2) ACTIONS_PO (à exécuter seulement si listé par ChatGPT)
 
-* **Secrets/API** : mettre à jour `.env.local` (ex: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `MAIL_API_KEY`, …)
-* **Snapshot schéma** :
-
-  * Supabase/Postgres
+- **Secrets/API** : mettre à jour `.env.local` (ex: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `MAIL_API_KEY`, …)
+- **Snapshot schéma** :
+  - Supabase/Postgres
 
     ```powershell
     supabase db dump --schema public -f schema.sql
     ```
-  * SQL Server
+
+  - SQL Server
 
     ```powershell
     sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
     ```
-* **Seed** : lancer la commande fournie (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`).
-* **Appliquer les migrations DB** (selon commandes documentées) **après merge** si nécessaire.
+
+- **Seed** : lancer la commande fournie (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`).
+- **Appliquer les migrations DB** (selon commandes documentées) **après merge** si nécessaire.
 
 ---
 
 ## 3) SPRINT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-sprint_id: <N>
+sprint_id: 1
 highlights: |
-  - …
+  - Sprint initialisé ; planification et préflight réalisés
 risks_or_todo: |
-  - …
-interaction_log: ./docs/sprints/S<N>/INTERACTIONS.yaml
-status: pending | waiting_PO | done
+  - Implémentation des US-10 et US-11
+interaction_log: ./docs/sprints/S1/INTERACTIONS.yaml
+status: pending
 ```
 
 ---
