@@ -1,7 +1,7 @@
 # PO\_NOTES — Billeterie Maïdo (minimal)
 
 > **But** : instructions stables pour ChatGPT + un en‑tête très court du sprint courant.
-> **Les interactions détaillées ne sont plus ici** → elles sont stockées **par sprint** dans `/docs/sprints/S<N>/INTERACTIONS.yaml`.
+> **Les interactions détaillées sont stockées **par sprint** dans `/docs/sprints/S<N>/INTERACTIONS.yaml`.
 
 ---
 
