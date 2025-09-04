@@ -1,93 +1,156 @@
-# Billeterie Maïdo
+# Billeterie Maïdo — README
 
-Billetterie serverless pour le Parc de la Luge du Maïdo : vente de passes, gestion de créneaux, paiement Stripe, validation sur site (luge/poney/tir), back‑office admin.
+## 1) Pré‑requis & installation
 
-## Stack
+* Windows 11, PowerShell 7+
+* Node.js 20+, npm
+* (Selon stack) Supabase CLI **ou** outils SQL Server
+* Comptes/API : Stripe (clé test), service d’email (clé API)
 
-* **Front** : React + TypeScript (Vite)
-* **Backend** : Supabase (Postgres, Auth, Edge Functions)
-* **Paiement** : Stripe Checkout + Webhooks
-* **Email** : provider SMTP/API
+### Variables d’environnement
 
-## Démarrage rapide
-
-```bash
-# Prérequis : Node 20+, Supabase CLI, compte Stripe
-cp .env.example .env.local   # compléter STRIPE_*, SUPABASE_*, APP_BASE_URL
-supabase start               # base locale
-npm i
-npm run dev                  # front
-supabase functions serve     # edge functions locales
-```
-
-## Scripts utiles
-
-```bash
-npm run dev           # frontend dev
-npm run build         # build prod
-npm run preview       # preview local
-npm run lint          # eslint
-npm run test          # tests unitaires
-npm run e2e           # e2e (Playwright/Cypress)
-supabase db reset     # reset DB locale (migrations + seed)
-```
-
-## Arborescence
+Créez **`.env.local`** depuis `.env.example` et renseignez au minimum :
 
 ```
-/supabase/migrations          # migrations SQL
-/supabase/seed                # jeux de données
-/supabase/functions/<fn>/     # edge functions (checkout, stripe-webhook, ...)
-/src/shared/contracts/*.ts    # contrats Zod (source de vérité API)
-/src/shared/stripe/*.ts
-/src/app/*                    # pages & features
-/specs/*                      # specs additionnelles
-/tests/e2e/*                  # tests end-to-end
-AGENTS.md
-BACKLOG.md
-CHANGELOG.md
-QA_CHECKLIST.md
-PO_NOTES.md
+STRIPE_SECRET_KEY=sk_test_...
+STRIPE_WEBHOOK_SECRET=whsec_...
+MAIL_API_KEY=...
+SUPABASE_URL=...
+SUPABASE_ANON_KEY=...
 ```
 
-## Orchestration & Qualité
+*(Ne pas committer de secrets)*
 
-* **Processus** : voir `AGENTS.md`
-* **Backlog** : `BACKLOG.md` (US, priorités, statuts)
-* **Tests & validation** : `QA_CHECKLIST.md`
-* **Journal PO & validations prod** : `PO_NOTES.md`
-* **Changements** : `CHANGELOG.md`
+---
 
-## Règles de contribution
+## 2) Démarrage local
 
-* Branches : `feat/US-XX-slug`, `fix/US-XX-…`
-* Commits : Conventional Commits
-* PR : obligatoire vers `main`, labels d’état (`InProgress` → `InReview` → `QA`) et checklists *gates* (A→D).
-* `BACKLOG.md` et `CHANGELOG.md` sont synchronisés par workflow à l’ouverture/MAJ/merge de PR.
+```powershell
+# Front / API (selon repo)
+npm ci
+npm run dev
 
-## CI/CD
+# Si Supabase (Postgres)
+supabase start
+supabase functions serve
+```
 
-* **CI** : lint, tests unitaires/intégration, build, e2e (sur preview)
-* **CD** : merge sur `main` → déploiement *stage* auto ; promotion manuelle → *prod*
-* **Secrets (GitHub Secrets)** : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE`, `MAIL_API_KEY`, `APP_BASE_URL`
+### Rafraîchir le schéma BDD (`schema.sql`)
 
-## Sécurité
+> À exécuter **sur demande de ChatGPT** (Gate 0 – Préflight)
 
-* **RLS** : cloisonnement par rôle (`admin`, `parc`, `pony_provider`, `archery_provider`, `atlm_collaborator`, `customer`)
-* **Paiement** : Webhook Stripe signé + idempotent (table de déduplication)
-* **Validation billets** : PK composite (`reservation_id+activity`) anti‑doublon
-* **Headers** : CSP, HSTS, no‑sniff, referrer‑policy
-* **Aucun secret** commité (utiliser variables d’environnement)
+* **Supabase/Postgres** :
 
-## Données & RGPD
+```powershell
+supabase db dump --schema public -f schema.sql
+```
 
-* Mention légale et politique de confidentialité à publier côté front
-* Droit d’accès/suppression : prévoir export/suppression sur demande utilisateur
+* **SQL Server** :
 
-## Support & Runbook
+```powershell
+sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
+```
 
-* Déploiement, rotation de secrets, incident Stripe/email : voir `RUNBOOK.md`
+---
 
-## Licence
+## 3) Hooks locaux (garde‑fous)
 
-* À définir (MIT/Propriétaire).
+> L’environnement ne lance pas GitHub Actions. Les contrôles se font **en local** via un hook `pre-commit` PowerShell.
+
+### Installation (une fois)
+
+```powershell
+# Activer le dossier de hooks du repo
+git config core.hooksPath .githooks
+
+# Autoriser l’exécution des scripts PowerShell pour l’utilisateur courant
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
+```
+
+### Ce que vérifie `.githooks/pre-commit.ps1`
+
+* Artefacts sprint présents : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md}`
+* `PREFLIGHT.md` contient **Code audit**, **DB audit** et **schema.sql RefreshedAt (ISO)** ou **`unchanged` justifié**
+* `PO_NOTES.md/INTERACTIONS` a une entrée **Sprint S<N>** (tests prod à exécuter)
+* `BACKLOG.md` :
+
+  * US **livrées** en `Done` ; `Spillover` exclues de la démo
+  * US `origin: auto` en `Done` → **`links.api`**, **≥ 2 AC**, **note sécurité/RLS**
+  * US `Done` → `sp` et `type` présents
+* Si **migrations** modifiées → `schema.sql` mis à jour **ou** justification `unchanged` dans `PREFLIGHT.md`
+
+> Si un point échoue, **le commit est bloqué**. Corrigez puis recommittez.
+
+---
+
+## 4) Mode agent — Sprint 25 min
+
+1. **Déclencheur** : « **Passe au sprint suivant** »
+2. **Gate 0 — Pré‑vol** : remplir `PREFLIGHT.md` (audit code + BDD, `schema.sql`)
+3. **Planification** : estimer en **SP** (1,2,3,5,8,13), capacité = vélocité×0.8 (+10% improvements) → `PLAN.md`
+4. **Exécution** : A→B→C→D, mise à jour continue de `BOARD.md` (**Selected → InSprint → Done → Spillover**)
+5. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `PO_NOTES.md`
+6. **PR unique** : `work → main`, titre `Sprint S<N>: …`
+
+**Rappels**
+
+* Branche **unique** : `work`
+* **Une seule PR** en fin de sprint
+* **Pré‑vol obligatoire** ; `schema.sql` **à jour** (ou `unchanged` justifié)
+
+---
+
+## 5) Backlog & user stories
+
+* `status` : `Ready → Selected → InSprint → Done → Spillover → Merged`
+* `owner` : `serverless | data | frontend | qa`
+* `sp` : `1|2|3|5|8|13` ; `sprint` : `<N|null>`
+* `type` : `feature | improvement | fix` ; `origin` : `po | auto`
+* `links.api` : chemin d’un contrat d’API/DTO (placeholder accepté pour `origin: auto`)
+
+**Autogrooming** : si aucune US **Ready**, ChatGPT génère des US depuis `PO_NOTES.md/NEW_FEATURES` (ou discovery), avec **≥2 AC**, **note sécurité/RLS**, `links.api` placeholder.
+
+---
+
+## 6) Qualité & sécurité
+
+* **Quality Gates** : voir `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
+* **DoD** : CI verte, couverture ≥ 80% des nouvelles lignes, docs à jour (`DEMO/REVIEW/RETRO`), sécurité OK
+* **Sécurité** :
+
+  * Jamais de secrets en repo/PR
+  * Webhooks Stripe **signés**, logique **idempotente**
+  * **RLS/policies** testées (admin, parc, prestataires, customer)
+  * Logs structurés (corrélation), pas de PII
+
+---
+
+## 7) Arborescence utile
+
+```
+/docs/templates/           # Modèles PLAN/BOARD/DEMO/REVIEW/RETRO/PREFLIGHT
+/docs/sprints/S<N>/        # Artefacts du sprint courant
+/src/shared/contracts/     # Contrats d’API/DTO
+supabase/migrations/       # Migrations (si Supabase)
+Infrastructure/**/Migrations/ # EF (si SQL Server)
+.githooks/pre-commit.ps1   # Garde-fou local (obligatoire)
+BACKLOG.md                 # US (statuts, SP, sprint, origin)
+PO_NOTES.md                # Rôle PO, inputs, interactions, rétro
+QUALITY-GATES.md           # Gates 0/A/B/C/D/S
+DoD.md                     # Definition of Done
+```
+
+---
+
+## 8) Dépannage
+
+* **Commit bloqué** : lire le message du hook, compléter l’artefact manquant (PREFLIGHT/DEMO/… ou PO\_NOTES)
+* **Migrations modifiées** : mettre à jour `schema.sql` ou justifier `unchanged` dans `PREFLIGHT.md`
+* **Lighthouse < 90** : optimiser images, lazy‑load, réduire JS bloquant, corriger a11y (labels/contraste)
+
+---
+
+## 9) Contact & rôle du PO
+
+* Le **PO** fournit **OK/KO**, **secrets/clé API**, et **orientations** dans `PO_NOTES.md`.
+* ChatGPT gère **grooming**, **planification**, **exécution** et **documentation** du sprint timeboxé.
