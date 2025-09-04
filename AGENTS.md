@@ -1,69 +1,132 @@
-# AGENTS
+# AGENTS.md — Billeterie Maïdo (MVP serverless)
 
-Ce document définit les règles à suivre pour contribuer au projet. **Chaque collaborateur doit le lire avant toute contribution.**
+## 0) Objet
 
-## Environnement
+Manuel d’exécution pour l’agent (Codex) afin d’enchaîner la prochaine tâche sans clarification. Sources de vérité : `PO_NOTES.md` (instructions PO) → `BACKLOG.md` (user stories & statuts).
 
-- Utiliser Node.js 18 ou version supérieure.
-- Exécuter `./setup.sh` une fois pour installer les dépendances, appliquer les migrations et configurer les secrets (`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET`, `WEBHOOK_SECRET`).
-- Pour les relances sur un conteneur mis en cache, utiliser `./maintenance.sh` pour mettre à jour les dépendances et exécuter les migrations.
-- Définir les variables d'environnement nécessaires à l'exécution (`VITE_SUPABASE_URL`, `VITE_SUPABASE_ANON_KEY`).
-- Utiliser `npm` pour l'installation et l'exécution des scripts.
-- Ne jamais committer de fichiers `.env` ou d'autres secrets.
+## 1) Portée & Contexte
 
-## Commandes
+* Produit : Billetterie serverless (passes/billets, créneaux, paiement Stripe, validation sur site luge/poney/tir, back‑office admin).
+* Stack : Supabase (Postgres/Auth/Edge Functions), React/TypeScript, Stripe Checkout + Webhooks, provider email.
 
-- Installer les dépendances : `npm install`
-- Lancer le serveur de développement : `npm run dev`
-- Construire l'application : `npm run build`
-- Lancer les tests : `npm test`
-- Lancer le lint : `npm run lint`
-- Générer la couverture : `npm run test:coverage`
-- Formater le code : `npm run format`
+## 2) Rôles & Responsabilités
 
-## Git & Workflow
+* **PO (Julien)** : priorisation, critères d’acceptation, validations finales. Rédige/édite `PO_NOTES.md`.
+* **Codex – Serverless/Backend** : contrats d’API (Zod), Edge/Cloud Functions (checkout, stripe-webhook, validate-ticket, resend, find-booking), idempotence, sécurité, observabilité.
+* **Codex – Data Engineer** : schéma SQL, RLS/policies, fonctions PL/pgSQL (capacité, numérotation), index, vues/rapports.
+* **Codex – Front-End/Designer** : UX/UI responsive & a11y, intégration contrats/types, états d’erreur, performance.
+* **Codex – QA/Testeur** : E2E (Playwright/Cypress), tests charge ciblés (k6), tests rôle/RLS, checklist release.
 
-- Créer une branche depuis `main` pour chaque fonctionnalité ou correctif.
-- Nommer les branches de façon descriptive (ex. `feature/xyz`).
-- Écrire des messages de commit clairs à l'impératif en suivant la convention [Conventional Commits](https://www.conventionalcommits.org/).
-- Pousser des commits atomiques et logiques.
-- Ouvrir une Pull Request dès qu'une contribution est prête à être revue.
+## 3) Flux d’exécution (one-piece flow)
 
-## Hooks Git
+1. Lire `PO_NOTES.md`, puis `BACKLOG.md`.
+2. Prendre la première US avec `status: Ready` et priorité la plus haute.
+3. Créer la branche `feat/US-XX-slug`.
+4. Exécuter la user story en tranches verticales avec **gates** :
 
-- `pre-commit` : `npm run lint && npm test && lint-staged`
-- `commit-msg` : `npx commitlint --edit "$1"`
+   * **Gate A — Serverless/Backend** : contrats Zod + fonctions + tests intégration + logs.
+   * **Gate B — Data** : migrations SQL + **RLS** + fonctions SQL + tests concurrence.
+   * **Gate C — Front** : intégration UI, a11y/perf ≥ 90, VRT, états d’erreur.
+   * **Gate D — QA** : E2E (happy + 2 erreurs), tests rôle/RLS, charge ciblée (si critique).
+5. Ouvrir PR et appliquer les labels : `InProgress` → `InReview` → `QA` → merge.
+6. Synchroniser automatiquement `BACKLOG.md` (statuts) et `CHANGELOG.md` (entrée) via workflow.
+7. Déployer stage → smoke → prod. Consigner l’interaction dans `PO_NOTES.md`.
 
-## Qualité & Style
+## 4) Format d’une user story (BACKLOG.md)
 
-- Respecter les configurations ESLint, Prettier et TypeScript existantes.
-- Lancer `npm run lint` et `npm test` avant de soumettre des changements.
-- Préférer un code lisible, typé et sans warnings.
-- TypeScript doit utiliser le mode `strict`.
-- Valider les entrées et gérer les erreurs avec des tests unitaires.
-- `console.log` est interdit (utiliser le logger ou `console.warn`/`console.error`).
-- L'usage de `any` est interdit sans justification explicite.
+```yaml
+id: US-XX
+persona: client | parc | prestataire | admin
+title: <titre>
+value: <bénéfice>
+priority: P1|P2|P3
+status: Ready|InProgress|InReview|QA|Done
+owner: serverless|data|frontend|qa
+links:
+  - design: ./design/<fichier>.md
+  - api: ./src/shared/contracts/<fichier>.ts
+  - spec: ./specs/<fichier>.md
+ac:
+  - <critère 1>
+  - <critère 2>
+notes:
+  - <contexte / sécurité / RLS>
+```
 
-## Sécurité
+## 5) Definition of Ready (DoR)
 
-- Ne jamais exposer de secrets, mots de passe ou clés d'API dans le dépôt.
-- Les variables `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` sont requises au runtime.
-- Les secrets (`SUPABASE_SERVICE_ROLE_KEY`, `STRIPE_SECRET`, `WEBHOOK_SECRET`) doivent être fournis via `setup.sh`.
-- Vérifier les dépendances et maintenir le projet à jour.
+* US rédigée (En tant que…, je veux…, afin de…).
+* AC listés, sécurité/RLS mentionnées si pertinent.
+* Contrat d’API créé (ou placeholder) + schéma cible esquissé.
+* Données de seed définies.
 
-## UI/UX
+## 6) Definition of Done (DoD)
 
-- Privilégier un design accessible et responsive.
-- Réutiliser les composants existants et suivre les conventions de style.
+* Contrats/DTO Zod stables + tests unitaires/intégration verts.
+* Migrations SQL + **RLS** + tests rôle OK.
+* UI intégrée ; Lighthouse a11y & perf ≥ 90 ; VRT OK.
+* E2E verts (happy path + 2 erreurs) ; tests charge ciblés si endpoint critique.
+* Logs structurés + alertes (webhook Stripe) en place.
+* CI verte (lint/test/build). Aucune fuite de secrets.
+* Docs à jour : `RUNBOOK.md`, `CHANGELOG.md`.
 
-## Documentation
+## 7) Conventions & Arborescence
 
-- Mettre à jour la documentation (README, architecture, etc.) lors de l'ajout de fonctionnalités.
-- Ajouter des commentaires aux parties complexes du code.
+```
+/supabase/migrations
+/supabase/seed
+/supabase/functions/<fn>/index.ts
+/src/shared/contracts/*.ts
+/src/shared/stripe/*.ts
+/src/app/*
+/specs/*
+/tests/e2e/*
+BACKLOG.md
+CHANGELOG.md
+QA_CHECKLIST.md
+PO_NOTES.md
+AGENTS.md
+```
 
-## Definition of Done
+* Branches : `feat/US-XX-…` ; Commits : Conventional Commits.
 
-- Les tests et le lint passent (`npm test`, `npm run lint`).
-- La fonctionnalité est documentée et testée.
-- La Pull Request est relue et reçoit au moins une approbation.
-- Pas de TODO ou de code mort restant.
+## 8) Sécurité & RLS
+
+* Rôles JWT : `admin`, `parc`, `pony_provider`, `archery_provider`, `atlm_collaborator`, `customer`.
+* Policies :
+
+  * Client → accès à ses réservations uniquement.
+  * Prestataire → accès validations de son activité uniquement.
+  * Admin → accès global (policy ou rôle DB dédié).
+* Idempotence : Stripe webhooks (table déduplication), validations billet (PK composite `reservation_id+activity`).
+* Rate‑limit sur endpoints publics (find-booking, resend). Headers sécurité (CSP, HSTS, no‑sniff, referrer‑policy).
+
+## 9) CI/CD & Synchronisation backlog
+
+* Protection `main` : PR obligatoire + checks CI.
+* Workflow `backlog-sync` : labels PR → `status` US dans `BACKLOG.md` et entrée `CHANGELOG.md`.
+* Secrets via GitHub Secrets : `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `SUPABASE_SERVICE_ROLE`, `MAIL_API_KEY`, `APP_BASE_URL`.
+
+## 10) Ordre recommandé des sprints
+
+* Sprint 0 (enablers) → Utilisateur → Parc (luge) → Prestataires (poney/arc) → Admin.
+* À l’intérieur de chaque sprint : slice vertical A→B→C→D ; WIP ≤ 2 US.
+
+## 11) Processus « Prochaine tâche »
+
+1. Lire `PO_NOTES.md` et appliquer ses décisions au backlog.
+2. Sélectionner la 1ʳᵉ US `Ready` prioritaire.
+3. Brancher `feat/US-XX-slug` et exécuter A→B→C→D.
+4. Mettre à jour `owner` de l’US, labels PR, et preuves des gates.
+5. À la demande de validation prod, ajouter une entrée horodatée dans `PO_NOTES.md/INTERACTIONS` (tests à réaliser, contexte PR/env).
+6. Après réponse du PO :
+
+   * `OK` → passer l’US à `Done`, alimenter `CHANGELOG.md`.
+   * `KO` → créer/mettre à jour une US de fix (P1 si bloquant) et relancer le cycle.
+
+## 12) Preuves attendues par gate
+
+* **Gate A** : fichier contrat Zod, validations d’entrée, fonctions edge, logs structurés, tests unit/inté.
+* **Gate B** : migrations versionnées (avec rollback), RLS testées, index/constraints, fonctions SQL atomiques + tests concurrence.
+* **Gate C** : UI responsive, états *loading/empty/error/success*, a11y & perf ≥ 90, VRT OK, intégration contrats.
+* **Gate D** : E2E (happy + erreurs), tests rôle/RLS, tests charge ciblés si critique, `QA_CHECKLIST.md` coché.
