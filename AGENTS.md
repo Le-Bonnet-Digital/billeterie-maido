@@ -1,109 +1,112 @@
-# AGENTS.md — Billeterie Maïdo (MVP, sprint timebox 25 min)
+# AGENTS.md — Billeterie Maïdo (MVP serverless, sprint timebox 25 min)
 
 ## 0) Objet
 
-Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suivant »**, ChatGPT crée son environnement isolé **sur `work`**, lit ce fichier et exécute **un sprint timeboxé 25 minutes** en jouant tous les rôles (PM, SM, Serverless/Backend, Data, Front, QA, Code Review).
-👉 **Aucune autre branche/environnement** n’est créé.
+Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suivant »**, ChatGPT crée son environnement isolé **sur la branche `work`**, lit ce fichier et exécute **un sprint timeboxé 25 minutes** en jouant tous les rôles (PM, SM, Serverless/Backend, Data, Front, QA, Code Review). 👉 **Aucune autre branche ni environnement** ne doit être créé.
+
+---
 
 ## 1) Contrats d’exécution
 
 * **Branche** : unique, `work`.
 * **PR** : **une seule PR en fin de sprint** → `work → main`, titre : `Sprint S<N>: <résumé>`.
 * **Timebox** : 25 min (gel **T+22** pour docs/review/rétro/PO\_NOTES).
-* **Autonomie produit** : si besoin, ChatGPT **propose, crée et sélectionne** les US nécessaires (MVP + qualité irréprochable), sans imposer de techno hors conventions du repo.
+* **Autonomie produit** : si besoin, ChatGPT **propose, crée et sélectionne** des US (MVP + qualité irréprochable).
 * **Rôle du PO** : fournit **OK/KO**, **secrets/clé API**, **orientations** dans `PO_NOTES.md`.
 * **Qualité** : respecter `QUALITY-GATES.md` et `DoD.md`.
-* **Sécurité** : pas de secrets en repo ; idempotence ; **RLS/policies** testées ; headers sécurité ; rate-limit endpoints publics.
+* **Sécurité** : pas de secrets en repo ; idempotence ; **RLS/policies** testées ; en‑têtes sécurité ; rate‑limit endpoints publics.
+* **Garde‑fous locaux** : tout commit doit passer le **hook Husky** `.husky/pre-commit`. Aucune dépendance à GitHub Actions.
+
+---
 
 ## 2) Mode Sprint (commande : « Passe au sprint suivant »)
 
 1. **Bootstrap & minuteur**
 
    * Démarrer un **minuteur 25 min** (checkpoints **T+10**, **T+22**).
-   * Créer `/docs/sprints/S<N>/` si absent et initialiser : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`.
+   * Créer `/docs/sprints/S<N>/` si absent et initialiser : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`, `INTERACTIONS.yaml` (depuis templates).
+2. **Pré‑vol (audit existant) → `PREFLIGHT.md`**
 
-2. **Pré-vol (audit existant – code + BDD)**
-
-   * Compléter `/docs/sprints/S<N>/PREFLIGHT.md` avec :
-
-     * Audit **code** : doublons, code mort, TODO/FIXME, refactor minimal.
-     * Audit **BDD** : tables, RLS, fonctions, écarts vs besoins.
-     * `schema.sql` rafraîchi (ou marqué `unchanged` justifié).
-   * Si migrations modifiées → exiger `schema.sql` mis à jour ou justification dans `PREFLIGHT.md`.
-
-3. **Intégrer review & rétro**
-
-   * Lire `PO_NOTES.md` → `SPRINT_HISTORY` & `RETRO/improvements`, ajuster pratiques.
-
+   * **Code** : cartographier endpoints/contrats/tests, relever doublons, **code mort**, dette bloquante ; proposer refactors **≤ timebox**.
+   * **BDD** : état schéma/migrations/RLS/fonctions ; exiger snapshot **`schema.sql`** (ou `unchanged` justifié). Le PO applique les migrations validées.
+3. **Intégrer review & rétro (apprentissage)** : lire `PO_NOTES.md` & `RETRO.md` ; ajuster pratiques.
 4. **Collecte & grooming automatique**
 
-   * Lire `BACKLOG.md`, `PO_NOTES.md/SPRINT_INPUT`, `README.md`, `DoD.md`, `QUALITY-GATES.md`.
-   * **Si aucune US `Ready`** : générer depuis `PO_NOTES.md/NEW_FEATURES` ou discovery produit.
-   * US auto-générées : **≥2 AC**, note sécurité/RLS, `links.api` placeholder, `origin: auto`.
+   * Lire `BACKLOG.md` (`Ready`) et `PO_NOTES.md`.
+   * **Si aucune US `Ready`** :
 
+     * 1. `PO_NOTES.md` (NEW\_FEATURES) → **générer** des US ;
+     * 2. si vide : **discovery produit** alignée MVP, consigner idées, puis **créer** les US.
+   * Toute US auto‑générée : `id,title,value,priority,type`, **≥2 AC**, **note sécurité/RLS**, `links.api` **placeholder**, `origin: auto`, `status: Ready`.
 5. **Estimation & capacité**
 
-   * Estimer en SP (`1|2|3|5|8|13`).
-   * **Capacité** = vélocité × 0.8, +10% improvements.
-
+   * `sp ∈ {1,2,3,5,8,13}` ; **vélocité** = moyenne `delivered_sp` (3 derniers, défaut 8) ; **capacité** = floor(vel×0.8) ; réserver ≈10 % aux **improvements**.
 6. **Planification**
 
-   * Sélectionner US jusqu’à capacité ; MAJ `BACKLOG.md` et `/docs/sprints/S<N>/PLAN.md`.
-   * Initialiser `BOARD.md`.
+   * Sélectionner des US jusqu’à la capacité ; marquer `Selected`, `sprint: N`, `sp` dans `BACKLOG.md` et `/docs/sprints/S<N>/PLAN.md`. Initialiser `BOARD.md`.
+7. **Exécution (A→B→C→D), sans PR intermédiaire**
 
-7. **Exécution (A→B→C→D)**
+   * Par US : `Selected → InSprint → Done` en passant les **gates** :
 
-   * US avancent `Selected → InSprint → Done`.
-   * Gates :
+     * **Gate 0 — Préflight** (code+BDD, `schema.sql`).
+     * **Gate A — Serverless/Backend**.
+     * **Gate B — Data**.
+     * **Gate C — Front**.
+     * **Gate D — QA**.
+   * Mettre à jour `owner` (serverless→data→frontend→qa) et `BOARD.md`. Déplacer en `Spillover` si dépassement.
+8. **Checkpoint T+22 (gel)** : figer code ; compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, finaliser `PREFLIGHT.md` ; renseigner `INTERACTIONS.yaml` (tests prod).
+9. **Clôture & PR unique** : calculer `committed_sp` vs `delivered_sp`, écrire `SPRINT_HISTORY` ; ouvrir **une PR** `work→main` `Sprint S<N>: …` ; après merge : passer US livrées en `Merged`.
 
-     * **Gate A** : API/DTO, idempotence, tests unit/intégration, logs.
-     * **Gate B** : migrations, RLS testées, contraintes, tests concurrence.
-     * **Gate C** : UI responsive, Lighthouse ≥90, états complets, VRT.
-     * **Gate D** : E2E (happy + 2 erreurs), tests rôle/RLS, QA\_CHECKLIST.
-   * Nettoyage identifié en pré-vol → appliqué si safe, sinon US `improvement`.
-   * Dépassement : basculer en `Spillover`.
-
-8. **Checkpoint T+22 (gel)**
-
-   * Geler le code, compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, finaliser `PREFLIGHT.md`.
-   * Renseigner `PO_NOTES.md/INTERACTIONS` (tests prod pour validation).
-
-9. **Clôture & PR unique**
-
-   * Calculer SP commit/delivered ; MAJ `SPRINT_HISTORY`.
-   * Ouvrir une PR `work → main` (`Sprint S<N>: …`).
-   * Après merge : marquer US en `Merged`.
+---
 
 ## 3) Backlog — statuts & schéma US
 
 * `status`: `Ready | Selected | InSprint | Done | Spillover | Merged`
 * `owner`: `serverless | data | frontend | qa`
-* `sp`: `1|2|3|5|8|13`
-* `sprint`: `<N|null>`
-* `type`: `feature | improvement | fix`
-* `origin`: `po | auto`
-* `links.api`: contrat d’API/DTO (placeholder si auto)
+* `sp`: `1|2|3|5|8|13` ; `sprint`: `<N|null>`
+* `type`: `feature | improvement | fix` ; `origin`: `po | auto`
+* `links.api`: contrat d’API/DTO (placeholder accepté pour `origin: auto`)
 
-> **Préflight obligatoire** : avant toute implémentation, vérifier l’existant (code + BDD), documenter dans `PREFLIGHT.md`, assurer `schema.sql` à jour (ou justifié).
+> **Pré‑vol obligatoire** avant implémentation ; `schema.sql` **à jour** ou `unchanged` justifié.
 
-## 4) Garde-fous (hook local)
+---
 
-Avant tout commit, le hook **`.githooks/pre-commit.ps1`** doit passer. Il bloque si :
+## 4) Garde‑fous **locaux** (pre‑commit)
 
-* Artefacts sprint manquants (PLAN/BOARD/DEMO/REVIEW/RETRO/PREFLIGHT).
-* `PO_NOTES.md` sans INTERACTION pour Sprint S<N>.
-* `BACKLOG.md`: US `origin: auto` en `Done` incomplètes (pas de `links.api`, <2 AC, pas de note sécurité/RLS).
-* Migrations modifiées sans `schema.sql` mis à jour ni justification `unchanged`.
+Avant **tout commit**, le hook **`.husky/pre-commit`** doit réussir. Il vérifie :
 
-## 5) Journal PO & décisions
+1. Présence des artefacts sprint : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`.
+2. `PREFLIGHT.md` contient **Code audit**, **DB audit**, et **schema.sql RefreshedAt (ISO)** ou **`unchanged`** justifié.
+3. `INTERACTIONS.yaml` contient une entrée **Sprint S<N>** (tests prod à exécuter).
+4. `BACKLOG.md` :
 
-* Chaque sprint → entrée horodatée dans `PO_NOTES.md/INTERACTIONS` :
+   * US `origin: auto` en `Done` → **`links.api`** présent, **≥2 AC**, **note sécurité/RLS**.
+   * US `Done` → `sp` et `type` présents.
+5. Si des **migrations** sont modifiées → `schema.sql` est mis à jour, **ou** `PREFLIGHT.md` justifie `unchanged`. ⚠️ **ChatGPT ne les applique pas**, le PO exécute les commandes fournies.
+
+---
+
+## 5) Rôles & switching (rappel)
+
+* ChatGPT joue **tous les rôles techniques** ; le **PO** valide et fournit secrets/orientations.
+* Ordre par US : **Gate 0** → **A (serverless)** → **B (data)** → **C (front)** → **D (qa)** ; `owner` reflète le rôle courant.
+
+---
+
+## 6) Journal PO & décisions
+
+* À chaque sprint, ajouter une entrée **horodatée** dans `/docs/sprints/S<N>/INTERACTIONS.yaml` :
 
   * `topic: Sprint S<N> — validation prod`
-  * `ask:` tests prod
-  * `context:` env/URL
-* PO répond **OK/KO** ; ChatGPT ajuste backlog et vélocité.
+  * `ask:` étapes de test simples
+  * `context:` env/URL utiles
+* Le PO répond **OK/KO** ; ChatGPT ajuste le backlog (fix/Spillover) et la capacité du sprint suivant (vélocité).
 
-## 6) Dérogations
+---
 
-Dérogations (scope, qualité, sécurité) : notées dans `REVIEW.md` + ajoutées en `RETRO` (improvements).
+## 7) Dérogations
+
+Toute dérogation (scope, qualité, sécurité) doit être :
+
+* mentionnée dans `/docs/sprints/S<N>/REVIEW.md`, et
+* ajoutée en **improvement** dans `/docs/sprints/S<N>/RETRO.md` avec action corrective planifiée.
