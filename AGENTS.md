@@ -20,83 +20,59 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 1. **Bootstrap & minuteur**
 
    * Démarrer un **minuteur 25 min** (checkpoints **T+10**, **T+22**).
-   * Créer `/docs/sprints/S<N>/` si absent et initialiser : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, **`PREFLIGHT.md`** (nouveau).
+   * Créer `/docs/sprints/S<N>/` si absent et initialiser : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`.
 
-2. **Pré-vol (audit existant – code + BDD) → `PREFLIGHT.md`**
+2. **Pré-vol (audit existant – code + BDD)**
 
-   * **Portée code (repo)** :
+   * Compléter `/docs/sprints/S<N>/PREFLIGHT.md` avec :
 
-     * Cartographier le **module concerné** par la/les US ciblées (recherche usages, TODO/FIXME, flags, endpoints, contrats, tests).
-     * Détecter **doublons**, **code mort/obsolète**, **tech-debt bloquante** ; proposer des **refactors minimaux** (sans déborder du timebox).
-   * **Portée BDD** :
+     * Audit **code** : doublons, code mort, TODO/FIXME, refactor minimal.
+     * Audit **BDD** : tables, RLS, fonctions, écarts vs besoins.
+     * `schema.sql` rafraîchi (ou marqué `unchanged` justifié).
+   * Si migrations modifiées → exiger `schema.sql` mis à jour ou justification dans `PREFLIGHT.md`.
 
-     * Lire l’état courant du schéma (migrations / RLS / fonctions).
-     * **Tenir `schema.sql` à jour** : demander au PO d’exécuter la commande de snapshot si nécessaire (et consigner l’horodatage dans `PREFLIGHT.md`) :
+3. **Intégrer review & rétro**
 
-       * Supabase/Postgres (exemple) :
-
-         ```
-         supabase db dump --schema public -f schema.sql
-         ```
-       * (Si SQL Server) :
-
-         ```
-         sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
-         ```
-     * Lister **écarts** entre l’existant et les besoins des US (tables, colonnes, indexes, RLS).
-   * **Sorties obligatoires dans `PREFLIGHT.md`** :
-
-     * *Code audit* (risques, doublons, code mort + décisions de nettoyage).
-     * *DB audit* (écarts, migrations envisagées).
-     * `schema.sql RefreshedAt: <ISO>` (ou “unchanged” si déjà à jour).
-     * **Actions de nettoyage** planifiées dans le sprint ou mises en `improvement` (US type `improvement` avec `sp`).
-
-3. **Intégrer review & rétro (apprentissage)**
-
-   * Lire `PO_NOTES.md` → `SPRINT_HISTORY` & `RETRO/improvements`, ajuster pratiques (et `QUALITY-GATES.md` si besoin).
+   * Lire `PO_NOTES.md` → `SPRINT_HISTORY` & `RETRO/improvements`, ajuster pratiques.
 
 4. **Collecte & grooming automatique**
 
-   * Lire `BACKLOG.md` (`Ready`), `PO_NOTES.md/SPRINT_INPUT`, `README.md`, `DoD.md`, `QUALITY-GATES.md`.
-   * **Si aucune US `Ready`** :
-
-     * Source 1 : `PO_NOTES.md/NEW_FEATURES` → **générer** des US.
-     * Si vide/insuffisant : **discovery produit** → consigner idées dans `PO_NOTES.md/NEW_FEATURES` puis **créer** les US dans `BACKLOG.md`.
-     * Chaque US auto-générée doit contenir : `id`, `title`, `value`, `priority`, `type`, **≥ 2 AC**, **note sécurité/RLS**, `links.api` **placeholder**, `origin: auto`, `status: Ready`.
+   * Lire `BACKLOG.md`, `PO_NOTES.md/SPRINT_INPUT`, `README.md`, `DoD.md`, `QUALITY-GATES.md`.
+   * **Si aucune US `Ready`** : générer depuis `PO_NOTES.md/NEW_FEATURES` ou discovery produit.
+   * US auto-générées : **≥2 AC**, note sécurité/RLS, `links.api` placeholder, `origin: auto`.
 
 5. **Estimation & capacité**
 
-   * Estimer `sp ∈ {1,2,3,5,8,13}`.
-   * **Vélocité** = moyenne des `delivered_sp` (3 derniers sprints, défaut = 8).
-   * **Capacité engagée** = `floor(vélocité × 0.8)`, réserver ≈ 10 % aux **improvements** (dont **nettoyage identifié en pré-vol**).
+   * Estimer en SP (`1|2|3|5|8|13`).
+   * **Capacité** = vélocité × 0.8, +10% improvements.
 
 6. **Planification**
 
-   * Sélectionner des US jusqu’à **capacité** ; marquer `Selected`, `sprint: N`, `sp`.
-   * Répercuter dans `/docs/sprints/S<N>/PLAN.md` et initialiser `BOARD.md` (colonnes `Selected → InSprint → Done → Spillover`).
+   * Sélectionner US jusqu’à capacité ; MAJ `BACKLOG.md` et `/docs/sprints/S<N>/PLAN.md`.
+   * Initialiser `BOARD.md`.
 
-7. **Exécution (A→B→C→D), sans PR intermédiaire**
+7. **Exécution (A→B→C→D)**
 
-   * Par US : `Selected → InSprint → Done` en passant les **gates** :
+   * US avancent `Selected → InSprint → Done`.
+   * Gates :
 
-     * **Gate A — Serverless/Backend** : contrats/API DTO validés, **idempotence**, tests unit/inté, logs.
-     * **Gate B — Data** : migrations + rollback, **RLS** testées, index/contr., fonctions SQL atomiques + tests concurrence.
-     * **Gate C — Front** : UI responsive, a11y/perf ≥ 90, états *loading/empty/error/success*, VRT OK, intégration contrats.
-     * **Gate D — QA** : E2E (happy + 2 erreurs), tests rôle/RLS, charge ciblée si critique, `QA_CHECKLIST.md` coché.
-   * Mettre à jour `owner` (serverless → data → frontend → qa) et `BOARD.md`.
-   * **Nettoyage pré-vol** : supprimer **code mort** identifié si sans risque (tests verts), sinon créer US `improvement` (Spillover si hors capacité).
-   * Dépassement : basculer l’US en `Spillover`.
+     * **Gate A** : API/DTO, idempotence, tests unit/intégration, logs.
+     * **Gate B** : migrations, RLS testées, contraintes, tests concurrence.
+     * **Gate C** : UI responsive, Lighthouse ≥90, états complets, VRT.
+     * **Gate D** : E2E (happy + 2 erreurs), tests rôle/RLS, QA\_CHECKLIST.
+   * Nettoyage identifié en pré-vol → appliqué si safe, sinon US `improvement`.
+   * Dépassement : basculer en `Spillover`.
 
 8. **Checkpoint T+22 (gel)**
 
-   * **Geler le code**. Compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, **finaliser `PREFLIGHT.md`** (résumé des changements & nettoyage réalisé).
-   * Renseigner **`PO_NOTES.md/INTERACTIONS`** (entrée horodatée) avec **tests prod** à exécuter pour valider/invalider le sprint.
+   * Geler le code, compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, finaliser `PREFLIGHT.md`.
+   * Renseigner `PO_NOTES.md/INTERACTIONS` (tests prod pour validation).
 
 9. **Clôture & PR unique**
 
-   * Calculer `committed_sp` vs `delivered_sp`, écrire **`SPRINT_HISTORY`** (incl. focus factor) dans `PO_NOTES.md`.
-   * Ouvrir **une PR** `work → main` intitulée `Sprint S<N>: <résumé>`.
-   * Après merge : marquer les US livrées en **`Merged`**.
+   * Calculer SP commit/delivered ; MAJ `SPRINT_HISTORY`.
+   * Ouvrir une PR `work → main` (`Sprint S<N>: …`).
+   * Après merge : marquer US en `Merged`.
 
 ## 3) Backlog — statuts & schéma US
 
@@ -106,34 +82,28 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 * `sprint`: `<N|null>`
 * `type`: `feature | improvement | fix`
 * `origin`: `po | auto`
-* `links.api`: chemin d’un contrat d’API/DTO (placeholder accepté pour `origin: auto`)
+* `links.api`: contrat d’API/DTO (placeholder si auto)
 
-> **Pré-vol obligatoire** : avant toute implémentation, vérifier **existant (code + BDD)**, documenter dans `PREFLIGHT.md`, et s’assurer que `schema.sql` est **à jour** (ou justifier).
+> **Préflight obligatoire** : avant toute implémentation, vérifier l’existant (code + BDD), documenter dans `PREFLIGHT.md`, assurer `schema.sql` à jour (ou justifié).
 
-## 4) Garde-fous (PR bloquante si non respectés)
+## 4) Garde-fous (hook local)
 
-Le workflow **`sprint-guard.yml`** doit vérifier :
+Avant tout commit, le hook **`.githooks/pre-commit.ps1`** doit passer. Il bloque si :
 
-1. `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md}` existent.
-2. `PREFLIGHT.md` contient **section Code audit** & **DB audit** + `schema.sql RefreshedAt` (ou justification “unchanged”).
-3. `PO_NOTES.md/INTERACTIONS` a l’entrée **Sprint S<N>** avec **tests prod**.
-4. `BACKLOG.md` :
-
-   * Chaque US **livrée** est `Done` (les `Spillover` exclus de la démo).
-   * US `origin: auto` en `Done` : **`links.api`**, **≥ 2 AC**, **note sécurité/RLS**.
-   * Chaque US `Done` a un `sp` et un `type`.
-5. `CHANGELOG.md` : section **\[Unreleased]** résumant le sprint.
-6. **CI verte** (lint, build, tests, Lighthouse), couverture ≥ **80 %** des nouvelles lignes.
+* Artefacts sprint manquants (PLAN/BOARD/DEMO/REVIEW/RETRO/PREFLIGHT).
+* `PO_NOTES.md` sans INTERACTION pour Sprint S<N>.
+* `BACKLOG.md`: US `origin: auto` en `Done` incomplètes (pas de `links.api`, <2 AC, pas de note sécurité/RLS).
+* Migrations modifiées sans `schema.sql` mis à jour ni justification `unchanged`.
 
 ## 5) Journal PO & décisions
 
-* À chaque sprint, ChatGPT ajoute une entrée **horodatée** dans `PO_NOTES.md/INTERACTIONS` :
+* Chaque sprint → entrée horodatée dans `PO_NOTES.md/INTERACTIONS` :
 
   * `topic: Sprint S<N> — validation prod`
-  * `ask:` étapes de test **simples et vérifiables**
-  * `context:` env/URL utiles
-* Le PO répond **OK/KO** ; ChatGPT adapte backlog (fix/Spillover) et capacité du sprint suivant (vélocité).
+  * `ask:` tests prod
+  * `context:` env/URL
+* PO répond **OK/KO** ; ChatGPT ajuste backlog et vélocité.
 
 ## 6) Dérogations
 
-Toute dérogation (scope, qualité, sécurité) doit être notée dans `/docs/sprints/S<N>/REVIEW.md` **et** ajoutée en **improvement** dans `PO_NOTES.md/RETRO`.
+Dérogations (scope, qualité, sécurité) : notées dans `REVIEW.md` + ajoutées en `RETRO` (improvements).
