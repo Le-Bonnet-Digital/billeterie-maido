@@ -47,6 +47,13 @@
     Refaire un achat en PROD et confirmer réception email (<1 min). Si échec, indiquer heure exacte.
   context: PR #124, change: retry + log provider
   status: pending
+- who: Codex
+  when: 2025-09-04T17:30:00+02:00
+  topic: US-00 — Paiement Stripe + webhook idempotent
+  ask: |
+    Tester un paiement simple et vérifier qu'aucune double réservation n'est créée si le webhook est rejoué.
+  context: PR TBD, env: https://stage.example.app
+  status: pending
 ```
 
 ## FORMAT (à recopier)
