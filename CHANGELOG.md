@@ -1,25 +1,44 @@
 # CHANGELOG — Billeterie Maïdo
 
-Ce fichier suit le format *Keep a Changelog* et le versionnage sémantique.
-
-## \[Unreleased]
-
-* Initialisation des sprints et user stories (Sprint 0, Utilisateur, Parc, Prestataires, Admin)
-* Ajout des fichiers d’orchestration : `AGENTS.md`, `BACKLOG.md`, `QA_CHECKLIST.md`, `PO_NOTES.md`
-* Mise en place du workflow de synchronisation backlog/changelog
-
-## \[0.1.0] - YYYY-MM-DD
-
-* Démarrage du MVP :
-
-  * Enablers : Stripe Checkout + webhook idempotent, Auth/Rôles + RLS, capacité/slots
-  * Parcours client : offres → panier → paiement → confirmation → retrouver mon billet
-  * Validation sur site : Luge, Poney, Tir à l’arc
-  * Back-office admin : CRUD de base (événements/passes/slots), liste réservations + export, reporting simple
+Toutes les modifications sont consignées ici. Suivre le format **Keep a Changelog**.
 
 ---
 
-## Journal des merges (ajout automatique par workflow)
+## \[Unreleased]
 
-> Chaque merge de PR ajoute une ligne ci-dessous au format :
-> `YYYY-MM-DD — US-XX: <titre> — Done via #<PR>`
+### Ajouté
+
+* Sprint en cours S<N>: fonctionnalités en développement
+
+### Modifié
+
+* …
+
+### Corrigé
+
+* …
+
+---
+
+## \[Sprint S0] — YYYY-MM-DD
+
+### Ajouté
+
+* Setup projet (README, AGENTS.md, QUALITY-GATES.md, QA\_CHECKLIST.md, BACKLOG.md, PO\_NOTES.md)
+* Husky pre-commit guard (.husky/pre-commit)
+* Templates sprint (`/docs/templates/*`)
+* `schema.sql` initial
+
+### Modifié
+
+* N/A
+
+### Corrigé
+
+* N/A
+
+---
+
+## \[Sprint S<N>] — YYYY-MM-DD
+
+*(à compléter par ChatGPT lors de la clôture de chaque sprint)*
