@@ -1,8 +1,11 @@
 # BACKLOG — Billeterie Maïdo (MVP)
 
-> Statuts US: `Ready | Selected | InSprint | Done | Spillover | Merged`  ·  Champs: `sp`, `sprint`, `type` (feature|improvement|fix), `origin` (po|auto)
+> Statuts US : `Ready | Selected | InSprint | Done | Spillover | Merged`
+> Champs : `owner`, `sp`, `sprint`, `type` (feature|improvement|fix), `origin` (po|auto), `links.api`
 
-## Sprint 0 — Enablers
+---
+
+## Sprint 0 — Enablers (exemples)
 
 ### US-00
 
@@ -43,8 +46,10 @@ sprint: null
 type: feature
 origin: po
 ac:
-  - Rôles JWT: admin, parc, atlm_collaborator, pony_provider, archery_provider, customer
+  - Rôles JWT: admin, parc, prestataire, customer
   - Policies conformes + tests d’accès automatisés
+notes:
+  - Ajouter fixtures de rôles/claims côté seed
 ```
 
 ### US-02
@@ -62,11 +67,15 @@ sprint: null
 type: feature
 origin: po
 ac:
-  - Fonction SQL reserve_slot(slot_id,reservation_id,qty) transactionnelle
+  - Fonction reserve_slot(slot_id,reservation_id,qty) transactionnelle
   - Test concurrence → 1 seule passe
+notes:
+  - Index sur slot_id + stratégie de verrouillage
 ```
 
-## Sprint Utilisateur (Client)
+---
+
+## Sprint Utilisateur (Client) — exemples
 
 ### US-10
 
@@ -127,26 +136,9 @@ ac:
   - Email confirmation avec n° de réservation + QR
 ```
 
-### US-13
+---
 
-```yaml
-id: US-13
-persona: client
-title: Retrouver mon billet par email
-value: récupérer mon billet
-priority: P2
-status: Ready
-owner: serverless
-sp: 3
-sprint: null
-type: feature
-origin: po
-ac:
-  - Formulaire email + CAPTCHA
-  - Renvoi d’email si trouvé, message si non trouvé
-```
-
-## Sprint Parc (Luge)
+## Sprint Parc (Luge) — exemples
 
 ### US-20
 
@@ -185,7 +177,9 @@ ac:
   - Vue compteur validés aujourd’hui (agrégat simple)
 ```
 
-## Sprint Prestataires
+---
+
+## Sprint Prestataires — exemples
 
 ### US-30
 
@@ -225,25 +219,9 @@ ac:
   - RLS prestataire: accès ARCHERY uniquement
 ```
 
-### US-32
+---
 
-```yaml
-id: US-32
-persona: prestataire
-title: Stats 7j par activité
-value: visualiser l’affluence
-priority: P3
-status: Ready
-owner: data
-sp: 2
-sprint: null
-type: feature
-origin: po
-ac:
-  - Tableau validations J-6..J filtrable par activité
-```
-
-## Sprint Admin
+## Sprint Admin — exemples
 
 ### US-40
 
@@ -299,3 +277,14 @@ origin: po
 ac:
   - CA total période, ventes par pass, courbe journalière
 ```
+
+---
+
+## Règles pour US auto‑générées (par ChatGPT)
+
+* Ajouter `origin: auto`
+* **≥ 2 AC** obligatoires
+* Une **note sécurité/RLS** dans `notes:`
+* Un lien `links.api` (placeholder accepté)
+
+> Le hook Husky vérifie ces règles pour toute US `origin: auto` passée en `Done`.
