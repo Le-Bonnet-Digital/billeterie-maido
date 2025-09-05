@@ -8,22 +8,22 @@
 
 ## 2) Points positifs 👍
 
-- …
-- …
+- Process de migration clarifié
+- Documentation sprint complète
 
 ## 3) Points à améliorer 👎
 
-- …
-- …
+- Automatiser le seeding de données pour les tests
+- Anticiper les renommages de migrations
 
 ## 4) Actions concrètes (improvements)
 
-- IMP-01: … (responsable: …, sprint cible: S7)
-- IMP-02: … (responsable: …, sprint cible: S7)
+- IMP-01: Script de seed automatisé (responsable: data, sprint cible: S7)
+- IMP-02: Audit régulier des conventions de nommage (responsable: dev, sprint cible: S7)
 
 ## 5) Décisions d’équipe
 
-- …
+- Utiliser les migrations pour toute donnée de démo
 
 ## 6) Suivi
 

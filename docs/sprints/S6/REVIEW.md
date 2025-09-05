@@ -3,14 +3,14 @@
 ## 1) Contexte
 
 - **Sprint**: S6
-- **Date review**: …
+- **Date review**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Bilan du sprint
 
 - **Capacité engagée**: 1 SP
-- **SP livrés**: … SP
-- **Focus factor**: … (livrés/engagés)
+- **SP livrés**: 1 SP
+- **Focus factor**: 1.0 (livrés/engagés)
 
 ## 3) Objectifs atteints
 
@@ -18,14 +18,14 @@
 
 ## 4) Dérogations / écarts
 
-- US-.. : … (raison, impact)
-- Qualité: Lighthouse à 85 (cause: …)
+- N/A
+- N/A
 - Schéma BDD: `unchanged` justifié (aucune modif réelle)
 
 ## 5) Feedback PO
 
-- Validation prod: OK/KO
-- Retours fonctionnels: …
+- Validation prod: pending
+- Retours fonctionnels: n/a
 
 ## 6) Actions d’amélioration (reportées en rétro)
 

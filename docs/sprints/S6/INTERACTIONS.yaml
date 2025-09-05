@@ -6,10 +6,11 @@
   when: 2025-09-05T09:05:00Z
   topic: Sprint S6 — validation prod
   did: |
-    - À compléter en fin de sprint
+    - Renommé la migration `extend_get_parc_activities_with_variants` selon la convention
+    - Converti le script `seed_luge_validations.sql` en migration Supabase
   ask: |
     Tester en local :
-    1) TODO
-    2) TODO
-  context: env: http://localhost:5173 ; PR: Sprint S6
+    1) Supabase migration repair puis migration apply
+    2) Vérifier que les données de démonstration Luge sont présentes
+  context: 'env: http://localhost:5173 ; PR: Sprint S6'
   status: pending

@@ -11,12 +11,9 @@
 
 > Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
 
-1. Ouvrir … (URL)
-2. Choisir le pass …
-3. Ajouter au panier …
-4. Payer via Checkout … (retour /success)
-5. Recevoir l’email de confirmation (n° + QR)
-6. Scanner le QR côté activité … (refus du double scan)
+1. Exécuter `supabase migration repair` puis `supabase migration up`
+2. Vérifier que la migration `20250829023000_extend_get_parc_activities_with_variants.sql` est bien listée
+3. Vérifier que les données de démonstration Luge sont insérées
 
 ## 3) Données de test
 
@@ -26,9 +23,9 @@
 
 ## 4) Résultats attendus
 
-- **API**: codes HTTP corrects (200/201/4xx) ; logs sans PII
-- **UI**: affichage succès/erreur ; a11y/perf ≥ 90 (Lighthouse)
-- **Data**: réservation créée, paiement `PAID`, validations comptées
+- **API**: migrations appliquées sans erreur
+- **UI**: n/a
+- **Data**: réservation de démo et validations Luge présentes
 
 ## 5) Preuves
 

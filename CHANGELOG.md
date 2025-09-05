@@ -12,6 +12,8 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Corrigé
 
+- Renommage de la migration `extend_get_parc_activities_with_variants` et conversion du script de seed Luge en migration (US-23)
+
 ---
 
 ## \[Sprint S0] — YYYY-MM-DD
