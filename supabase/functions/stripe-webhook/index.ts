@@ -26,13 +26,15 @@ async function alertError(message) {
     console.error("Alert webhook failed", e);
   }
 }
-// --- Secrets (noms EXACTS selon ta capture)
+// --- Secrets (noms EXACTS)
 const STRIPE_SECRET = env("STRIPE_SECRET"); // sk_test_...
 const WEBHOOK_SECRET = env("WEBHOOK_SECRET"); // whsec_...
 const SUPABASE_URL = env("SUPABASE_URL");
 const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
+// ⚠️ Deno/Edge: forcer le client HTTP basé sur fetch
 const stripe = new Stripe(STRIPE_SECRET, {
-  apiVersion: "2024-06-20"
+  apiVersion: "2024-06-20",
+  httpClient: Stripe.createFetchHttpClient()
 });
 const sbAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
 Deno.serve(async (req)=>{
@@ -46,12 +48,11 @@ Deno.serve(async (req)=>{
       }
     });
   }
-  // APRÈS (Edge/Deno)
   const sig = req.headers.get("stripe-signature");
   if (!sig) return new Response("Missing signature", {
     status: 400
   });
-  // Lire le **corps brut** puis utiliser l’API **asynchrone**
+  // Lire le corps BRUT puis utiliser l’API asynchrone
   const raw = await req.text();
   let event;
   try {
@@ -70,7 +71,7 @@ Deno.serve(async (req)=>{
   const session = event.data.object;
   const sessionId = session.id;
   try {
-    // Idempotence : ignorer si déjà traité
+    // Idempotence
     const { error: sErr } = await sbAdmin.from("stripe_sessions").insert({
       id: sessionId
     });
@@ -83,8 +84,8 @@ Deno.serve(async (req)=>{
       }
       throw sErr;
     }
-    // Email client (priorité: customer_details.email -> customer_email -> metadata.customer.email -> API)
-    let email = session.customer_details?.email ?? // @ts-ignore (présent si fourni à la création de session)
+    // Email client
+    let email = session.customer_details?.email ?? // @ts-ignore
     session.customer_email ?? undefined;
     if (!email && session.metadata?.customer) {
       try {
@@ -102,7 +103,7 @@ Deno.serve(async (req)=>{
         status: 200
       });
     }
-    // Items du panier (contrat app)
+    // Items du panier
     let cartItems = [];
     try {
       cartItems = JSON.parse(session.metadata?.cart ?? "[]");
@@ -121,13 +122,11 @@ Deno.serve(async (req)=>{
           payment_status: "paid"
         }).select("id").single();
         if (insErr || !res) throw insErr ?? new Error("Insert reservation failed");
-        // Appel EXPLICITE de la fonction (JWT = service_role)
-        const invokeUrl = `${SUPABASE_URL}/functions/v1/send-reservation-email`;
-        const r = await fetch(invokeUrl, {
+        // Appel explicite de la fonction d’email avec Bearer service_role
+        const r = await fetch(`${SUPABASE_URL}/functions/v1/send-reservation-email`, {
           method: "POST",
           headers: {
             "content-type": "application/json",
-            // ⚠️ JWT obligatoire car send-reservation-email garde verify_jwt=true
             Authorization: `Bearer ${SUPABASE_SERVICE_ROLE_KEY}`
           },
           body: JSON.stringify({
@@ -138,7 +137,6 @@ Deno.serve(async (req)=>{
         if (!r.ok) {
           const txt = await r.text();
           await alertError(`SEND_EMAIL_INVOKE_ERROR session=${sessionId} res=${res.id} :: ${r.status} ${txt}`);
-        // On continue : réservation créée, email à rejouer manuellement si besoin
         }
       }
     }
@@ -147,7 +145,6 @@ Deno.serve(async (req)=>{
     });
   } catch (e) {
     await alertError(`WEBHOOK_HANDLER_ERROR session=${sessionId} :: ${e?.message ?? e}`);
-    // Ne pas marquer traité : Stripe relivrera l’event
     return new Response("server error", {
       status: 500
     });
