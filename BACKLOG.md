@@ -15,14 +15,16 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: Ready
+status: Selected
 owner: serverless
 sp: 5
-sprint: null
+sprint: 8
 type: feature
 origin: po
 links:
   - api: ./src/shared/contracts/checkout.ts
+scenario: |
+  En tant que client, je règle ma commande via Stripe et reçois une confirmation fiable.
 ac:
   - Checkout Stripe depuis panier + retour /success|/cancel
   - Webhook vérifié (signature) met payment_status='PAID' (idempotent)
@@ -39,15 +41,17 @@ persona: admin
 title: Auth & Rôles + RLS de base
 value: cloisonnement des données
 priority: P1
-status: Ready
+status: Selected
 owner: data
 sp: 5
-sprint: null
+sprint: 8
 type: feature
 origin: po
+scenario: |
+  En tant qu'admin, je gère les rôles utilisateurs pour cloisonner les données.
 ac:
   - Rôles JWT: admin, parc, prestataire, customer
-  - Policies conformes + tests d’accès automatisés
+  - Policies conformes + tests d'accès automatisés
 notes:
   - Ajouter fixtures de rôles/claims côté seed
 ```
@@ -60,12 +64,14 @@ persona: admin
 title: Capacité & créneaux atomiques
 value: éviter la surréservation
 priority: P1
-status: Ready
+status: Selected
 owner: data
 sp: 5
-sprint: null
+sprint: 8
 type: feature
 origin: po
+scenario: |
+  En tant qu'admin, je réserve un créneau sans dépasser la capacité disponible.
 ac:
   - Fonction reserve_slot(slot_id,reservation_id,qty) transactionnelle
   - Test concurrence → 1 seule passe
@@ -482,6 +488,56 @@ notes:
 ```
 
 ---
+
+### IMP-06
+
+```yaml
+id: IMP-06
+persona: dev
+title: Mesurer la vélocité réelle
+value: planification réaliste
+priority: P2
+status: Selected
+owner: qa
+sp: 3
+sprint: 8
+type: improvement
+origin: auto
+links:
+  - api: ./tools/velocity.ts
+scenario: |
+  En tant que membre de l'équipe, je calcule la moyenne des SP livrés pour ajuster la planification.
+ac:
+  - Calculer la moyenne des SP livrés sur les 3 derniers sprints
+  - Documenter la vélocité dans SPRINT_HISTORY
+notes:
+  - Sécurité: données internes uniquement, aucun impact RLS
+```
+
+### IMP-07
+
+```yaml
+id: IMP-07
+persona: dev
+title: Automatiser la génération de docs
+value: limiter les tâches manuelles
+priority: P2
+status: Selected
+owner: qa
+sp: 2
+sprint: 8
+type: improvement
+origin: auto
+links:
+  - api: ./tools/docgen.ts
+scenario: |
+  En tant que membre de l'équipe, je génère les fichiers de sprint via un script.
+ac:
+  - Script génère PLAN, BOARD, DEMO, REVIEW, RETRO depuis templates
+  - Commande documentée dans README
+notes:
+  - Sécurité: script local, aucun secret
+```
 
 ## Règles pour US auto‑générées (par ChatGPT)
 
