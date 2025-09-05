@@ -10,3 +10,9 @@
     2) Vérifier affichage des passes sans erreur
   context: env: http://localhost:5173 ; PR: Sprint S3
   status: pending
+
+- who: PO
+  topic: Sprint S3 — validation prod
+  reply: OK
+  details: "L'affichage des passes se fait bien sans erreur"
+  action: none
