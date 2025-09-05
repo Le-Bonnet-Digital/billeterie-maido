@@ -30,3 +30,9 @@
     Confirmer que ces ajustements répondent aux attentes.
   context: repo
   status: pending
+
+- who: PO
+  topic: Sprint S4 — ajustements suite feedback
+  reply: ok
+  details: "Ces ajustements semblesnt correspondent aux attentes"
+  action: none
