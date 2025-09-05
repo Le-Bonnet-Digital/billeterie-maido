@@ -1,89 +1,112 @@
-# QUALITY-GATES — Billeterie Maïdo
+# QA\_CHECKLIST — Billeterie Maïdo
 
-> **But** : critères de passage obligatoires par gate. Chaque case **doit être cochée** avant de passer à la suivante. Les preuves sont référencées dans `/docs/sprints/S<N>/*`.
-
----
-
-## Gate 0 — Préflight (code + BDD)
-
-**Objectif** : vérifier l’existant et figer le plan minimal.
-
-- [ ] `/docs/sprints/S<N>/PREFLIGHT.md` rempli (sections 1→8)
-- [ ] **Code audit** : doublons / code mort listés + décision (supprimer/refactor ≤ timebox)
-- [ ] **DB audit** : tables/colonnes, RLS/policies, fonctions, **écarts** et migrations envisagées
-- [ ] **`schema.sql`** : `RefreshedAt` (ISO) **ou** `unchanged` **justifié**
-- [ ] **Plan d’action** (nettoyages/refactors ≤ timebox) défini
-
-**Preuves** : `PREFLIGHT.md` ; diff `schema.sql` si rafraîchi
+> À cocher avant de passer une US en **Done** et à la clôture du sprint. Les preuves sont stockées dans `/docs/sprints/S<N>/*` et/ou les dossiers de tests.
 
 ---
 
-## Gate A — Serverless/Backend
+## 1) Serverless / Backend
 
-**Objectif** : contrats stables, logique robuste, idempotence.
+* [ ] Contrats d’entrée/sortie à jour (`/src/shared/contracts/*`)
+* [ ] Validation entrée (Zod/FluentValidation) + erreurs normalisées
+* [ ] Idempotence (webhooks/validations) + déduplication si applicable
+* [ ] Tests **unitaires** verts (≥ 2 cas d’erreur)
+* [ ] Tests **d’intégration** verts (repository/service/controller)
+* [ ] Logs structurés (corrélation), pas de PII
 
-- [ ] Contrats d’API/DTO (validation entrée – Zod/FluentValidation) + erreurs normalisées
-- [ ] Idempotence (webhooks/validations) + déduplication
-- [ ] Tests **unitaires & intégration** verts (incl. erreurs)
-- [ ] Logs structurés (correlation id), pas de PII
-
-**Preuves** : fichiers contrats, tests, extraits logs / README section API
-
----
-
-## Gate B — Data
-
-**Objectif** : intégrité & sécurité des données.
-
-- [ ] **Migrations** versionnées + scripts de rollback
-- [ ] **RLS/policies** testées par rôle (fixtures auto/seed)
-- [ ] Index/constraints en place (PK/UK/FK, unique, check)
-- [ ] Fonctions SQL atomiques + **tests de concurrence** (verrouillage / sérialisation)
-
-**Preuves** : migrations, tests RLS/concurrence, `schema.sql` ou justification
+**Preuves** : contrats, spec d’erreurs, rapports tests, extraits logs
 
 ---
 
-## Gate C — Front
+## 2) Data / Persistant
 
-**Objectif** : UX accessible et performante.
+* [ ] Migrations versionnées + **script de rollback**
+* [ ] **RLS/policies** testées par rôle (admin, parc, prestataire, customer)
+* [ ] Index/contraintes (PK/UK/FK, unique, check) en place
+* [ ] Fonctions SQL atomiques + **tests de concurrence** (si concerné)
+* [ ] `schema.sql` rafraîchi **ou** `PREFLIGHT.md` justifie `unchanged`
 
-- [ ] UI responsive ; i18n si prévu ; états `loading/empty/error/success`
-- [ ] Lighthouse **a11y & perf ≥ 90** (capture rapport)
-- [ ] VRT OK (si configuré) ; intégration contrats (types sûrs)
+**Preuves** : migrations, tests RLS/concurrence, diff `schema.sql`
 
-**Preuves** : captures Lighthouse, snapshots VRT, checklists a11y
-
----
-
-## Gate D — QA / E2E
-
-**Objectif** : valider le flux bout‑en‑bout et les garde‑fous sécurité.
-
-- [ ] E2E **happy path** + **≥ 2 cas d’erreur** critiques
-- [ ] Tests rôle/RLS ; **charge ciblée** si endpoint critique
-- [ ] `QA_CHECKLIST.md` coché
-
-**Preuves** : rapports tests (E2E/charge), `QA_CHECKLIST.md`
+> ℹ️ Les **migrations ne sont pas appliquées par ChatGPT**. Le PO les applique après merge, selon les commandes documentées.
 
 ---
 
-## Gate S — Clôture Sprint (timebox 25 min)
+## 3) Front / UX
 
-**Objectif** : livrer, documenter, préparer la validation PO et la rétro.
+* [ ] Responsive (desktop/tablette/mobile)
+* [ ] États complets : `loading / empty / error / success`
+* [ ] i18n si prévu (fr par défaut)
+* [ ] **Lighthouse a11y & perf ≥ 90** (capture rapport jointe)
+* [ ] VRT OK (si configuré)
+* [ ] Contrats consommés correctement (types sûrs)
 
-- [ ] `PLAN.md` (capacité & SP) à jour
-- [ ] `BOARD.md` à jour (`Selected → InSprint → Delivered → Spillover`)
-- [ ] `DEMO.md`, `REVIEW.md`, `RETRO.md` présents et complétés à **T+22**
-- [ ] `/docs/sprints/S<N>/INTERACTIONS.yaml` contient l’entrée **Sprint S<N>** (tests prod)
-- [ ] `CHANGELOG.md` **\[Unreleased]** mis à jour
-
-**Preuves** : fichiers sprint, `INTERACTIONS.yaml`
+**Preuves** : captures Lighthouse, snapshots VRT, story/screenshot
 
 ---
 
-## Conditions d’échec (bloquantes pre‑commit)
+## 4) QA / E2E
 
-- Une des cases ci‑dessus non cochée → **commit bloqué** par `.husky/pre-commit`
-- US `origin: auto` en `Delivered` **sans** `links.api` **ou** **< 2 AC** **ou** **sans note sécurité/RLS** → **commit bloqué**
-- Migrations modifiées **sans** mise à jour de `schema.sql` **et sans** justification `unchanged` dans `PREFLIGHT.md` → **commit bloqué**
+* [ ] **Happy path** bout‑en‑bout
+* [ ] **≥ 2 cas d’erreur** critiques couverts
+* [ ] Tests rôle/RLS (accès parc/prestataires/admin)
+* [ ] **Charge ciblée** (si endpoint critique)
+
+**Preuves** : rapports E2E, charge
+
+---
+
+## 5) Sécurité
+
+* [ ] Aucune **clé/secret** en repo/PR
+* [ ] Webhooks **signés** (Stripe) ; vérif signature OK
+* [ ] En‑têtes de sécurité (CSP, HSTS, etc. si front public)
+* [ ] Données sensibles **non loggées**, masquage si besoin
+
+**Preuves** : config, extraits logs, captures headers
+
+---
+
+## 6) Observabilité
+
+* [ ] Logs structurés (niveau `Information`/`Warning` pertinents)
+* [ ] Traces/CorrelationId propagé
+* [ ] Métriques clés (si disponibles) : latence, erreurs, tentatives
+
+**Preuves** : extraits logs/metrics, doc
+
+---
+
+## 7) Documentation
+
+* [ ] `README` section API/feature mise à jour (si nouvelle API)
+* [ ] `/docs/sprints/S<N>/DEMO.md` décrit le scénario de démo
+* [ ] `/docs/sprints/S<N>/REVIEW.md` consigne décisions/dérogations
+* [ ] `/docs/sprints/S<N>/RETRO.md` liste les improvements
+
+**Preuves** : fichiers sprint, diff README
+
+---
+
+## 8) Release / Changelog
+
+* [ ] `CHANGELOG.md` — entrée **\[Unreleased]** renseignée
+* [ ] Version/Tag prévu si nécessaire (notes de version courtes)
+
+**Preuves** : diff CHANGELOG, release notes
+
+---
+
+## 9) PO Validation (prod/stage)
+
+* [ ] `/docs/sprints/S<N>/INTERACTIONS.yaml` : entrée **ChatGPT** créée avec les **tests prod à exécuter**
+* [ ] PO a répondu **OK/KO** (ou en attente : `status: pending`)
+
+**Preuves** : `INTERACTIONS.yaml`
+
+---
+
+## 10) Récap final (US → Done)
+
+* [ ] Toutes les cases ci‑dessus sont cochées
+* [ ] `BACKLOG.md` : US marquée **Done** (ou **Spillover** si report)
+* [ ] Si `origin: auto` → **`links.api` + ≥ 2 AC + note sécurité/RLS** présents
