@@ -1,39 +1,163 @@
-\n\n-- Fonction pour calculer la capacité totale des créneaux d'une activité d'événement\nCREATE OR REPLACE FUNCTION calculate_total_timeslot_capacity(event_activity_uuid uuid)\nRETURNS integer\nLANGUAGE plpgsql\nAS $$\nDECLARE\n  total_capacity integer := 0;
-\nBEGIN\n  SELECT COALESCE(SUM(capacity), 0)\n  INTO total_capacity\n  FROM time_slots\n  WHERE event_activity_id = event_activity_uuid;
-\n  \n  RETURN total_capacity;
-\nEND;
-\n$$;
-\n\n-- Fonction pour synchroniser le stock limite avec la capacité des créneaux\nCREATE OR REPLACE FUNCTION sync_activity_stock_with_timeslots(event_activity_uuid uuid)\nRETURNS void\nLANGUAGE plpgsql\nAS $$\nDECLARE\n  total_capacity integer;
-\n  requires_slots boolean;
-\nBEGIN\n  -- Vérifier si l'activité nécessite des créneaux\n  SELECT requires_time_slot INTO requires_slots\n  FROM event_activities\n  WHERE id = event_activity_uuid;
-\n  \n  -- Si l'activité nécessite des créneaux, synchroniser le stock\n  IF requires_slots THEN\n    -- Calculer la capacité totale des créneaux\n    total_capacity := calculate_total_timeslot_capacity(event_activity_uuid);
-\n    \n    -- Mettre à jour le stock limite de l'activité\n    UPDATE event_activities\n    SET stock_limit = CASE \n      WHEN total_capacity > 0 THEN total_capacity\n      ELSE NULL\n    END\n    WHERE id = event_activity_uuid;
-\n  END IF;
-\nEND;
-\n$$;
-\n\n-- Trigger pour synchroniser automatiquement après modification des créneaux\nCREATE OR REPLACE FUNCTION trigger_sync_activity_stock()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  -- Synchroniser pour l'ancienne activité (en cas de UPDATE/DELETE)\n  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN\n    PERFORM sync_activity_stock_with_timeslots(OLD.event_activity_id);
-\n  END IF;
-\n  \n  -- Synchroniser pour la nouvelle activité (en cas d'INSERT/UPDATE)\n  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN\n    PERFORM sync_activity_stock_with_timeslots(NEW.event_activity_id);
-\n  END IF;
-\n  \n  RETURN COALESCE(NEW, OLD);
-\nEND;
-\n$$;
-\n\n-- Créer le trigger sur la table time_slots\nDROP TRIGGER IF EXISTS trigger_sync_stock_on_timeslot_change ON time_slots;
-\nCREATE TRIGGER trigger_sync_stock_on_timeslot_change\n  AFTER INSERT OR UPDATE OR DELETE ON time_slots\n  FOR EACH ROW\n  EXECUTE FUNCTION trigger_sync_activity_stock();
-\n\n-- Trigger pour synchroniser quand on change requires_time_slot\nCREATE OR REPLACE FUNCTION trigger_sync_on_requires_timeslot_change()\nRETURNS trigger\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  -- Si on active requires_time_slot, synchroniser avec les créneaux existants\n  IF NEW.requires_time_slot = true AND (OLD.requires_time_slot = false OR OLD.requires_time_slot IS NULL) THEN\n    PERFORM sync_activity_stock_with_timeslots(NEW.id);
-\n  END IF;
-\n  \n  -- Si on désactive requires_time_slot, remettre le stock limite à NULL (stock illimité)\n  IF NEW.requires_time_slot = false AND OLD.requires_time_slot = true THEN\n    NEW.stock_limit := NULL;
-\n  END IF;
-\n  \n  RETURN NEW;
-\nEND;
-\n$$;
-\n\n-- Créer le trigger sur la table event_activities\nDROP TRIGGER IF EXISTS trigger_sync_on_requires_timeslot_change ON event_activities;
-\nCREATE TRIGGER trigger_sync_on_requires_timeslot_change\n  BEFORE UPDATE ON event_activities\n  FOR EACH ROW\n  EXECUTE FUNCTION trigger_sync_on_requires_timeslot_change();
-\n\n-- Fonction pour synchroniser toutes les activités existantes (migration)\nCREATE OR REPLACE FUNCTION sync_all_existing_activities()\nRETURNS void\nLANGUAGE plpgsql\nAS $$\nDECLARE\n  activity_record RECORD;
-\nBEGIN\n  FOR activity_record IN \n    SELECT id FROM event_activities WHERE requires_time_slot = true\n  LOOP\n    PERFORM sync_activity_stock_with_timeslots(activity_record.id);
-\n  END LOOP;
-\nEND;
-\n$$;
-\n\n-- Exécuter la synchronisation pour toutes les activités existantes\nSELECT sync_all_existing_activities();
-\n\n-- Nettoyer la fonction temporaire\nDROP FUNCTION sync_all_existing_activities();
+
+
+-- Fonction pour calculer la capacité totale des créneaux d'une activité d'événement
+CREATE OR REPLACE FUNCTION calculate_total_timeslot_capacity(event_activity_uuid uuid)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  total_capacity integer := 0;
+
+BEGIN
+  SELECT COALESCE(SUM(capacity), 0)
+  INTO total_capacity
+  FROM time_slots
+  WHERE event_activity_id = event_activity_uuid;
+
+  
+  RETURN total_capacity;
+
+END;
+
+$$;
+
+
+-- Fonction pour synchroniser le stock limite avec la capacité des créneaux
+CREATE OR REPLACE FUNCTION sync_activity_stock_with_timeslots(event_activity_uuid uuid)
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  total_capacity integer;
+
+  requires_slots boolean;
+
+BEGIN
+  -- Vérifier si l'activité nécessite des créneaux
+  SELECT requires_time_slot INTO requires_slots
+  FROM event_activities
+  WHERE id = event_activity_uuid;
+
+  
+  -- Si l'activité nécessite des créneaux, synchroniser le stock
+  IF requires_slots THEN
+    -- Calculer la capacité totale des créneaux
+    total_capacity := calculate_total_timeslot_capacity(event_activity_uuid);
+
+    
+    -- Mettre à jour le stock limite de l'activité
+    UPDATE event_activities
+    SET stock_limit = CASE 
+      WHEN total_capacity > 0 THEN total_capacity
+      ELSE NULL
+    END
+    WHERE id = event_activity_uuid;
+
+  END IF;
+
+END;
+
+$$;
+
+
+-- Trigger pour synchroniser automatiquement après modification des créneaux
+CREATE OR REPLACE FUNCTION trigger_sync_activity_stock()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Synchroniser pour l'ancienne activité (en cas de UPDATE/DELETE)
+  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+    PERFORM sync_activity_stock_with_timeslots(OLD.event_activity_id);
+
+  END IF;
+
+  
+  -- Synchroniser pour la nouvelle activité (en cas d'INSERT/UPDATE)
+  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    PERFORM sync_activity_stock_with_timeslots(NEW.event_activity_id);
+
+  END IF;
+
+  
+  RETURN COALESCE(NEW, OLD);
+
+END;
+
+$$;
+
+
+-- Créer le trigger sur la table time_slots
+DROP TRIGGER IF EXISTS trigger_sync_stock_on_timeslot_change ON time_slots;
+
+CREATE TRIGGER trigger_sync_stock_on_timeslot_change
+  AFTER INSERT OR UPDATE OR DELETE ON time_slots
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_sync_activity_stock();
+
+
+-- Trigger pour synchroniser quand on change requires_time_slot
+CREATE OR REPLACE FUNCTION trigger_sync_on_requires_timeslot_change()
+RETURNS trigger
+LANGUAGE plpgsql
+AS $$
+BEGIN
+  -- Si on active requires_time_slot, synchroniser avec les créneaux existants
+  IF NEW.requires_time_slot = true AND (OLD.requires_time_slot = false OR OLD.requires_time_slot IS NULL) THEN
+    PERFORM sync_activity_stock_with_timeslots(NEW.id);
+
+  END IF;
+
+  
+  -- Si on désactive requires_time_slot, remettre le stock limite à NULL (stock illimité)
+  IF NEW.requires_time_slot = false AND OLD.requires_time_slot = true THEN
+    NEW.stock_limit := NULL;
+
+  END IF;
+
+  
+  RETURN NEW;
+
+END;
+
+$$;
+
+
+-- Créer le trigger sur la table event_activities
+DROP TRIGGER IF EXISTS trigger_sync_on_requires_timeslot_change ON event_activities;
+
+CREATE TRIGGER trigger_sync_on_requires_timeslot_change
+  BEFORE UPDATE ON event_activities
+  FOR EACH ROW
+  EXECUTE FUNCTION trigger_sync_on_requires_timeslot_change();
+
+
+-- Fonction pour synchroniser toutes les activités existantes (migration)
+CREATE OR REPLACE FUNCTION sync_all_existing_activities()
+RETURNS void
+LANGUAGE plpgsql
+AS $$
+DECLARE
+  activity_record RECORD;
+
+BEGIN
+  FOR activity_record IN 
+    SELECT id FROM event_activities WHERE requires_time_slot = true
+  LOOP
+    PERFORM sync_activity_stock_with_timeslots(activity_record.id);
+
+  END LOOP;
+
+END;
+
+$$;
+
+
+-- Exécuter la synchronisation pour toutes les activités existantes
+SELECT sync_all_existing_activities();
+
+
+-- Nettoyer la fonction temporaire
+DROP FUNCTION sync_all_existing_activities();
 ;
+

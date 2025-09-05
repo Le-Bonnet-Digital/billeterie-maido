@@ -1,8 +1,25 @@
 -- Migration: extend get_parc_activities_with_variants to include activities.parc_description
--- Safe to re-run (CREATE OR REPLACE FUNCTION)
+-- Idempotent: on supprime d'abord toute version existante (même signature), puis on recrée.
 
-create or replace function public.get_parc_activities_with_variants()
-returns table (
+DO $$
+BEGIN
+  IF EXISTS (
+    SELECT 1
+    FROM pg_proc p
+    JOIN pg_namespace n ON n.oid = p.pronamespace
+    WHERE n.nspname = 'public'
+      AND p.proname = 'get_parc_activities_with_variants'
+      AND p.pronargs = 0  -- aucune argument
+  ) THEN
+    DROP FUNCTION public.get_parc_activities_with_variants();
+    -- Si tu sais qu'il n'y a pas de dépendances: tu peux aussi faire CASCADE
+    -- DROP FUNCTION public.get_parc_activities_with_variants() CASCADE;
+  END IF;
+END
+$$;
+
+CREATE FUNCTION public.get_parc_activities_with_variants()
+RETURNS TABLE (
   id uuid,
   name text,
   description text,
@@ -13,38 +30,40 @@ returns table (
   image_url text,
   variants jsonb
 )
-language sql
-security definer
-as $$
-  select
+LANGUAGE sql
+SECURITY DEFINER
+SET search_path = public
+AS $$
+  SELECT
     a.id,
     a.name,
-    coalesce(a.description, '') as description,
+    COALESCE(a.description, '') AS description,
     a.parc_description,
     a.icon,
-    a.parc_category as category,
-    coalesce(a.parc_requires_time_slot, false) as requires_time_slot,
-    a.parc_image_url as image_url,
-    coalesce(
+    a.parc_category AS category,
+    COALESCE(a.parc_requires_time_slot, false) AS requires_time_slot,
+    a.parc_image_url AS image_url,
+    COALESCE(
       (
-        select jsonb_agg(
+        SELECT jsonb_agg(
           jsonb_build_object(
             'id', v.id,
             'name', v.name,
             'price', v.price,
-            'sort_order', coalesce(v.sort_order, 0),
+            'sort_order', COALESCE(v.sort_order, 0),
             'remaining_stock', get_activity_variant_remaining_stock(v.id),
             'image_url', v.image_url
           )
-          order by coalesce(v.sort_order, 0), v.name
+          ORDER BY COALESCE(v.sort_order, 0), v.name
         )
-        from public.activity_variants v
-        where v.activity_id = a.id and v.is_active = true
+        FROM public.activity_variants v
+        WHERE v.activity_id = a.id AND v.is_active = true
       ), '[]'::jsonb
-    ) as variants
-  from public.activities a
-  where a.is_parc_product = true
-  order by a.parc_sort_order, a.name;
+    ) AS variants
+  FROM public.activities a
+  WHERE a.is_parc_product = true
+  ORDER BY a.parc_sort_order, a.name;
 $$;
-comment on function public.get_parc_activities_with_variants() is
-  'Returns park activities and their variants; now includes activities.parc_description for UI chips.';
+
+-- (Optionnel) Donner les droits d'exécution si besoin :
+-- GRANT EXECUTE ON FUNCTION public.get_parc_activities_with_variants() TO anon, authenticated, service_role;
