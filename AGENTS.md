@@ -1,127 +1,76 @@
-# AGENTS.md — Billeterie Maïdo (MVP serverless, sprint timebox 25 min)
+# AGENTS.md — Billeterie Maïdo (MVP serverless)
 
-## 0) Objet
+Ce fichier sert de **briefing** pour tous les agents de codage (OpenAI Codex ou autres). Il contient les informations indispensables pour comprendre la structure du projet, exécuter les tests et respecter les conventions. Les détails opérationnels du sprint sont déplacés dans des fichiers dédiés pour alléger ce document.
 
-Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suivant »**, ChatGPT crée son environnement isolé **sur la branche `work`**, lit ce fichier et exécute **un sprint timeboxé 25 minutes** en jouant tous les rôles (PM, SM, Serverless/Backend, Data, Front, QA, Code Review). 👉 **Aucune autre branche ni environnement** ne doit être créé.
+## 1. Objet
 
----
+Ce dépôt suit un mode de développement agile timeboxé. À chaque commande “Passe au sprint suivant”, l’agent crée un environnement isolé sur la branche `work`, lit ce fichier et démarre un sprint de 25 minutes. Une seule PR est créée à la fin du sprint.
 
-## 1) Contrats d’exécution
+## 2. Préparation de l’environnement
 
-- **Branche** : unique, `work`.
-- **PR** : **une seule PR en fin de sprint** → `work → main`, titre : `Sprint S<N>: <résumé>`.
-- **Timebox** : 25 min (gel **T+22** pour docs/review/rétro/PO_NOTES).
-- **Autonomie produit** : si besoin, ChatGPT **propose, crée et sélectionne** des US (MVP + qualité irréprochable).
-- **Rôle du PO** : fournit **OK/KO**, **secrets/clé API**, **orientations** dans `PO_NOTES.md`.
-- **Qualité** : respecter [QUALITY-GATES.md](QUALITY-GATES.md) et [DoD.md](DoD.md).
-- **Sécurité** : pas de secrets en repo ; idempotence ; **RLS/policies** testées ; en‑têtes sécurité ; rate‑limit endpoints publics.
-- **Garde‑fous locaux** : tout commit doit passer le **hook Husky** `.husky/pre-commit`. Aucune dépendance à GitHub Actions.
+Avant d’exécuter des tâches, l’agent doit disposer de toutes les dépendances et outils nécessaires, car l’environnement Codex n’a **pas accès à Internet**. Les dépendances doivent être installées dans le script de configuration (`Setup script` dans l’interface Codex) par le PO. Exemple :
 
----
+```bash
+# Exemple de script d’installation (à adapter)
+npm install -g pnpm
+pnpm install
+pnpm run build
+# Préparer la base de données locale et importer les migrations
+```
 
-## 2) Mode Sprint (appliqué à chaque demande)
+Si une dépendance manque, l’agent doit l’indiquer dans `INTERACTIONS.yaml` pour que le PO l’ajoute avant le sprint suivant.
 
-Les étapes suivantes s'appliquent à chaque nouvelle demande du PO, pas seulement à la commande « Passe au sprint suivant ».
+## 3. Build & Test
 
-1. **Bootstrap & minuteur**
-   - Exécuter `npm run sprint:init` (crée `/docs/sprints/S<N>` depuis `docs/templates`).
-   - Démarrer un **minuteur 25 min** (checkpoints **T+10**, **T+22**).
+### Commandes de build et de test
 
-2. **Pré‑vol (audit existant) → `PREFLIGHT.md`**
-   - **Code** : cartographier endpoints/contrats/tests, relever doublons, **code mort**, dette bloquante ; proposer refactors **≤ timebox**.
-   - **BDD** : état schéma/migrations/RLS/fonctions ; exiger snapshot **`schema.sql`** (ou `unchanged` justifié). Le PO applique les migrations validées et tout problème de migration `reverted` (ex. `supabase migration repair`) doit être résolu ou signalé.
+- **Lancer tous les tests** : `pnpm test`
+- **Lancer un test spécifique** : `pnpm test -- path/to/test-file.test.ts`
+- **Exécuter le linter et le formatage** : `pnpm run lint` et `pnpm run format`
+- **Démarrer en mode développement** : `pnpm dev`
+- **Générer la documentation** : `pnpm run docs`
 
-3. **Intégrer review & rétro (apprentissage)** :
-   - Lire `PO_NOTES.md` & `RETRO.md` ; ajuster pratiques.
-   - Consulter `docs/sprints/S<N-1>/INTERACTIONS.yaml` :
-     - US `Delivered` validées par le PO → passer en `Done`.
-     - Corrections demandées → créer les US de fix et ajuster le backlog/capacité.
-     - Ce fichier prévaut sur `REVIEW.md` pour l'état des US.
-     - Tant qu'une entrée est `pending` ou `reply: KO`, **ne sélectionner aucune nouvelle US** ; traiter ces actions d'abord.
-     - En cas de `reply: KO`, laisser l'US en `Delivered` jusqu'à correction.
-4. **Collecte & grooming automatique**
-   - Lire `BACKLOG.md` (`Ready`) et `PO_NOTES.md`.
-   - **Si aucune US `Ready`** :
-     - 1. `PO_NOTES.md` (NEW_FEATURES) → **générer** des US ;
-     - 2. si vide : **discovery produit** alignée MVP, consigner idées, puis **créer** les US.
-   - Vérifier la **Definition of Ready (DoR)** : chaque US doit être bien rédigée (persona, title, value, priority, `status: Ready`, `sp`, ≥2 AC, note sécurité/RLS, `links.api` pour `origin:auto`).
+### Cadre de test
 
-   - Toute US auto‑générée : `id,title,value,priority,type`, **≥2 AC**, **note sécurité/RLS**, `links.api` **placeholder**, `origin: auto`, `status: Ready`.
+Les tests doivent être isolés : toute requête vers un service externe doit être mockée. Utiliser `msw` ou `vi.fn` pour simuler les API externes afin que les tests passent hors connexion.
 
-5. **Estimation & capacité**
-   - `sp ∈ {1,2,3,5,8,13}` ; **vélocité** = moyenne `delivered_sp` (3 derniers, défaut 8) ; **capacité** = floor(vel×0.8) ; réserver ≈10 % aux **improvements**.
+## 4. Structure et conventions du projet
 
-6. **Planification**
-   - Sélectionner des US jusqu’à la capacité ; marquer `Selected`, `sprint: N`, `sp` dans `BACKLOG.md` et `/docs/sprints/S<N>/PLAN.md`. Initialiser `BOARD.md`.
+- **Sources** : tout le code applicatif se trouve dans `src/`.
+- **Tests** : les fichiers de test se trouvent dans `tests/` ou `__tests__/`.
+- **Migrations** : les scripts SQL se trouvent dans `migrations/`. Un dump de l’état de la base doit être enregistré dans `schema.sql` à chaque sprint.
+- **Style de code** : respectez la configuration ESLint et Prettier du projet. Les noms de fichiers sont en `camelCase` pour le code et `PascalCase` pour les composants front.
 
-7. **Exécution (A→B→C→D), sans PR intermédiaire**
-   - Par US : `Selected → InSprint → Delivered` en passant les **gates** :
-     - **Gate 0 — Préflight** (code+BDD, `schema.sql`).
-     - **Gate A — Serverless/Backend**.
-     - **Gate B — Data** (migrations + rollback, RLS/policies, index/constraints, résolution des migrations `reverted`).
-     - **Gate C — Front**.
-     - **Gate D — QA** (suivre `QA_CHECKLIST.md` + `QUALITY-GATES.md`).
-   - Mettre à jour `owner` (serverless→data→frontend→qa) et `BOARD.md`. Déplacer en `Spillover` si dépassement.
-   - À l'entrée en `InSprint`, noter `start` (horodatage ISO `HH:MM:SS`), et à la transition `Delivered`, noter `end` dans `BOARD.md`.
+Ajoutez ici les sections spécifiques à vos microservices ou à votre architecture (ex. dossiers `serverless/`, `data/`, etc.).
 
-8. **Checkpoint T+22 (gel)** : figer code ; compléter `DEMO.md`, `REVIEW.md` (inclure temps par US et temps total de sprint), `RETRO.md`, finaliser `PREFLIGHT.md` ; renseigner `INTERACTIONS.yaml` (tests prod) ; mettre à jour `CHANGELOG.md`.
-9. **Clôture & PR unique** : calculer `committed_sp` vs `delivered_sp`, consigner la **vélocité** dans `REVIEW.md` et `SPRINT_HISTORY` ; ouvrir **une PR** `work→main` `Sprint S<N>: …`. Après merge, les US restent en `Delivered` jusqu'à validation PO ; elles passeront en `Done` au sprint suivant.
+## 5. Workflow Git
 
----
+- **Branche de travail** : `work`. Ne créez jamais de branches supplémentaires.
+- **Commit** : effectuer des commits atomiques et respecter les conventions du projet (ex. `[feat]`, `[fix]`, `[chore]`).
+- **PR** : une seule Pull Request par sprint (`work → main`) intitulée `Sprint S : <objectif principal>`.
+- **Hook pre-commit** : le hook `.husky/pre-commit` doit réussir avant chaque commit. Il vérifie la présence des artefacts de sprint (`PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`, `INTERACTIONS.yaml`), le respect des conventions et la mise à jour de `schema.sql`. Un mode `ALLOW_EMPTY_SPRINT` permet de committer des fichiers de documentation sans lancer tous les tests.
 
-## 3) Backlog — statuts & schéma US
+## 6. Sprint process
 
-- `status`: `Ready | Selected | InSprint | Delivered | Done | Spillover`
-  - `Delivered` : implémenté, QA OK, PR ouverte/mergée en attente validation PO.
-  - `Done` : validé par le PO après merge et tests.
-- `owner`: `serverless | data | frontend | qa`
-- `sp`: `1|2|3|5|8|13` ; `sprint`: `<N|null>`
-- `type`: `feature | improvement | fix` ; `origin`: `po | auto`
-- `links.api`: contrat d’API/DTO (placeholder accepté pour `origin: auto`)
+Les détails du déroulement d’un sprint sont décrits dans `docs/process/SPRINT_PROCESS.md`. Ce fichier présente les étapes : pré‑vol, intégration du feedback, collecte et grooming du backlog, estimation, planification, exécution des différentes gates, checkpoint T+22, clôture et génération de la PR. Référez‑vous à ce document pendant le sprint.
 
-> **Pré‑vol obligatoire** avant implémentation ; `schema.sql` **à jour** ou `unchanged` justifié.
+## 7. Gestion du backlog et des user stories
 
----
+- Les US sont listées dans `BACKLOG.md`.
+- Chaque US doit respecter la *Definition of Ready* (persona, titre, valeur, priorité, au moins deux critères d’acceptation, note sécurité/RLS, champ `links.api` si origine `auto`).
+- La vélocité est calculée sur la moyenne des trois derniers sprints et la capacité du sprint est fixée à 80 % de cette valeur. Réservez 10 % pour les improvements.
+- Priorité : corriger d’abord les US ayant le statut `Fix` ou `KO`, puis les features urgentes, puis les improvements.
 
-## 4) Garde‑fous **locaux** (pre‑commit)
+Un script de validation (`npm run validate:backlog`) doit s’assurer que toutes les US `Ready` respectent la DoR avant la planification.
 
-Avant **tout commit**, le hook **`.husky/pre-commit`** doit réussir. Il vérifie :
+## 8. Lignes directrices pour les PR
 
-1. Présence des artefacts sprint : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`.
-2. `PREFLIGHT.md` contient **Code audit**, **DB audit**, et **schema.sql RefreshedAt (ISO)** ou **`unchanged`** justifié.
-3. `INTERACTIONS.yaml` contient une entrée **Sprint S<N>** (tests prod à exécuter).
-4. `BACKLOG.md` :
-   - US `origin: auto` en `Delivered` ou `Done` → **`links.api`** présent, **≥2 AC**, **note sécurité/RLS**.
-   - US `Delivered` ou `Done` → `sp` et `type` présents.
+- Le message de PR doit inclure :
+  - le résumé du sprint (US livrées et statut),
+  - les instructions de test pour le PO (`DEMO.md`),
+  - la métrique de vélocité (`committed_sp` vs `delivered_sp`),
+  - les références aux fichiers du sprint (plan, board, revue, rétro).
 
-5. Si des **migrations** sont modifiées → `schema.sql` est mis à jour, **ou** `PREFLIGHT.md` justifie `unchanged`. ⚠️ **ChatGPT ne les applique pas**, le PO exécute les commandes fournies.
+## 9. Hiérarchie des instructions
 
-> ✍️ **Commit docs-only** : si le commit ne touche que des fichiers de documentation (`*.md`, `*.yml`, `docs/…`), le hook détecte un mode "allow-empty-sprint". Les contrôles d'artefacts sprint et les tests complets sont ignorés au profit de `lint-staged`. Pour forcer ce mode, lancer `git commit` avec `ALLOW_EMPTY_SPRINT=1` (ou en appelant le hook avec `--allow-empty-sprint`).
-
----
-
-## 5) Rôles & switching (rappel)
-
-- ChatGPT joue **tous les rôles techniques** ; le **PO** valide et fournit secrets/orientations.
-- Ordre par US : **Gate 0** → **A (serverless)** → **B (data)** → **C (front)** → **D (qa)** ; `owner` reflète le rôle courant.
-
----
-
-## 6) Journal PO & décisions
-
-- À chaque sprint, **ChatGPT** ajoute une entrée **horodatée** dans `/docs/sprints/S<N>/INTERACTIONS.yaml` :
-  - `topic: Sprint S<N> — validation prod`
-- `ask:` étapes de test simples
-- `context:` env/URL utiles
-
-- Le PO répond **OK/KO** (sans horodatage) ; ChatGPT ajuste le backlog (fix/Spillover) et la capacité du sprint suivant (vélocité).
-  - Les réponses du PO dans `INTERACTIONS.yaml` font foi et priment sur `REVIEW.md` ou tout autre artefact.
-
----
-
-## 7) Dérogations
-
-Toute dérogation (scope, qualité, sécurité) doit être :
-
-- mentionnée dans `/docs/sprints/S<N>/REVIEW.md`, et
-- ajoutée en **improvement** dans `/docs/sprints/S<N>/RETRO.md` avec action corrective planifiée.
+Les instructions de ce fichier s’appliquent à l’ensemble du dépôt. Des fichiers `AGENTS.md` plus profonds (ex. pour chaque microservice) peuvent préciser des règles supplémentaires et prévalent sur celles‑ci en cas de conflit. Les instructions directes du PO (dans `PO_NOTES.md` ou via la commande) priment sur toute instruction écrite.
