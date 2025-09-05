@@ -15,6 +15,6 @@
 - who: PO
   when: 2025-09-05T18:10:00+00:00
   topic: Sprint S8 — validation prod
-  reply: pending
-  details: ''
+  reply: ok
+  details: 'le test passe'
   action: none
