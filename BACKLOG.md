@@ -15,7 +15,7 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: Selected
+status: Spillover
 owner: serverless
 sp: 5
 sprint: 8
@@ -41,7 +41,7 @@ persona: admin
 title: Auth & Rôles + RLS de base
 value: cloisonnement des données
 priority: P1
-status: Selected
+status: Spillover
 owner: data
 sp: 5
 sprint: 8
@@ -64,7 +64,7 @@ persona: admin
 title: Capacité & créneaux atomiques
 value: éviter la surréservation
 priority: P1
-status: Selected
+status: Spillover
 owner: data
 sp: 5
 sprint: 8
@@ -129,7 +129,7 @@ persona: client
 title: Payer et recevoir la confirmation
 value: finaliser mon achat
 priority: P1
-status: Ready
+status: Draft
 owner: serverless
 sp: 5
 sprint: null
@@ -223,7 +223,7 @@ persona: parc
 title: Valider billet Luge (scan/QR)
 value: admettre rapidement
 priority: P1
-status: Ready
+status: Draft
 owner: serverless
 sp: 5
 sprint: null
@@ -306,7 +306,7 @@ persona: prestataire
 title: Valider Poney
 value: contrôler l’accès
 priority: P1
-status: Ready
+status: Draft
 owner: serverless
 sp: 3
 sprint: null
@@ -325,7 +325,7 @@ persona: prestataire
 title: Valider Tir à l’arc
 value: contrôler l’accès
 priority: P1
-status: Ready
+status: Draft
 owner: serverless
 sp: 3
 sprint: null
@@ -348,7 +348,7 @@ persona: admin
 title: CRUD Événements / Passes / Slots
 value: configurer l’offre
 priority: P1
-status: Ready
+status: Draft
 owner: data
 sp: 8
 sprint: null
@@ -366,7 +366,7 @@ persona: admin
 title: Liste réservations + filtres + export CSV
 value: assistance & analyse
 priority: P1
-status: Ready
+status: Draft
 owner: frontend
 sp: 5
 sprint: null
@@ -385,7 +385,7 @@ persona: admin
 title: Reporting simple (CA, volumes)
 value: pilotage
 priority: P2
-status: Ready
+status: Draft
 owner: data
 sp: 5
 sprint: null
@@ -497,7 +497,7 @@ persona: dev
 title: Mesurer la vélocité réelle
 value: planification réaliste
 priority: P2
-status: Selected
+status: Delivered
 owner: qa
 sp: 3
 sprint: 8
@@ -522,7 +522,7 @@ persona: dev
 title: Automatiser la génération de docs
 value: limiter les tâches manuelles
 priority: P2
-status: Selected
+status: Spillover
 owner: qa
 sp: 2
 sprint: 8

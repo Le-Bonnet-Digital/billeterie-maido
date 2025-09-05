@@ -27,8 +27,7 @@
 
 ## 5) Schéma SQL (`schema.sql`)
 
-- **RefreshedAt**: n/a
-- Ou justification `unchanged`: aucune modification BDD prévue avant implémentation
+- **RefreshedAt**: unchanged (aucune modification BDD prévue)
 
 ## 6) Sécurité
 
