@@ -34,6 +34,7 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
    - Consulter `docs/sprints/S<N-1>/INTERACTIONS.yaml` :
      - US `Delivered` validées par le PO → passer en `Done`.
      - Corrections demandées → créer les US de fix et ajuster le backlog/capacité.
+     - Ce fichier prévaut sur `REVIEW.md` pour l'état des US ; en cas de `reply: KO`, laisser l'US en `Delivered`.
 4. **Collecte & grooming automatique**
    - Lire `BACKLOG.md` (`Ready`) et `PO_NOTES.md`.
    - **Si aucune US `Ready`** :
@@ -103,10 +104,11 @@ Avant **tout commit**, le hook **`.husky/pre-commit`** doit réussir. Il vérifi
 
 - À chaque sprint, **ChatGPT** ajoute une entrée **horodatée** dans `/docs/sprints/S<N>/INTERACTIONS.yaml` :
   - `topic: Sprint S<N> — validation prod`
-  - `ask:` étapes de test simples
-  - `context:` env/URL utiles
+- `ask:` étapes de test simples
+- `context:` env/URL utiles
 
 - Le PO répond **OK/KO** (sans horodatage) ; ChatGPT ajuste le backlog (fix/Spillover) et la capacité du sprint suivant (vélocité).
+  - Les réponses du PO dans `INTERACTIONS.yaml` font foi et priment sur `REVIEW.md` ou tout autre artefact.
 
 ---
 

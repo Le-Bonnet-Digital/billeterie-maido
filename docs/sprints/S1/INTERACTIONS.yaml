@@ -15,12 +15,21 @@
   status: pending
   note: sprint history updated
 
-  - who: PO
-    topic: Sprint S1 — validation prod
+- who: PO
+  topic: Sprint S1 — validation prod
   reply: KO
   details: |
-    - Je n'ai pas pu afficher les passes pour vérifier l'affichage des créneaux 
+    - Je n'ai pas pu afficher les passes pour vérifier l'affichage des créneaux
     - error POST https://rvotxqsgaolddvpqbkhy.supabase.co/rest/v1/rpc/get_passes_with_activities 404 (Not Found)
-    - Erreur chargement événement: |
-      - {code: 'PGRST202', details: 'Searched for the function public.get_passes_with_a…r, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.get_pass_max_stock_from_activities', message: 'Could not find the function public.get_passes_with_activities(event_uuid) in the schema cache'}
+    - Erreur chargement événement:
+      - {code: 'PGRST202', details: 'Searched for the function public.get_passes_with_activities, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.get_pass_max_stock_from_activities', message: 'Could not find the function public.get_passes_with_activities(event_uuid) in the schema cache'}
   action: fix
+
+- who: ChatGPT
+  when: 2025-09-04T23:10:00+00:00
+  topic: Sprint S1 — workflow update
+  did: |
+    - Mis à jour BACKLOG, REVIEW et SPRINT_HISTORY suite au KO du PO
+    - Ajouté US-13 pour corriger get_passes_with_activities
+    - Clarifié dans les instructions la priorité d'INTERACTIONS.yaml
+  status: n/a

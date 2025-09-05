@@ -17,17 +17,17 @@
 
 ## 3) Objectifs atteints
 
-- US-10 ✔️
-- US-11 ✔️
+- US-10 ❌ (fonction get_passes_with_activities absente)
+- US-11 ❌ (non validée suite au bug précédent)
 
 ## 4) Dérogations / écarts
 
-- Aucune dérogation
+- Validation PO KO : erreur 404 sur `get_passes_with_activities`
 
 ## 5) Feedback PO
 
-- Validation prod: en attente
-- Retours fonctionnels: n/a
+- Validation prod: KO — impossible d'afficher les passes
+- Retours fonctionnels: vérification des créneaux impossible
 
 ## 6) Actions d’amélioration (reportées en rétro)
 
@@ -44,3 +44,4 @@
 - PR merge: `Sprint S1: …`
 - CHANGELOG mis à jour (`[Unreleased]`)
 - Tickets follow‑up créés si besoin
+- Fix à planifier : créer la fonction `get_passes_with_activities`
