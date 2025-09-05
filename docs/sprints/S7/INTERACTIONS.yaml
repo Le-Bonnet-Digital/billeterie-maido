@@ -1,0 +1,20 @@
+# INTERACTIONS — Sprint S7
+
+- who: ChatGPT
+  when: 2025-09-05T18:45:00+00:00
+  topic: Sprint S7 — validation prod
+  did: |
+    - Implémenté : utilitaires parsePrice, formatDate, slugify, clamp
+    - Gates passées : lint, tests unitaires
+  ask: |
+    Vérifier en local :
+    1) `npm test`
+  context: 'env: local ; PR: Sprint S7'
+  status: pending
+
+- who: PO
+  when: 2025-09-05T19:00:00+00:00
+  topic: Sprint S7 — validation prod
+  reply: pending
+  details: ''
+  action: none

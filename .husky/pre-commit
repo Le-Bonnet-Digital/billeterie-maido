@@ -92,9 +92,12 @@ if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migration
   echo "   ➜ Applique-les manuellement après merge (ex: supabase db reset/apply, EF Core update, etc.)."
 fi
 # Refuser des \n littéraux dans les migrations SQL
-if git diff --cached --name-only -- 'supabase/migrations/**/*.sql' | xargs -r grep -n "\\n"; then
-  echo "❌ Des \n littéraux détectés dans des migrations."
-  exit 1
+MIGS="$(git diff --cached --name-only -- 'supabase/migrations/**/*.sql')"
+if [ -n "$MIGS" ]; then
+  if echo "$MIGS" | xargs grep -n "\\n"; then
+    echo "❌ Des \\n littéraux détectés dans des migrations."
+    exit 1
+  fi
 fi
 
 # 6) Sécurité & qualité locales
