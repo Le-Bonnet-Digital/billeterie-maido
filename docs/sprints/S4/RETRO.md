@@ -2,28 +2,27 @@
 
 ## 1) Contexte
 
-- **Sprint**: S<N>
-- **Date rétro**: …
+- **Sprint**: S4
+- **Date rétro**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Points positifs 👍
 
-- …
-- …
+- Processus d'interaction clarifié
+- Livraison du compteur luge
 
 ## 3) Points à améliorer 👎
 
-- …
-- …
+- Planification à valider avec le PO avant démarrage
+- Surveillance des interactions précédentes
 
 ## 4) Actions concrètes (improvements)
 
-- IMP-01: … (responsable: …, sprint cible: S\<N+1>)
-- IMP-02: … (responsable: …, sprint cible: S\<N+1>)
+- IMP-03: automatiser la vérification des interactions (responsable: ChatGPT, sprint cible: S5)
 
 ## 5) Décisions d’équipe
 
-- …
+- Poursuivre l'horodatage des US
 
 ## 6) Suivi
 

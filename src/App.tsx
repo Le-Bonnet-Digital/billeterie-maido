@@ -32,6 +32,7 @@ import PonyValidation from './pages/provider/PonyValidation';
 import ArcheryValidation from './pages/provider/ArcheryValidation';
 import LugeValidation from './pages/provider/LugeValidation';
 import ProviderStats from './pages/provider/Stats';
+import LugeCounter from './pages/provider/LugeCounter';
 
 export default function App() {
   return (
@@ -78,6 +79,7 @@ export default function App() {
             <Route path="pony" element={<PonyValidation />} />
             <Route path="archery" element={<ArcheryValidation />} />
             <Route path="luge" element={<LugeValidation />} />
+            <Route path="luge-counter" element={<LugeCounter />} />
             <Route path="stats" element={<ProviderStats />} />
           </Route>
         </Routes>

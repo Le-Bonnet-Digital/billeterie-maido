@@ -1,34 +1,30 @@
-# DEMO — Sprint S<N>
+# DEMO — Sprint S4
 
 ## 1) Contexte
 
-- **Sprint**: S<N>
-- **Scope démo**: US présentées (IDs + titre)
-- **Environnement**: local / stage / prod (URL)
-- **Prerequis**: seed exécuté ? comptes de test ?
+- **Sprint**: S4
+- **Scope démo**: US-21 Compteur jour Luge
+- **Environnement**: local
+- **Prerequis**: aucune donnée particulière
 
 ## 2) Scénario de démo (pas-à-pas)
 
 > Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
 
-1. Ouvrir … (URL)
-2. Choisir le pass …
-3. Ajouter au panier …
-4. Payer via Checkout … (retour /success)
-5. Recevoir l’email de confirmation (n° + QR)
-6. Scanner le QR côté activité … (refus du double scan)
+1. Ouvrir `http://localhost:5173/provider/luge-counter`
+2. Observer le nombre de validations Luge du jour
 
 ## 3) Données de test
 
-- **Comptes**: `customer_demo@example.com` / `***` (si nécessaire)
-- **Pass/événements**: …
-- **Codes de test**: Stripe test cards (4242 …)
+- **Comptes**: compte prestataire luge
+- **Pass/événements**: validations existantes
+- **Codes de test**: n/a
 
 ## 4) Résultats attendus
 
-- **API**: codes HTTP corrects (200/201/4xx) ; logs sans PII
-- **UI**: affichage succès/erreur ; a11y/perf ≥ 90 (Lighthouse)
-- **Data**: réservation créée, paiement `PAID`, validations comptées
+- **API**: requête `luge_validations_today` renvoie le compteur
+- **UI**: le compteur s'affiche sans erreur
+- **Data**: nombre reflète les validations du jour
 
 ## 5) Preuves
 
@@ -38,10 +34,10 @@
 
 ## 6) Limitations connues / dérogations
 
-- …
+- agrégat simple pour le jour courant
 
 ## 7) Suivi
 
-- Liens vers PR : `Sprint S<N>: …`
-- Liens vers tests : unit/intégration/E2E
+- Liens vers PR : `Sprint S4: compteur luge`
+- Liens vers tests : `src/pages/provider/__tests__/LugeCounter.test.tsx`
 - Tickets follow‑up (si nécessaires)

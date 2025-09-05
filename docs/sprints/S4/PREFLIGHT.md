@@ -27,7 +27,7 @@
 
 ## 5) Schéma SQL (`schema.sql`)
 
-- **RefreshedAt**: unchanged (aucune migration depuis 2025-09-05)
+- **RefreshedAt**: 2025-09-05T07:04:10Z
 
 ## 6) Sécurité
 

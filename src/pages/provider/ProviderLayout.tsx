@@ -60,6 +60,11 @@ export default function ProviderLayout() {
       roles: ['luge_provider', 'admin', 'atlm_collaborator'],
     });
     items.push({
+      to: '/provider/luge-counter',
+      label: 'Compteur Luge',
+      roles: ['luge_provider', 'admin', 'atlm_collaborator'],
+    });
+    items.push({
       to: '/provider/stats',
       label: 'Statistiques',
       roles: [

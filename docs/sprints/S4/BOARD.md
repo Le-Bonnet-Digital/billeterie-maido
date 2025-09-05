@@ -10,10 +10,9 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID  | Title | SP  | Owner | Start | End | Status |
-| --- | ----- | --- | ----- | ----- | --- | ------ |
-
-> Aucune US sélectionnée tant que les retours du sprint précédent ne sont pas résolus.
+| ID    | Title              | SP  | Owner | Start    | End      | Status    |
+| ----- | ------------------ | --- | ----- | -------- | -------- | --------- |
+| US-21 | Compteur jour Luge | 2   | data  | 07:04:10 | 07:05:39 | Delivered |
 
 ## 3) Légende statuts
 

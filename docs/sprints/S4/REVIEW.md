@@ -1,45 +1,40 @@
-# REVIEW — Sprint S<N>
+# REVIEW — Sprint S4
 
 ## 1) Contexte
 
-- **Sprint**: S<N>
-- **Date review**: …
+- **Sprint**: S4
+- **Date review**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Bilan du sprint
 
-- **Capacité engagée**: … SP
-- **SP livrés**: … SP
-- **Focus factor**: … (livrés/engagés)
+- **Capacité engagée**: 2 SP
+- **SP livrés**: 2 SP
+- **Focus factor**: 1.0
 
 ## 3) Objectifs atteints
 
-- US-.. ✔️
-- US-.. ❌ (Spillover)
+- US-21 ✔️
 
 ## 4) Dérogations / écarts
 
-- US-.. : … (raison, impact)
-- Qualité: Lighthouse à 85 (cause: …)
-- Schéma BDD: `unchanged` justifié (aucune modif réelle)
+- néant
 
 ## 5) Feedback PO
 
-- Validation prod: OK/KO
-- Retours fonctionnels: …
+- Validation prod: pending
+- Retours fonctionnels: n/a
 
 ## 6) Actions d’amélioration (reportées en rétro)
 
-- Améliorer tests RLS prestataires
-- Stabiliser webhook Stripe (retry/alerte)
+- RAS
 
 ## 7) Décisions
 
-- Maintenir Stripe Checkout uniquement (pas d’autres moyens de paiement)
-- Standardiser logs (format JSON + correlation)
+- RAS
 
 ## 8) Suivi
 
-- PR merge: `Sprint S<N>: …`
+- PR merge: `Sprint S4: compteur luge`
 - CHANGELOG mis à jour (`[Unreleased]`)
 - Tickets follow‑up créés si besoin
