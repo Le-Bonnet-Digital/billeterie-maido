@@ -2,10 +2,10 @@
 
 ## 1) Pré‑requis & installation
 
-* Windows 11, PowerShell 7+
-* Node.js 20+, npm
-* (Selon stack) Supabase CLI **ou** outils SQL Server
-* Comptes/API : Stripe (clé test), service d’email (clé API)
+- Windows 11, PowerShell 7+
+- Node.js 20+, npm
+- (Selon stack) Supabase CLI **ou** outils SQL Server
+- Comptes/API : Stripe (clé test), service d’email (clé API)
 
 ### Variables d’environnement
 
@@ -19,7 +19,7 @@ SUPABASE_URL=...
 SUPABASE_ANON_KEY=...
 ```
 
-*(Ne pas committer de secrets)*
+_(Ne pas committer de secrets)_
 
 ---
 
@@ -39,13 +39,13 @@ supabase functions serve
 
 > À exécuter **par le PO** sur demande de ChatGPT (Gate 0 – Préflight). ChatGPT **ne lance pas** de migrations.
 
-* **Supabase/Postgres** :
+- **Supabase/Postgres** :
 
 ```powershell
 supabase db dump --schema public -f schema.sql
 ```
 
-* **SQL Server** :
+- **SQL Server** :
 
 ```powershell
 sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
@@ -68,15 +68,15 @@ npx husky install
 
 ### Ce que vérifie `.husky/pre-commit`
 
-* Artefacts sprint présents : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`
-* `PREFLIGHT.md` contient **Code audit**, **DB audit** et **schema.sql RefreshedAt (ISO)** ou **`unchanged` justifié**
-* `INTERACTIONS.yaml` du sprint est **stagé** et contient `topic: Sprint S<N> — …`
-* `BACKLOG.md` :
+- Artefacts sprint présents : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`
+- `PREFLIGHT.md` contient **Code audit**, **DB audit** et **schema.sql RefreshedAt (ISO)** ou **`unchanged` justifié**
+- `INTERACTIONS.yaml` du sprint est **stagé** et contient `topic: Sprint S<N> — …`
+- `BACKLOG.md` :
+  - US `origin: auto` en `Delivered` → **`links.api`**, **≥ 2 AC**, **note sécurité/RLS**
+  - US `Delivered` → `sp` et `type` présents
 
-  * US `origin: auto` en `Done` → **`links.api`**, **≥ 2 AC**, **note sécurité/RLS**
-  * US `Done` → `sp` et `type` présents
-* Si **migrations** modifiées → `schema.sql` mis à jour **ou** justification `unchanged` dans `PREFLIGHT.md`
-* `git-secrets --scan` si dispo, puis `npm run lint && npm test && lint-staged`
+- Si **migrations** modifiées → `schema.sql` mis à jour **ou** justification `unchanged` dans `PREFLIGHT.md`
+- `git-secrets --scan` si dispo, puis `npm run lint && npm test && lint-staged`
 
 > Si un point échoue, **le commit est bloqué**. Corrigez puis recommittez.
 
@@ -87,26 +87,26 @@ npx husky install
 1. **Déclencheur** : « **Passe au sprint suivant** »
 2. **Gate 0 — Pré‑vol** : remplir `PREFLIGHT.md` (audit code + BDD, `schema.sql`)
 3. **Planification** : estimer en **SP** (1,2,3,5,8,13), capacité = vélocité×0.8 (+10% improvements) → `PLAN.md`
-4. **Exécution** : A→B→C→D, mise à jour `BOARD.md` (**Selected → InSprint → Done → Spillover**)
+4. **Exécution** : A→B→C→D, mise à jour `BOARD.md` (**Selected → InSprint → Delivered → Spillover**)
 5. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `/docs/sprints/S<N>/INTERACTIONS.yaml`
 6. **PR unique** : `work → main`, titre `Sprint S<N>: …`
 
 **Rappels**
 
-* Branche **unique** : `work`
-* **Une seule PR** en fin de sprint
-* **Pré‑vol obligatoire** ; `schema.sql` **à jour** (ou `unchanged` justifié)
-* **Migrations** : ChatGPT **documente** ; le **PO** les **applique**
+- Branche **unique** : `work`
+- **Une seule PR** en fin de sprint
+- **Pré‑vol obligatoire** ; `schema.sql` **à jour** (ou `unchanged` justifié)
+- **Migrations** : ChatGPT **documente** ; le **PO** les **applique**
 
 ---
 
 ## 5) Backlog & user stories
 
-* `status` : `Ready → Selected → InSprint → Done → Spillover → Merged`
-* `owner` : `serverless | data | frontend | qa`
-* `sp` : `1|2|3|5|8|13` ; `sprint` : `<N|null>`
-* `type` : `feature | improvement | fix` ; `origin` : `po | auto`
-* `links.api` : chemin d’un contrat d’API/DTO (placeholder accepté pour `origin: auto`)
+- `status` : `Ready → Selected → InSprint → Delivered → Done → Spillover`
+- `owner` : `serverless | data | frontend | qa`
+- `sp` : `1|2|3|5|8|13` ; `sprint` : `<N|null>`
+- `type` : `feature | improvement | fix` ; `origin` : `po | auto`
+- `links.api` : chemin d’un contrat d’API/DTO (placeholder accepté pour `origin: auto`)
 
 **Autogrooming** : si aucune US **Ready**, ChatGPT génère des US (MVP) avec **≥2 AC**, **note sécurité/RLS**, `links.api` placeholder.
 
@@ -114,14 +114,13 @@ npx husky install
 
 ## 6) Qualité & sécurité
 
-* **Quality Gates** : `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
-* **DoD** : CI locale verte, couverture ≥ 80% des nouvelles lignes, docs à jour, sécurité OK
-* **Sécurité** :
-
-  * Jamais de secrets en repo/PR
-  * Webhooks Stripe **signés**, logique **idempotente**
-  * **RLS/policies** testées (admin, parc, prestataires, customer)
-  * Logs structurés (corrélation), pas de PII
+- **Quality Gates** : `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
+- **DoD** : CI locale verte, couverture ≥ 80% des nouvelles lignes, docs à jour, sécurité OK
+- **Sécurité** :
+  - Jamais de secrets en repo/PR
+  - Webhooks Stripe **signés**, logique **idempotente**
+  - **RLS/policies** testées (admin, parc, prestataires, customer)
+  - Logs structurés (corrélation), pas de PII
 
 ---
 
@@ -145,13 +144,13 @@ DoD.md                     # Definition of Done
 
 ## 8) Dépannage
 
-* **Commit bloqué** : lire le message du hook, compléter l’artefact manquant (PREFLIGHT/DEMO/… ou INTERACTIONS)
-* **Migrations modifiées** : mettre à jour `schema.sql` ou justifier `unchanged` dans `PREFLIGHT.md`
-* **Lighthouse < 90** : optimiser images, lazy‑load, réduire JS bloquant, corriger a11y (labels/contraste)
+- **Commit bloqué** : lire le message du hook, compléter l’artefact manquant (PREFLIGHT/DEMO/… ou INTERACTIONS)
+- **Migrations modifiées** : mettre à jour `schema.sql` ou justifier `unchanged` dans `PREFLIGHT.md`
+- **Lighthouse < 90** : optimiser images, lazy‑load, réduire JS bloquant, corriger a11y (labels/contraste)
 
 ---
 
 ## 9) Rôle du PO
 
-* Le **PO** fournit **OK/KO**, **secrets/clé API**, et **exécute** les actions listées par ChatGPT dans `ACTIONS_PO`.
-* ChatGPT gère **grooming**, **planification**, **exécution** et **documentation** du sprint timeboxé.
+- Le **PO** fournit **OK/KO**, **secrets/clé API**, et **exécute** les actions listées par ChatGPT dans `ACTIONS_PO`.
+- ChatGPT gère **grooming**, **planification**, **exécution** et **documentation** du sprint timeboxé.

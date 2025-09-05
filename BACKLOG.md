@@ -1,6 +1,6 @@
 # BACKLOG — Billeterie Maïdo (MVP)
 
-> Statuts US : `Ready | Selected | InSprint | Done | Spillover | Merged`
+> Statuts US : `Ready | Selected | InSprint | Delivered | Done | Spillover`
 > Champs : `owner`, `sp`, `sprint`, `type` (feature|improvement|fix), `origin` (po|auto), `links.api`
 
 ---
@@ -287,4 +287,4 @@ ac:
 - Une **note sécurité/RLS** dans `notes:`
 - Un lien `links.api` (placeholder accepté)
 
-> Le hook Husky vérifie ces règles pour toute US `origin: auto` passée en `Done`.
+> Le hook Husky vérifie ces règles pour toute US `origin: auto` passée en `Delivered`.

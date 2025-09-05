@@ -10,20 +10,20 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID    | Title                     | SP  | Owner | Status |
-| ----- | ------------------------- | --- | ----- | ------ |
-| US-10 | Parcourir offres & passes | 3   | qa    | Done   |
-| US-11 | Panier + CGV              | 3   | qa    | Done   |
+| ID    | Title                     | SP  | Owner | Status    |
+| ----- | ------------------------- | --- | ----- | --------- |
+| US-10 | Parcourir offres & passes | 3   | qa    | Delivered |
+| US-11 | Panier + CGV              | 3   | qa    | Delivered |
 
 ## 3) Légende statuts
 
 - **Selected**: choisi dans le plan, pas encore commencé
 - **InSprint**: en cours d’implémentation (A→B→C→D)
-- **Done**: terminé et validé QA (prêt PR)
+- **Delivered**: terminé et validé QA (PR ouverte/mergée, en attente validation PO)
 - **Spillover**: non terminé, reporté
 
 ## 4) Notes
 
 - Chaque US doit avoir `sp`, `owner`, `origin`, `type`, `links.api` si `origin:auto`
-- Le hook Husky bloque si une US `origin:auto` est `Done` **sans** `links.api` ou **<2 AC** ou **pas de note sécurité/RLS**
+- Le hook Husky bloque si une US `origin:auto` est `Delivered` **sans** `links.api` ou **<2 AC** ou **pas de note sécurité/RLS**
 - Les transitions doivent être cohérentes avec `BACKLOG.md`
