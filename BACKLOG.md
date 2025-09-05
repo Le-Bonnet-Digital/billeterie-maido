@@ -15,10 +15,10 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: Spillover
+status: Selected
 owner: serverless
 sp: 5
-sprint: 8
+sprint: 9
 type: feature
 origin: po
 links:
@@ -41,10 +41,10 @@ persona: admin
 title: Auth & Rôles + RLS de base
 value: cloisonnement des données
 priority: P1
-status: Spillover
+status: Selected
 owner: data
 sp: 5
-sprint: 8
+sprint: 9
 type: feature
 origin: po
 scenario: |
@@ -64,10 +64,10 @@ persona: admin
 title: Capacité & créneaux atomiques
 value: éviter la surréservation
 priority: P1
-status: Spillover
+status: Selected
 owner: data
 sp: 5
-sprint: 8
+sprint: 9
 type: feature
 origin: po
 scenario: |
@@ -522,10 +522,10 @@ persona: dev
 title: Automatiser la génération de docs
 value: limiter les tâches manuelles
 priority: P2
-status: Spillover
+status: Selected
 owner: qa
 sp: 2
-sprint: 8
+sprint: 9
 type: improvement
 origin: auto
 links:
@@ -537,6 +537,29 @@ ac:
   - Commande documentée dans README
 notes:
   - Sécurité: script local, aucun secret
+```
+
+### US-104
+
+```yaml
+id: US-104
+persona: client
+title: Filtrer les offres par activité
+value: trouver rapidement une offre
+priority: P2
+status: Selected
+owner: frontend
+sp: 3
+sprint: 9
+type: feature
+origin: auto
+links:
+  - api: ./src/lib/filter.ts
+ac:
+  - L'utilisateur peut filtrer les passes par activité
+  - Un message apparaît si aucun pass ne correspond
+notes:
+  - Sécurité: traitement côté client, aucune donnée sensible, RLS non applicable
 ```
 
 ## Règles pour US auto‑générées (par ChatGPT)

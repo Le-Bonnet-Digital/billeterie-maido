@@ -45,14 +45,15 @@
 ## 3) SPRINT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-sprint_id: 8
+sprint_id: 9
 highlights: |
-  - Utilitaires front livrés (parsePrice, formatDate, slugify, clamp)
-  - Objectif de sprint et scénarios exigés par le PO
-risks_or_todo: |
-  - Capacité réelle à mesurer
+  - Objectif "valeur ajoutée client" (Stripe, Auth & RLS, capacité créneaux)
   - Automatiser la génération de docs
-interaction_log: ./docs/sprints/S7/INTERACTIONS.yaml
+  - Filtre des offres par activité
+risks_or_todo: |
+  - Sur-engagement (20 SP > vélocité récente)
+  - Automatiser la génération de docs
+interaction_log: ./docs/sprints/S9/INTERACTIONS.yaml
 status: pending
 ```
 
