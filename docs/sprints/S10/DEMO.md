@@ -11,12 +11,12 @@
 
 > Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
 
-1. Ouvrir … (URL)
-2. Choisir le pass …
-3. Ajouter au panier …
-4. Payer via Checkout … (retour /success)
-5. Recevoir l’email de confirmation (n° + QR)
-6. Scanner le QR côté activité … (refus du double scan)
+1. Ouvrir la page d'accueil et vérifier le catalogue avec badges
+2. Ajouter un pass au panier puis accepter les CGV
+3. Cliquer sur paiement Stripe et finaliser avec la carte test 4242
+4. Être redirigé vers `/success` et constater le panier vidé
+5. Vérifier l'email de confirmation contenant le QR code
+6. Saisir le code de réservation dans `/provider/pony` et constater la validation
 
 ## 3) Données de test
 

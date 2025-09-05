@@ -3,8 +3,8 @@ import { render, screen, waitFor } from '../../test/utils';
 import userEvent from '@testing-library/user-event';
 import ConfirmationModal from '../ConfirmationModal';
 
-vi.mock('qrcode', () => ({
-  default: { toDataURL: vi.fn().mockResolvedValue('data:qr') },
+vi.mock('../../lib/qr', () => ({
+  generateReservationQr: vi.fn().mockResolvedValue('data:qr'),
 }));
 
 describe('ConfirmationModal Component', () => {

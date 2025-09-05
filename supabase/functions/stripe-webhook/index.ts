@@ -88,17 +88,23 @@ serve(async (req: Request) => {
 
       for (const item of cartItems) {
         for (let i = 0; i < (item.quantity || 1); i++) {
-          const { error } = await supabase.from('reservations').insert({
-            client_email: customer.email,
-            pass_id: item.pass.id,
-            event_activity_id: item.eventActivity?.id ?? null,
-            time_slot_id: item.timeSlot?.id ?? null,
-            payment_status: 'paid',
+          const { data: res, error } = await supabase
+            .from('reservations')
+            .insert({
+              client_email: customer.email,
+              pass_id: item.pass.id,
+              event_activity_id: item.eventActivity?.id ?? null,
+              time_slot_id: item.timeSlot?.id ?? null,
+              payment_status: 'paid',
+            })
+            .select('id')
+            .single();
+          if (error || !res) throw error;
+          await supabase.functions.invoke('send-reservation-email', {
+            body: { email: customer.email, reservationId: res.id },
           });
-          if (error) throw error;
         }
       }
-
     } catch (err) {
       await alertError((err as Error).message);
       return new Response(JSON.stringify({ error: (err as Error).message }), {

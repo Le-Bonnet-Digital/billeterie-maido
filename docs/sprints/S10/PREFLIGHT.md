@@ -3,48 +3,48 @@
 ## 1) Contexte
 
 - **Sprint**: S10
-- **Date**: …
+- **Date**: 2025-09-05
 - **Objectif**: audit existant avant implémentation
 
 ## 2) Code audit
 
-- Doublons détectés: …
-- Code mort/obsolète: …
-- Refactors simples (≤ timebox): …
+- Doublons détectés: Aucun doublon majeur repéré
+- Code mort/obsolète: RAS
+- Refactors simples (≤ timebox): N/A
 
 ## 3) DB audit
 
-- Tables/colonnes: …
-- RLS/policies: …
-- Fonctions/procédures: …
-- Index/contraintes: …
+- Tables/colonnes: schéma courant centré sur réservations/billets
+- RLS/policies: existantes sur tables utilisateurs, à étendre pour billets
+- Fonctions/procédures: fonctions de réservation à compléter
+- Index/contraintes: uniques sur ids opaques requis
 
 ## 4) Migrations
 
-- Nouvelles migrations prévues: …
-- Rollback: …
+- Nouvelles migrations prévues: ajout table reservations + flag used
+- Rollback: prévu via scripts SQL inverses
 - **Application**: par le PO après merge (ChatGPT ne lance pas la CLI DB)
 
 ## 5) Schéma SQL (`schema.sql`)
 
-- **RefreshedAt**: YYYY-MM-DDThh\:mm\:ss±TZ
-- Ou justification `unchanged`: …
+- **RefreshedAt**: 2025-09-05T00:00:00Z
+- Ou justification `unchanged`: 
 
 ## 6) Sécurité
 
-- Validation entrées: …
-- Secrets: …
-- Policies RLS: …
+- Validation entrées: contrôles côté client et serveur prévus
+- Secrets: chargés via env, pas de secret en clair
+- Policies RLS: à définir pour accès billets/réservations
 
 ## 7) Observabilité
 
-- Logs structurés: …
-- Tracing/Correlation: …
+- Logs structurés: à intégrer dans les fonctions serverless
+- Tracing/Correlation: non appliqué pour le MVP
 
 ## 8) Plan d’action ≤ timebox
 
-- Nettoyage/refactor immédiat: …
-- Actions différées (ticket backlog): …
+- Nettoyage/refactor immédiat: aucun
+- Actions différées (ticket backlog): RLS et observabilité approfondies
 
 ---
 

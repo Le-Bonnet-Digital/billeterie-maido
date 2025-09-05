@@ -1091,6 +1091,9 @@ ALTER TABLE ONLY "public"."passes"
 ALTER TABLE ONLY "public"."reservation_validations"
     ADD CONSTRAINT "reservation_validations_pkey" PRIMARY KEY ("id");
 
+ALTER TABLE ONLY "public"."reservation_validations"
+    ADD CONSTRAINT "reservation_validations_reservation_activity_key" UNIQUE ("reservation_id", "activity");
+
 
 
 ALTER TABLE ONLY "public"."reservations"

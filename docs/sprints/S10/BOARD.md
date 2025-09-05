@@ -10,12 +10,12 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID     | Title             | SP  | Owner      | Start | End | Status   |
-| ------ | ----------------- | --- | ---------- | ----- | --- | -------- |
-| US-201 | Parcourir offres  | 1   | frontend   |       |     | Selected |
-| US-202 | Panier + CGV      | 1   | frontend   |       |     | Selected |
-| US-203 | Paiement Stripe   | 3   | serverless |       |     | Selected |
-| US-204 | Validation billet | 1   | serverless |       |     | Selected |
+| ID     | Title             | SP  | Owner      | Start | End | Status    |
+| ------ | ----------------- | --- | ---------- | ----- | --- | --------- |
+| US-201 | Parcourir offres  | 1   | frontend   |       |     | Delivered |
+| US-202 | Panier + CGV      | 1   | frontend   |       |     | Delivered |
+| US-203 | Paiement Stripe   | 3   | serverless |       |     | Delivered |
+| US-204 | Validation billet | 1   | serverless |       |     | Delivered |
 
 ## 3) Légende statuts
 
