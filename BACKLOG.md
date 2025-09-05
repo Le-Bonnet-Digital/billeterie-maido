@@ -254,7 +254,7 @@ persona: parc
 title: Données test compteur luge
 value: valider le flux
 priority: P1
-status: Delivered
+status: Done
 owner: data
 sp: 1
 sprint: 5
@@ -265,6 +265,27 @@ ac:
   - Démo compteur >0 avec données seed
 notes:
   - RLS inchangées
+```
+
+### US-23
+
+```yaml
+id: US-23
+persona: data
+title: Corriger nommage migrations Supabase
+value: éviter les réparations manuelles
+priority: P1
+status: Selected
+owner: data
+sp: 1
+sprint: 6
+type: fix
+origin: po
+ac:
+  - Remplacer le script `seed_luge_validations.sql` par une migration Supabase
+  - Renommer la migration `20250829_extend_get_parc_activities_with_variants.sql` pour respecter le format attendu
+notes:
+  - Sécurité: RLS inchangées, garantit `supabase migration repair` sans intervention manuelle
 ```
 
 ---

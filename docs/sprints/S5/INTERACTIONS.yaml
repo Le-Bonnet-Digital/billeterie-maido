@@ -13,7 +13,7 @@
     1) `pnpm run seed:luge`
     2) Ouvrir `/provider/luge-counter` → compteur >0
   context: "env: http://localhost:5173 ; PR: Sprint S5"
-  status: waiting_PO
+  status: done
 
 - who: PO
   when: 2025-09-05T08:10:00Z
@@ -23,4 +23,4 @@
     - Les test en local on fonctionner, j'ai du modifier le script SQL.
     - Pour les prochaines fois, préfère les migrations plutot que les scripts.
     - Et j'aimerai que le problème m'obligeant à toujours faire un "supabase migration repair --status reverted 20250829 " soit résolu. Il doit sagir d'un problème de nommage car je vois que l'horodatage du début du nom du ficheir ne correspond pas au meme format que les autres.
-  action: 
+  action: fix

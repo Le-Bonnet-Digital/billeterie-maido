@@ -1,0 +1,15 @@
+# INTERACTIONS — Sprint S6
+
+# Journal
+
+- who: ChatGPT
+  when: 2025-09-05T09:05:00Z
+  topic: Sprint S6 — validation prod
+  did: |
+    - À compléter en fin de sprint
+  ask: |
+    Tester en local :
+    1) TODO
+    2) TODO
+  context: env: http://localhost:5173 ; PR: Sprint S6
+  status: pending
