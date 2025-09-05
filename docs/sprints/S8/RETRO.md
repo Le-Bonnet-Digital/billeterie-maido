@@ -3,20 +3,20 @@
 ## 1) Contexte
 
 - **Sprint**: S8
-- **Date rétro**: …
+- **Date rétro**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Points positifs 👍
 
-- …
+- Mise en place du script de vélocité
 
 ## 3) Points à améliorer 👎
 
-- …
+- Sur-engagement du sprint
 
 ## 4) Actions concrètes (improvements)
 
-- …
+- Automatiser la génération de docs (IMP-07)
 
 ## 5) Décisions d’équipe
 

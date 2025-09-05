@@ -10,13 +10,13 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID     | Title                                | SP  | Owner      | Start | End | Status   |
-| ------ | ------------------------------------ | --- | ---------- | ----- | --- | -------- |
-| US-00  | Paiement Stripe + webhook idempotent | 5   | serverless |       |     | Selected |
-| US-01  | Auth & Rôles + RLS de base           | 5   | data       |       |     | Selected |
-| US-02  | Capacité & créneaux atomiques        | 5   | data       |       |     | Selected |
-| IMP-06 | Mesurer la vélocité réelle           | 3   | qa         |       |     | Selected |
-| IMP-07 | Automatiser la génération de docs    | 2   | qa         |       |     | Selected |
+| ID     | Title                                | SP  | Owner      | Start | End | Status    |
+| ------ | ------------------------------------ | --- | ---------- | ----- | --- | --------- |
+| US-00  | Paiement Stripe + webhook idempotent | 5   | serverless |       |     | Spillover |
+| US-01  | Auth & Rôles + RLS de base           | 5   | data       |       |     | Spillover |
+| US-02  | Capacité & créneaux atomiques        | 5   | data       |       |     | Spillover |
+| IMP-06 | Mesurer la vélocité réelle           | 3   | qa         |       |     | Delivered |
+| IMP-07 | Automatiser la génération de docs    | 2   | qa         |       |     | Spillover |
 
 ## 3) Légende statuts
 

@@ -9,6 +9,7 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 ### Ajouté
 
 - Utilitaires parsePrice, formatDate, slugify et clamp (US-100 à US-103)
+- Script de calcul de vélocité (IMP-06)
 
 ### Modifié
 

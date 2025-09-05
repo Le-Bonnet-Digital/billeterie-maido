@@ -3,45 +3,36 @@
 ## 1) Contexte
 
 - **Sprint**: S8
-- **Scope démo**: US-00 Paiement Stripe, US-01 Auth & Rôles, US-02 Capacité
+- **Scope démo**: IMP-06 Mesurer la vélocité réelle
 - **Environnement**: local
-- **Prerequis**: seed exécuté, comptes de test
+- **Prerequis**: `SPRINT_HISTORY.md` présent
 
 ## 2) Scénario de démo (pas-à-pas)
 
-> Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
+> Objectif: calculer la moyenne des SP livrés sur les trois derniers sprints.
 
-1. Ouvrir l'application locale
-2. Créer un compte admin et un compte client
-3. Ajouter un pass au panier et initier le paiement Stripe
-4. Valider le paiement de test et vérifier la mise à jour `PAID`
-5. Consulter la table des rôles et vérifier les policies RLS
-6. Réserver un créneau et tester la limite de capacité
+1. Ouvrir un terminal à la racine du projet
+2. Exécuter `npm test src/__tests__/velocity.test.ts`
+3. Observer dans la sortie la moyenne `8`
 
 ## 3) Données de test
 
-- **Comptes**: `admin@example.com`, `client@example.com`
-- **Pass/événements**: pass luge
-- **Codes de test**: carte Stripe 4242 4242 4242 4242
+- **Fichier**: `SPRINT_HISTORY.md`
 
 ## 4) Résultats attendus
 
-- **API**: codes HTTP corrects ; logs sans PII
-- **UI**: affichage succès/erreur ; a11y/perf ≥ 90 (Lighthouse)
-- **Data**: paiement `PAID`, rôles appliqués, capacité décrémentée
+- La commande de test passe et affiche la moyenne `8`
 
 ## 5) Preuves
 
-- Captures d’écran clés ou enregistrement court
-- Extraits de logs si utile
-- Exemples de payloads/réponses (redactés)
+- Capture d'écran de la sortie de test (optionnel)
 
 ## 6) Limitations connues / dérogations
 
-- …
+- Le script lit uniquement les trois derniers sprints
 
 ## 7) Suivi
 
 - Liens vers PR : `Sprint S8: paiement & RLS`
-- Liens vers tests : unit/intégration/E2E
-- Tickets follow‑up (si nécessaires)
+- Liens vers tests : `src/__tests__/velocity.test.ts`
+- Tickets follow‑up : US-00, US-01, US-02, IMP-07 en spillover
