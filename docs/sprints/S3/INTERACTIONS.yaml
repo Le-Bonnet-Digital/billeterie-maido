@@ -9,7 +9,7 @@
     1) Exécuter `supabase db push --include-all --yes`
     2) Vérifier affichage des passes sans erreur
   context: env: http://localhost:5173 ; PR: Sprint S3
-  status: pending
+  status: done
 
 - who: PO
   topic: Sprint S3 — validation prod
@@ -26,4 +26,10 @@
   ask: |
     Vérifier que les liens vers DoD.md sont corrects.
   context: repo
-  status: pending
+  status: done
+
+- who: PO
+  topic: Sprint S3 — documentation
+  reply: OK
+  details: "Les liens vers DoD.md sont corrects"
+  action: none

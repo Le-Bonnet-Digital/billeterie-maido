@@ -80,3 +80,9 @@ status: pending
 ```
 
 > Les **hooks Husky** exigent que `INTERACTIONS.yaml` existe, soit **stagé**, et référence `topic: Sprint S<N>`.
+
+---
+
+## RETRO
+
+- IMP-03: automatiser la vérification des interactions (responsable: ChatGPT, sprint cible: S5)

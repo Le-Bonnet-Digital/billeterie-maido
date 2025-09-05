@@ -17,12 +17,11 @@
 
 > Déplacer ces US en `Selected` dans `BACKLOG.md` et renseigner `sprint: N`.
 
-| ID  | Title | Type | SP  | Owner initial | Notes |
-| --- | ----- | ---- | --- | ------------- | ----- |
+| ID    | Title              | Type    | SP  | Owner initial | Notes |
+| ----- | ------------------ | ------- | --- | ------------- | ----- |
+| US-21 | Compteur jour Luge | feature | 2   | data          |       |
 
-> Aucune US planifiée : en attente des retours du sprint précédent.
-
-**Total SP sélectionnés**: 0 / **Capacité**: 2
+**Total SP sélectionnés**: 2 / **Capacité**: 2
 
 ## 4) Stratégie & plan d’exécution
 
