@@ -246,6 +246,27 @@ ac:
   - Vue compteur validés aujourd’hui (agrégat simple)
 ```
 
+### US-22
+
+```yaml
+id: US-22
+persona: parc
+title: Données test compteur luge
+value: valider le flux
+priority: P1
+status: Selected
+owner: data
+sp: 1
+sprint: 5
+type: fix
+origin: po
+ac:
+  - Script ou doc pour créer des validations Luge en test
+  - Démo compteur >0 avec données seed
+notes:
+  - RLS inchangées
+```
+
 ---
 
 ## Sprint Prestataires — exemples

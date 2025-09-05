@@ -19,7 +19,9 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 
 ---
 
-## 2) Mode Sprint (commande : « Passe au sprint suivant »)
+## 2) Mode Sprint (appliqué à chaque demande)
+
+Les étapes suivantes s'appliquent à chaque nouvelle demande du PO, pas seulement à la commande « Passe au sprint suivant ».
 
 1. **Bootstrap & minuteur**
    - Exécuter `npm run sprint:init` (crée `/docs/sprints/S<N>` depuis `docs/templates`).
@@ -27,7 +29,7 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 
 2. **Pré‑vol (audit existant) → `PREFLIGHT.md`**
    - **Code** : cartographier endpoints/contrats/tests, relever doublons, **code mort**, dette bloquante ; proposer refactors **≤ timebox**.
-   - **BDD** : état schéma/migrations/RLS/fonctions ; exiger snapshot **`schema.sql`** (ou `unchanged` justifié). Le PO applique les migrations validées.
+   - **BDD** : état schéma/migrations/RLS/fonctions ; exiger snapshot **`schema.sql`** (ou `unchanged` justifié). Le PO applique les migrations validées et tout problème de migration `reverted` (ex. `supabase migration repair`) doit être résolu ou signalé.
 
 3. **Intégrer review & rétro (apprentissage)** :
    - Lire `PO_NOTES.md` & `RETRO.md` ; ajuster pratiques.
@@ -42,6 +44,7 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
    - **Si aucune US `Ready`** :
      - 1. `PO_NOTES.md` (NEW_FEATURES) → **générer** des US ;
      - 2. si vide : **discovery produit** alignée MVP, consigner idées, puis **créer** les US.
+   - Vérifier la **Definition of Ready (DoR)** : chaque US doit être bien rédigée (persona, title, value, priority, `status: Ready`, `sp`, ≥2 AC, note sécurité/RLS, `links.api` pour `origin:auto`).
 
    - Toute US auto‑générée : `id,title,value,priority,type`, **≥2 AC**, **note sécurité/RLS**, `links.api` **placeholder**, `origin: auto`, `status: Ready`.
 
@@ -55,13 +58,13 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
    - Par US : `Selected → InSprint → Delivered` en passant les **gates** :
      - **Gate 0 — Préflight** (code+BDD, `schema.sql`).
      - **Gate A — Serverless/Backend**.
-     - **Gate B — Data**.
+     - **Gate B — Data** (migrations + rollback, RLS/policies, index/constraints, résolution des migrations `reverted`).
      - **Gate C — Front**.
-     - **Gate D — QA**.
+     - **Gate D — QA** (suivre `QA_CHECKLIST.md` + `QUALITY-GATES.md`).
    - Mettre à jour `owner` (serverless→data→frontend→qa) et `BOARD.md`. Déplacer en `Spillover` si dépassement.
    - À l'entrée en `InSprint`, noter `start` (horodatage ISO `HH:MM:SS`), et à la transition `Delivered`, noter `end` dans `BOARD.md`.
 
-8. **Checkpoint T+22 (gel)** : figer code ; compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, finaliser `PREFLIGHT.md` ; renseigner `INTERACTIONS.yaml` (tests prod).
+8. **Checkpoint T+22 (gel)** : figer code ; compléter `DEMO.md`, `REVIEW.md` (inclure temps par US et temps total de sprint), `RETRO.md`, finaliser `PREFLIGHT.md` ; renseigner `INTERACTIONS.yaml` (tests prod) ; mettre à jour `CHANGELOG.md`.
 9. **Clôture & PR unique** : calculer `committed_sp` vs `delivered_sp`, consigner la **vélocité** dans `REVIEW.md` et `SPRINT_HISTORY` ; ouvrir **une PR** `work→main` `Sprint S<N>: …`. Après merge, les US restent en `Delivered` jusqu'à validation PO ; elles passeront en `Done` au sprint suivant.
 
 ---
