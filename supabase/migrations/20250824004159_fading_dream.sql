@@ -1,17 +1,68 @@
-\n\n-- Drop and recreate the function with correct column references\nDROP FUNCTION IF EXISTS get_event_activity_remaining_stock(uuid);
-\n\nCREATE OR REPLACE FUNCTION get_event_activity_remaining_stock(event_activity_id_param uuid)\nRETURNS integer\nLANGUAGE plpgsql\nAS $$\nDECLARE\n    total_stock integer;
-\n    reserved_count integer;
-\n    cart_reserved_count integer;
-\n    remaining_stock integer;
-\nBEGIN\n    -- Get the total stock limit for this event activity\n    SELECT COALESCE(ea.stock_limit, 999999)\n    INTO total_stock\n    FROM event_activities ea\n    WHERE ea.id = event_activity_id_param;
-\n    \n    -- If no stock limit is set, return a high number (unlimited)\n    IF total_stock IS NULL THEN\n        RETURN 999999;
-\n    END IF;
-\n    \n    -- Count confirmed reservations for this event activity\n    SELECT COALESCE(COUNT(*), 0)\n    INTO reserved_count\n    FROM reservations r\n    WHERE r.event_activity_id = event_activity_id_param\n    AND r.payment_status = 'paid';
-\n    \n    -- Count items currently in carts (temporary reservations)\n    SELECT COALESCE(SUM(ci.quantity), 0)\n    INTO cart_reserved_count\n    FROM cart_items ci\n    WHERE ci.event_activity_id = event_activity_id_param\n    AND ci.reserved_until > NOW();
-\n    \n    -- Calculate remaining stock\n    remaining_stock := total_stock - reserved_count - cart_reserved_count;
-\n    \n    -- Ensure we don't return negative values\n    IF remaining_stock < 0 THEN\n        remaining_stock := 0;
-\n    END IF;
-\n    \n    RETURN remaining_stock;
-\nEND;
-\n$$;
+
+
+-- Drop and recreate the function with correct column references
+DROP FUNCTION IF EXISTS get_event_activity_remaining_stock(uuid);
+
+
+CREATE OR REPLACE FUNCTION get_event_activity_remaining_stock(event_activity_id_param uuid)
+RETURNS integer
+LANGUAGE plpgsql
+AS $$
+DECLARE
+    total_stock integer;
+
+    reserved_count integer;
+
+    cart_reserved_count integer;
+
+    remaining_stock integer;
+
+BEGIN
+    -- Get the total stock limit for this event activity
+    SELECT COALESCE(ea.stock_limit, 999999)
+    INTO total_stock
+    FROM event_activities ea
+    WHERE ea.id = event_activity_id_param;
+
+    
+    -- If no stock limit is set, return a high number (unlimited)
+    IF total_stock IS NULL THEN
+        RETURN 999999;
+
+    END IF;
+
+    
+    -- Count confirmed reservations for this event activity
+    SELECT COALESCE(COUNT(*), 0)
+    INTO reserved_count
+    FROM reservations r
+    WHERE r.event_activity_id = event_activity_id_param
+    AND r.payment_status = 'paid';
+
+    
+    -- Count items currently in carts (temporary reservations)
+    SELECT COALESCE(SUM(ci.quantity), 0)
+    INTO cart_reserved_count
+    FROM cart_items ci
+    WHERE ci.event_activity_id = event_activity_id_param
+    AND ci.reserved_until > NOW();
+
+    
+    -- Calculate remaining stock
+    remaining_stock := total_stock - reserved_count - cart_reserved_count;
+
+    
+    -- Ensure we don't return negative values
+    IF remaining_stock < 0 THEN
+        remaining_stock := 0;
+
+    END IF;
+
+    
+    RETURN remaining_stock;
+
+END;
+
+$$;
 ;
+

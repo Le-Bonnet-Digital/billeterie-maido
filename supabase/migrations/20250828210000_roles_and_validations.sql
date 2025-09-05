@@ -23,7 +23,7 @@ BEGIN
 END $$;
 -- 2) Reservation validations table
 CREATE TABLE IF NOT EXISTS reservation_validations (
-  id uuid PRIMARY KEY DEFAULT uuid_generate_v4(),
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
   reservation_id uuid NOT NULL REFERENCES reservations(id) ON DELETE CASCADE,
   activity text NOT NULL CHECK (activity IN ('poney','tir_arc','luge_bracelet')),
   validated_by uuid NOT NULL REFERENCES users(id),
@@ -51,3 +51,4 @@ CREATE POLICY "Providers can read validations" ON reservation_validations
       AND u.role IN ('admin','pony_provider','archery_provider','luge_provider','atlm_collaborator')
     )
   );
+
