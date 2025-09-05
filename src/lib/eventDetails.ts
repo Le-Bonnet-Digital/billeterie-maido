@@ -1,4 +1,5 @@
 import { supabase } from './supabase';
+import { logger } from './logger';
 import type {
   Event,
   Pass,
@@ -30,11 +31,15 @@ export async function fetchEvent(eventId: string): Promise<Event> {
  * @returns Liste des passes
  */
 export async function fetchPasses(eventId: string): Promise<Pass[]> {
+  logger.info('fetchPasses', { eventId });
   const { data, error } = await supabase.rpc('get_passes_with_activities', {
     event_uuid: eventId,
   });
 
-  if (error) throw error;
+  if (error) {
+    logger.error('fetchPasses error', { eventId, error });
+    throw error;
+  }
 
   return (data || []) as Pass[];
 }
