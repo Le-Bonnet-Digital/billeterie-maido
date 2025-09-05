@@ -10,3 +10,38 @@
     2) Vérifier la présence du log `fetchPasses`
   context: env: http://localhost:5173 ; PR: Sprint S2
   status: pending
+
+- who: PO
+  topic: Sprint S2 — validation prod
+  reply: KO
+  details: |
+    Run supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
+    Connecting to remote database...
+    Do you want to push these migrations to the remote database?
+     • 20250829_extend_get_parc_activities_with_variants.sql
+     • 20250905003500_get_passes_with_activities.sql
+    
+     [Y/n] y
+    Applying migration 20250829_extend_get_parc_activities_with_variants.sql...
+    Applying migration 20250905003500_get_passes_with_activities.sql...
+    ERROR: column p.guaranteed_runs does not exist (SQLSTATE 42703)         
+    At statement: 0                                                         
+    -- Function to retrieve passes with their activities and remaining stock
+    CREATE OR REPLACE FUNCTION get_passes_with_activities(event_uuid uuid)  
+    RETURNS json                                                            
+    LANGUAGE sql                                                            
+    SECURITY DEFINER                                                        
+    AS $$                                                                   
+      select coalesce(json_agg(                                             
+        json_build_object(                                                  
+          'id', p.id,                                                       
+          'name', p.name,                                                   
+          'price', p.price,                                                 
+          'description', p.description,                                     
+          'initial_stock', p.initial_stock,                                 
+          'pass_type', p.pass_type,                                         
+          'guaranteed_runs', p.guaranteed_runs,                             
+                             ^                                              
+    Try rerunning the command with --debug to troubleshoot the error.
+    Error: Process completed with exit code 1.
+  action: fix
