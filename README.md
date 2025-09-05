@@ -84,12 +84,13 @@ npx husky install
 
 ## 4) Mode agent — Sprint 25 min
 
-1. **Déclencheur** : « **Passe au sprint suivant** »
-2. **Gate 0 — Pré‑vol** : remplir `PREFLIGHT.md` (audit code + BDD, `schema.sql`)
-3. **Planification** : estimer en **SP** (1,2,3,5,8,13), capacité = vélocité×0.8 (+10% improvements) → `PLAN.md`
-4. **Exécution** : A→B→C→D, mise à jour `BOARD.md` (**Selected → InSprint → Delivered → Spillover**)
-5. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `/docs/sprints/S<N>/INTERACTIONS.yaml`
-6. **PR unique** : `work → main`, titre `Sprint S<N>: …`
+1. **Initialisation** : `npm run sprint:init` (crée `/docs/sprints/S<N>` depuis `docs/templates`) puis démarrer un minuteur 25 min
+2. **Déclencheur** : « **Passe au sprint suivant** »
+3. **Gate 0 — Pré‑vol** : remplir `PREFLIGHT.md` (audit code + BDD, `schema.sql`)
+4. **Planification** : estimer en **SP** (1,2,3,5,8,13), capacité = vélocité×0.8 (+10% improvements) → `PLAN.md`
+5. **Exécution** : A→B→C→D, mise à jour `BOARD.md` (**Selected → InSprint → Delivered → Spillover**)
+6. **Gel T+22** : compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, consigner l’entrée **INTERACTIONS** (tests prod) dans `/docs/sprints/S<N>/INTERACTIONS.yaml`
+7. **PR unique** : `work → main`, titre `Sprint S<N>: …`
 
 **Rappels**
 
