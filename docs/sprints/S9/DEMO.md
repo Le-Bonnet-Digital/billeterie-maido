@@ -3,45 +3,36 @@
 ## 1) Contexte
 
 - **Sprint**: S9
-- **Scope démo**: US-00, US-01, US-02, IMP-07, US-104
-- **Environnement**: à définir
-- **Prerequis**: seed exécuté ? comptes de test ?
+- **Scope démo**: Aucun livrable fonctionnel (Spillover complet)
+- **Environnement**: local
+- **Prerequis**: dépendances installées (`pnpm install`)
 
 ## 2) Scénario de démo (pas-à-pas)
 
-> Objectif: décrire un enchaînement simple, vérifiable par le PO en 2–5 minutes.
+> Aucun flux utilisable n'a été livré. Vérifier que la base et les tests existants restent fonctionnels.
 
-1. Ouvrir … (URL)
-2. Choisir le pass …
-3. Ajouter au panier …
-4. Payer via Checkout … (retour /success)
-5. Recevoir l’email de confirmation (n° + QR)
-6. Scanner le QR côté activité … (refus du double scan)
+1. Lancer `pnpm test`
+2. Vérifier que tous les tests passent
 
 ## 3) Données de test
 
-- **Comptes**: `customer_demo@example.com` / `***` (si nécessaire)
-- **Pass/événements**: …
-- **Codes de test**: Stripe test cards (4242 …)
+- Aucune donnée spécifique : tests automatisés uniquement
 
 ## 4) Résultats attendus
 
-- **API**: codes HTTP corrects (200/201/4xx) ; logs sans PII
-- **UI**: affichage succès/erreur ; a11y/perf ≥ 90 (Lighthouse)
-- **Data**: réservation créée, paiement `PAID`, validations comptées
+- **Tests**: tous les tests unitaires et d'intégration passent
+- **Docs**: préflight et artefacts sprint à jour
 
 ## 5) Preuves
 
-- Captures d’écran clés (ou enregistrement court)
-- Extraits de logs (corrélation) si utile
-- Exemples de payloads/réponses (redactés)
+- Rapports de tests (`pnpm test`)
 
 ## 6) Limitations connues / dérogations
 
-- …
+- Aucun développement livré
 
 ## 7) Suivi
 
-- Liens vers PR : `Sprint S<N>: …`
-- Liens vers tests : unit/intégration/E2E
+- Liens vers PR : `Sprint S9: clôture sans livrables`
+- Liens vers tests : unit/intégration
 - Tickets follow‑up (si nécessaires)

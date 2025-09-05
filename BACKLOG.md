@@ -15,7 +15,7 @@ persona: client
 title: Paiement Stripe + webhook idempotent
 value: paiements fiables et traçables
 priority: P1
-status: Selected
+status: Spillover
 owner: serverless
 sp: 5
 sprint: 9
@@ -41,7 +41,7 @@ persona: admin
 title: Auth & Rôles + RLS de base
 value: cloisonnement des données
 priority: P1
-status: Selected
+status: Spillover
 owner: data
 sp: 5
 sprint: 9
@@ -64,7 +64,7 @@ persona: admin
 title: Capacité & créneaux atomiques
 value: éviter la surréservation
 priority: P1
-status: Selected
+status: Spillover
 owner: data
 sp: 5
 sprint: 9
@@ -522,7 +522,7 @@ persona: dev
 title: Automatiser la génération de docs
 value: limiter les tâches manuelles
 priority: P2
-status: Selected
+status: Spillover
 owner: qa
 sp: 2
 sprint: 9
@@ -547,7 +547,7 @@ persona: client
 title: Filtrer les offres par activité
 value: trouver rapidement une offre
 priority: P2
-status: Selected
+status: Spillover
 owner: frontend
 sp: 3
 sprint: 9

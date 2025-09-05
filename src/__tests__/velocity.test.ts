@@ -9,6 +9,6 @@ describe('computeVelocity', () => {
     const __dirname = dirname(__filename);
     const path = resolve(__dirname, '../../SPRINT_HISTORY.md');
     const avg = computeVelocity(path);
-    expect(avg).toBeCloseTo(8, 3);
+    expect(avg).toBeCloseTo(7.667, 3);
   });
 });

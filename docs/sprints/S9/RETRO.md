@@ -3,27 +3,27 @@
 ## 1) Contexte
 
 - **Sprint**: S9
-- **Date rétro**: …
+- **Date rétro**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Points positifs 👍
 
-- …
-- …
+- Processus de sprint documenté de bout en bout
+- Préflight complet avec justification `schema.sql` unchanged
 
 ## 3) Points à améliorer 👎
 
-- …
-- …
+- Sur-engagement : aucune US livrée
+- Manque d'automatisation pour la génération de docs
 
 ## 4) Actions concrètes (improvements)
 
-- IMP-01: … (responsable: …, sprint cible: S\<N+1>)
-- IMP-02: … (responsable: …, sprint cible: S\<N+1>)
+- IMP-08: Réduire l'engagement à 1 US prioritaire (responsable: équipe, sprint cible: S10)
+- IMP-09: Finaliser script docgen (responsable: qa, sprint cible: S10)
 
 ## 5) Décisions d’équipe
 
-- …
+- Prioriser les US critiques et limiter la portée
 
 ## 6) Suivi
 

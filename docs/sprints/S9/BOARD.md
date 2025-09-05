@@ -10,13 +10,13 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID     | Title                                | SP  | Owner      | Start    | End | Status   |
-| ------ | ------------------------------------ | --- | ---------- | -------- | --- | -------- |
-| US-00  | Paiement Stripe + webhook idempotent | 5   | serverless | 00:00:00 |     | Selected |
-| US-01  | Auth & Rôles + RLS de base           | 5   | data       | 00:00:00 |     | Selected |
-| US-02  | Capacité & créneaux atomiques        | 5   | data       | 00:00:00 |     | Selected |
-| IMP-07 | Automatiser la génération de docs    | 2   | qa         | 00:00:00 |     | Selected |
-| US-104 | Filtrer les offres par activité      | 3   | frontend   | 00:00:00 |     | Selected |
+| ID     | Title                                | SP  | Owner      | Start    | End | Status    |
+| ------ | ------------------------------------ | --- | ---------- | -------- | --- | --------- |
+| US-00  | Paiement Stripe + webhook idempotent | 5   | serverless | 00:00:00 |     | Spillover |
+| US-01  | Auth & Rôles + RLS de base           | 5   | data       | 00:00:00 |     | Spillover |
+| US-02  | Capacité & créneaux atomiques        | 5   | data       | 00:00:00 |     | Spillover |
+| IMP-07 | Automatiser la génération de docs    | 2   | qa         | 00:00:00 |     | Spillover |
+| US-104 | Filtrer les offres par activité      | 3   | frontend   | 00:00:00 |     | Spillover |
 
 ## 3) Légende statuts
 
