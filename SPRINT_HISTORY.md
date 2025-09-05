@@ -9,3 +9,4 @@
 - Sprint S7 (2025-09-05): committed 20 SP, delivered 20 SP, focus 1.0, PO pending
 - Sprint S8 (2025-09-05): committed 20 SP, delivered 3 SP, focus 0.15, PO pending
 - Sprint S9 (2025-09-05): committed 20 SP, delivered 0 SP, focus 0.0, PO pending
+- Sprint S10 (2025-09-05): committed 20 SP, delivered 0 SP, focus 0.0, PO pending

@@ -562,6 +562,103 @@ notes:
   - Sécurité: traitement côté client, aucune donnée sensible, RLS non applicable
 ```
 
+## Sprint 10 — MVP
+
+### US-201
+
+```yaml
+id: US-201
+persona: client
+title: Parcourir les offres disponibles
+value: choisir ce que je veux acheter
+priority: P1
+status: Selected
+owner: frontend
+sp: 1
+sprint: 10
+type: feature
+origin: po
+scenario: |
+  En tant que client du parc, je veux parcourir les offres de billets et passes disponibles afin de choisir ce que je veux acheter.
+ac:
+  - La page d'accueil affiche la liste des passes/offres disponibles avec nom, prix, description et activités incluses le cas échéant.
+  - Un badge "Créneau requis" s'affiche pour les activités nécessitant une réservation, "Accès libre" sinon.
+  - Un message "Aucune offre disponible pour le moment" s'affiche si le catalogue est vide.
+notes:
+  - Sécurité: lecture publique uniquement, aucune donnée sensible, RLS non applicable.
+```
+
+### US-202
+
+```yaml
+id: US-202
+persona: client
+title: Composer un panier et accepter les CGV
+value: préparer ma commande
+priority: P1
+status: Selected
+owner: frontend
+sp: 1
+sprint: 10
+type: feature
+origin: po
+scenario: |
+  En tant que client, je veux pouvoir composer mon panier en ajoutant ou retirant des billets, puis accepter les CGV afin de préparer ma commande avant paiement.
+ac:
+  - Le panier affiche un récapitulatif des articles avec quantités et total mis à jour en temps réel.
+  - Le paiement est désactivé tant que les CGV ne sont pas cochées.
+  - Les erreurs (limites, panier vide) sont gérées avec des messages clairs.
+notes:
+  - Sécurité: traitement côté client, aucune donnée sensible, RLS non applicable.
+```
+
+### US-203
+
+```yaml
+id: US-203
+persona: client
+title: Payer en ligne via Stripe et recevoir une confirmation
+value: finaliser mon achat
+priority: P1
+status: Selected
+owner: serverless
+sp: 3
+sprint: 10
+type: feature
+origin: po
+scenario: |
+  En tant que client, je veux pouvoir payer ma commande en ligne via Stripe et recevoir une confirmation afin de finaliser mon achat et obtenir mes billets.
+ac:
+  - Le paiement est initié via Stripe Checkout et redirige le client selon le succès ou l'échec.
+  - Après paiement réussi, la commande est enregistrée en base avec payment_status='PAID' de manière idempotente.
+  - Une confirmation s'affiche et un email est envoyé avec les billets et un QR code.
+notes:
+  - Sécurité: clés Stripe côté serveur, QR code non falsifiable.
+```
+
+### US-204
+
+```yaml
+id: US-204
+persona: employé
+title: Vérifier la validité d'un billet
+value: admettre rapidement les clients
+priority: P1
+status: Selected
+owner: serverless
+sp: 1
+sprint: 10
+type: feature
+origin: po
+scenario: |
+  En tant qu'employé du parc, je veux pouvoir scanner ou saisir le code d'un billet et vérifier sa validité afin d'admettre le client rapidement et éviter les fraudes.
+ac:
+  - Une page permet de scanner ou saisir un code et indique si le billet est valide ou déjà utilisé.
+  - La validation enregistre l'utilisation du billet pour empêcher toute double entrée.
+notes:
+  - Sécurité: contrôle d'accès requis pour la page de validation, RLS empêche double utilisation.
+```
+
 ## Règles pour US auto‑générées (par ChatGPT)
 
 - Ajouter `origin: auto`
