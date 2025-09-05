@@ -10,7 +10,7 @@
 
 - Doublons détectés: néant
 - Code mort/obsolète: aucun repéré
-- Refactors simples (≤ timebox): ajouter script/commande pour seed validations Luge
+- Refactors simples (≤ timebox): script de seed ajouté (`supabase/sql/seed_luge_validations.sql` + commande `pnpm run seed:luge`)
 
 ## 3) DB audit
 
@@ -42,7 +42,7 @@
 
 ## 8) Plan d’action ≤ timebox
 
-- Nettoyage/refactor immédiat: documenter script de seed
+- Nettoyage/refactor immédiat: documenter script de seed (fait)
 - Actions différées (ticket backlog): renommer migration récurrente `20250829_extend_get_parc_activities_with_variants.sql`
 
 ---

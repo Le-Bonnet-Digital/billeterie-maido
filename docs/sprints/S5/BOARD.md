@@ -10,9 +10,9 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID    | Title                      | SP  | Owner | Start | End | Status   |
-| ----- | -------------------------- | --- | ----- | ----- | --- | -------- |
-| US-22 | Données test compteur luge | 1   | data  |       |     | Selected |
+| ID    | Title                      | SP  | Owner | Start      | End        | Status    |
+| ----- | -------------------------- | --- | ----- | ---------- | ---------- | --------- |
+| US-22 | Données test compteur luge | 1   | data  | 2025-09-05 | 2025-09-05 | Delivered |
 
 ## 3) Légende statuts
 

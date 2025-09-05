@@ -254,7 +254,7 @@ persona: parc
 title: Données test compteur luge
 value: valider le flux
 priority: P1
-status: Selected
+status: Delivered
 owner: data
 sp: 1
 sprint: 5

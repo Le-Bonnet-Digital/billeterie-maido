@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 
-const fs = require('fs');
+import fs from 'node:fs';
 
 const content = fs.readFileSync('BACKLOG.md', 'utf8');
 const lines = content.split(/\r?\n/);
@@ -18,9 +18,11 @@ function validateStory(st) {
   if (!st.value) missing.push('value');
   if (!st.priority) missing.push('priority');
   if (st.sp && st.sp.trim() !== '') missing.push('sp should be empty');
-  if (!st.acCount || st.acCount < 2) missing.push('at least two acceptance criteria');
+  if (!st.acCount || st.acCount < 2)
+    missing.push('at least two acceptance criteria');
   if (!st.securityNote) missing.push('security/RLS note');
-  if (st.origin === 'auto' && !st.linksApi) missing.push('links.api for auto origin');
+  if (st.origin === 'auto' && !st.linksApi)
+    missing.push('links.api for auto origin');
   if (missing.length) {
     errors.push(`US ${st.id || '(unknown)'}: missing ${missing.join(', ')}`);
   }

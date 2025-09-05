@@ -20,7 +20,8 @@
     "sprint:init": "node scripts/sprint-init.js",
     "prepare": "husky",
     "format": "prettier --write .",
-    "validate:backlog": "node scripts/validate-backlog.js"
+    "validate:backlog": "node scripts/validate-backlog.js",
+    "seed:luge": "psql \"$SUPABASE_DB_URL\" -f supabase/sql/seed_luge_validations.sql"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.0.8",

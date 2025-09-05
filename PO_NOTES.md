@@ -86,3 +86,5 @@ status: pending
 ## RETRO
 
 - IMP-03: automatiser la vérification des interactions (responsable: ChatGPT, sprint cible: S5)
+- IMP-04: étendre le script de seed aux activités poney/tir à l'arc (responsable: data, sprint cible: S6)
+- IMP-05: documenter la création d'utilisateurs de test (responsable: data, sprint cible: S6)
