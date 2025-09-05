@@ -4,7 +4,7 @@
   "author": "Maïdo",
   "repository": {
     "type": "git",
-    "url": "https://github.com/OWNER/billeterie-maido.git"
+    "url": "https://github.com/Le-Bonnet-Digital/billeterie-maido.git"
   },
   "private": true,
   "version": "0.0.0",
@@ -21,8 +21,7 @@
     "prepare": "husky",
     "format": "prettier --write .",
     "validate:backlog": "node scripts/validate-backlog.js"
-  
-
+  },
   "dependencies": {
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.0",
