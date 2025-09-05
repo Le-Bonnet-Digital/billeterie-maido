@@ -1,0 +1,56 @@
+# INTERACTIONS — Sprint S4
+
+## Gabarit des échanges ChatGPT ↔ PO
+
+# Journal
+
+- who: ChatGPT
+  when: 2025-09-05T06:40:54+00:00
+  topic: Sprint S4 — validation prod
+  did: |
+    - Préflight code et base
+    - Planification US-21
+  ask: |
+    Confirmer la planification du sprint.
+  context: repo
+  status: pending
+
+---
+
+## Règles d’usage
+
+* **Obligatoire** : au moins une entrée `ChatGPT` + une entrée `PO` par sprint.
+* **Horodatage** : ISO8601 `YYYY-MM-DDThh:mm:ss±TZ`.
+* **Topic** : `Sprint S<N> — validation prod`.
+* **Statut** : `pending → waiting_PO → done`.
+* Les hooks Husky bloquent si :
+
+  * `INTERACTIONS.yaml` absent ou non stagé,
+  * ou aucune entrée `topic: Sprint S<N>` trouvée.
+
+---
+
+## Exemple complet
+
+```yaml
+- who: ChatGPT
+  when: 2025-09-04T15:00:00+02:00
+  topic: Sprint S3 — validation prod
+  did: |
+    - Implémenté : Checkout + webhook idempotent
+    - Gate 0/A/B/C/D passées
+  ask: |
+    Tester en prod :
+    1) Achat pass → Checkout Stripe → retour /success
+    2) Réception email (QR inclus)
+    3) Scan QR côté luge → 2ᵉ scan refusé
+  context: env: https://stage.example.app ; PR: Sprint S3
+  status: pending
+
+- who: PO
+  when: 2025-09-04T16:15:00+02:00
+  topic: Sprint S3 — validation prod
+  reply: OK
+  details: "Flux complet validé, email reçu, QR fonctionne."
+  action: none
+```

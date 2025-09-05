@@ -190,7 +190,7 @@ persona: dev
 title: Ajouter colonne guaranteed_runs aux passes
 value: corriger la fonction get_passes_with_activities
 priority: P1
-status: Delivered
+status: Done
 owner: qa
 sp: 1
 sprint: 3
@@ -236,10 +236,10 @@ persona: parc
 title: Compteur jour Luge
 value: suivre le flux
 priority: P2
-status: Ready
+status: Selected
 owner: data
 sp: 2
-sprint: null
+sprint: 4
 type: feature
 origin: po
 ac:
