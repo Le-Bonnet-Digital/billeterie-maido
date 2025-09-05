@@ -11,6 +11,7 @@ import EventDetails from './pages/EventDetails';
 import EventFAQ from './pages/EventFAQ';
 import EventCGV from './pages/EventCGV';
 import Cart from './pages/Cart';
+import Success from './pages/Success';
 import FindTicket from './pages/FindTicket';
 import Profile from './pages/Profile';
 
@@ -51,6 +52,7 @@ export default function App() {
             <Route path="event/:eventId/faq" element={<EventFAQ />} />
             <Route path="event/:eventId/cgv" element={<EventCGV />} />
             <Route path="cart" element={<Cart />} />
+            <Route path="success" element={<Success />} />
             <Route path="find-ticket" element={<FindTicket />} />
             <Route path="profile" element={<Profile />} />
           </Route>

@@ -1,3 +1,6 @@
+> [S10 – OVERRIDE] Le périmètre MVP du Sprint 10 prévaut : US1, US2, US3, US4.  
+> Tout autre item est **hors scope** pour ce sprint (reporté).
+
 # BACKLOG — Billeterie Maïdo (MVP)
 
 > Statuts US : `Ready | Selected | InSprint | Delivered | Done | Spillover`
@@ -572,7 +575,7 @@ persona: client
 title: Parcourir les offres disponibles
 value: choisir ce que je veux acheter
 priority: P1
-status: Selected
+status: Delivered
 owner: frontend
 sp: 1
 sprint: 10
@@ -596,7 +599,7 @@ persona: client
 title: Composer un panier et accepter les CGV
 value: préparer ma commande
 priority: P1
-status: Selected
+status: Delivered
 owner: frontend
 sp: 1
 sprint: 10
@@ -620,7 +623,7 @@ persona: client
 title: Payer en ligne via Stripe et recevoir une confirmation
 value: finaliser mon achat
 priority: P1
-status: Selected
+status: Delivered
 owner: serverless
 sp: 3
 sprint: 10
@@ -644,7 +647,7 @@ persona: employé
 title: Vérifier la validité d'un billet
 value: admettre rapidement les clients
 priority: P1
-status: Selected
+status: Delivered
 owner: serverless
 sp: 1
 sprint: 10

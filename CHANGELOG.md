@@ -8,6 +8,10 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Ajouté
 
+- Catalogue des offres avec badges créneau
+- Panier avec acceptation des CGV bloquant le paiement
+- Paiement Stripe Checkout avec email QR et page de succès
+- Validation des billets empêchant la double utilisation
 - Utilitaires parsePrice, formatDate, slugify et clamp (US-100 à US-103)
 - Script de calcul de vélocité (IMP-06)
 - Aucun changement fonctionnel livré au sprint S9 (Spillover complet)

@@ -11,3 +11,16 @@
   context: |
     backlog: BACKLOG.md
   status: pending
+- who: ChatGPT
+  when: 2025-09-05T22:10:00Z
+  topic: Sprint S10 — delivery
+  did: |
+    - US1 catalogue
+    - US2 panier & CGV
+    - US3 Stripe + email QR
+    - US4 validation billet
+  ask: |
+    Recette du flux achat -> validation
+  context: |
+    tests: npm test
+  status: done

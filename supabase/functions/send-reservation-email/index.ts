@@ -1,5 +1,6 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import { toDataURL } from 'https://esm.sh/qrcode@1?target=deno';
 
 function getEnvVar(name: string): string {
   const value = Deno.env.get(name);
@@ -59,6 +60,8 @@ serve(async (req: Request) => {
     const apiKey = getEnvVar('RESEND_API_KEY');
     const fromEmail = getEnvVar('FROM_EMAIL');
 
+    const qr = await toDataURL(data.id);
+
     const sendRes = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -69,7 +72,7 @@ serve(async (req: Request) => {
         from: fromEmail,
         to: email,
         subject: 'Votre billet',
-        html: `<p>Votre réservation ${data.reservation_number ?? data.id} est confirmée.</p>`,
+        html: `<p>Votre réservation ${data.reservation_number ?? data.id} est confirmée.</p><img src="${qr}" alt="QR"/>`,
       }),
     });
 

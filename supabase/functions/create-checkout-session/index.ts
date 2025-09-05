@@ -74,7 +74,7 @@ serve(async (req: Request) => {
         },
         quantity: item.quantity || 1,
       })),
-      success_url: `${origin}/cart?success=true`,
+      success_url: `${origin}/success`,
       cancel_url: `${origin}/cart?canceled=true`,
       metadata: {
         cart: JSON.stringify(cartItems),

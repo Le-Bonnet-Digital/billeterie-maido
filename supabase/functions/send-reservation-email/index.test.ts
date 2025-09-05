@@ -12,8 +12,14 @@ const fromMock = {
 const clientMock = { from: vi.fn(() => fromMock) };
 const fetchMock = vi.fn();
 
+const qrMock = vi.fn().mockResolvedValue('data:qr');
+
 vi.mock('https://esm.sh/@supabase/supabase-js@2', () => ({
   createClient: vi.fn(() => clientMock),
+}));
+
+vi.mock('https://esm.sh/qrcode@1?target=deno', () => ({
+  toDataURL: qrMock,
 }));
 
 vi.mock('https://deno.land/std@0.224.0/http/server.ts', () => ({
@@ -99,7 +105,9 @@ describe('send-reservation-email edge function', () => {
       'https://api.resend.com/emails',
       expect.objectContaining({
         method: 'POST',
+        body: expect.stringContaining('data:qr'),
       }),
     );
+    expect(qrMock).toHaveBeenCalledWith('1');
   });
 });
