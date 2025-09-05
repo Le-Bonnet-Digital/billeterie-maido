@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { CheckCircle, X, Download, Mail } from 'lucide-react';
-import QRCode from 'qrcode';
+import { generateReservationQr } from '../lib/qr';
 import { logger } from '../lib/logger';
 
 interface ConfirmationModalProps {
@@ -32,7 +32,7 @@ export default function ConfirmationModal({
 
   useEffect(() => {
     let mounted = true;
-    QRCode.toDataURL(reservationNumber)
+    generateReservationQr(reservationNumber)
       .then((url) => {
         if (mounted) setQrDataUrl(url);
       })

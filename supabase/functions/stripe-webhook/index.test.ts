@@ -4,12 +4,13 @@ let handler: (req: Request) => Promise<Response>;
 
 const insertSessionMock = vi.fn();
 const insertReservationMock = vi.fn();
+const invokeMock = vi.fn();
 const fromMock = vi.fn((table: string) =>
   table === 'stripe_sessions'
     ? { insert: insertSessionMock }
     : { insert: insertReservationMock },
 );
-const supabaseClient = { from: fromMock };
+const supabaseClient = { from: fromMock, functions: { invoke: invokeMock } };
 
 const constructEventMock = vi.fn();
 const stripeMock = { webhooks: { constructEvent: constructEventMock } };
@@ -43,6 +44,12 @@ describe('stripe-webhook edge function', () => {
     ).Deno = {
       env: { get: (name: string) => process.env[name] },
     };
+    insertSessionMock.mockResolvedValue({ error: null });
+    const selectMock = vi.fn().mockReturnValue({
+      single: vi.fn().mockResolvedValue({ data: { id: 'r1' }, error: null }),
+    });
+    insertReservationMock.mockReturnValue({ select: selectMock });
+    invokeMock.mockResolvedValue({ data: { sent: true }, error: null });
   });
 
   it('returns 400 on invalid signature', async () => {
@@ -73,8 +80,6 @@ describe('stripe-webhook edge function', () => {
         },
       },
     });
-    insertSessionMock.mockResolvedValue({ error: null });
-    insertReservationMock.mockResolvedValue({ error: null });
     await import('./index.ts');
     const res = await handler(
       new Request('http://localhost', {
@@ -86,6 +91,7 @@ describe('stripe-webhook edge function', () => {
     expect(res.status).toBe(200);
     expect(insertSessionMock).toHaveBeenCalled();
     expect(insertReservationMock).toHaveBeenCalled();
+    expect(invokeMock).toHaveBeenCalled();
   });
 
   it('skips processing when session already handled', async () => {
@@ -112,5 +118,6 @@ describe('stripe-webhook edge function', () => {
     );
     expect(res.status).toBe(200);
     expect(insertReservationMock).not.toHaveBeenCalled();
+    expect(invokeMock).not.toHaveBeenCalled();
   });
 });
