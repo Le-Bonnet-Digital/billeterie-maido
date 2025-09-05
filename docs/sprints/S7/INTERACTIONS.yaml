@@ -15,6 +15,10 @@
 - who: PO
   when: 2025-09-05T19:00:00+00:00
   topic: Sprint S7 — validation prod
-  reply: pending
-  details: ''
+  reply: ok
+  details: |
+    - npm test ok
+    - J'aimerai qu'à l'avenir il soit défini un objectif de sprint claire avec des scénario utilisateur rédigé pour chaque US avec critère df'acceptation complet -> mettre en place les instructions dans les fichiers nécessaires
+    - Tous les sprint doivent contenir 20 SP -> diviser les US si nécessaire.
+    - se concentrer sur les US qui apporte de la valeur ajouté au utilisateur -> Wobjectif MVP à définir et documenter si besoin.
   action: none
