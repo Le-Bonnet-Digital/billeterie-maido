@@ -17,3 +17,15 @@
   reply: ok
   details: ''
   action: none
+
+- who: ChatGPT
+  when: 2025-09-05T10:25:00Z
+  topic: Sprint S9 — deliverables
+  did: |
+    - Clôturé le sprint S9 sans livrable (Spillover complet)
+    - Complété les artefacts: BOARD, DEMO, REVIEW, RETRO
+  ask: |
+    Vérifier que `pnpm test` passe et valider la réception
+  context: |
+    docs/sprints/S9
+  status: pending
