@@ -8,16 +8,9 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Ajouté
 
-- Affichage des activités des passes avec badge "Créneau requis"
-- Panier: paiement désactivé tant que les CGV ne sont pas acceptées
-
 ### Modifié
 
-- …
-
 ### Corrigé
-
-- Ajout de la colonne `guaranteed_runs` dans `passes`
 
 ---
 
@@ -40,6 +33,51 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ---
 
-## \[Sprint S<N>] — YYYY-MM-DD
+## \[Sprint S1] — 2025-09-04
 
-_(à compléter par ChatGPT lors de la clôture de chaque sprint)_
+### Ajouté
+
+- Affichage des activités des passes avec badge "Créneau requis" (US-10)
+- Panier: paiement désactivé tant que les CGV ne sont pas acceptées (US-11)
+
+### Corrigé
+
+- N/A
+
+---
+
+## \[Sprint S2] — 2025-09-05
+
+### Ajouté
+
+- Fonction `get_passes_with_activities` et logger `fetchPasses`
+
+### Corrigé
+
+- N/A
+
+---
+
+## \[Sprint S3] — 2025-09-05
+
+### Ajouté
+
+- Colonne `guaranteed_runs` pour les passes
+
+### Corrigé
+
+- N/A
+
+---
+
+## \[Sprint S4] — 2025-09-05
+
+### Ajouté
+
+- Vue `luge_validations_today` et page compteur Luge (US-21)
+
+### Corrigé
+
+- N/A
+
+---
