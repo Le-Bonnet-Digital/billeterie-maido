@@ -1,4 +1,4 @@
-🚨 ** SPRINT 10 – RÈGLE DE PRÉSÉANCE (OVERRIDE OBLIGATOIRE) **
+# 🚨 SPRINT 10 – RÈGLE DE PRÉSÉANCE (OVERRIDE OBLIGATOIRE)
 Ce dépôt fonctionne en mode *override de sprint*. **Pendant tout le Sprint 10**,
 l’agent DOIT :
 1) Lire et appliquer **docs/sprint-overrides/S10_OVERRIDES.md**,
