@@ -19,3 +19,14 @@
   reply: ko
   details: "Pourquoi avoir sélectionné une seul US pour ce SPRINT alros que le SPRINT précédent à terminé 3 SP en moins de 10 minutes. Il faut que la réalisation des US soit horodaté, heure de début, et heure de fin, avec les minutes et secondes, sinon on ne peut pas améliorer la vélocité. De plus, pourquoi avoir pris une nouvelle US pour ce SPRINT alors que les SPRINT précédent sont en pending ou en KO ? REvois et modifie les instructions si nécessaire pour ne plus que ça arrive. La base de vérité pour commencer chaque SPRINT ce sont les fichiers interractions et mes feedbacks"
   action: fix
+
+- who: ChatGPT
+  when: 2025-09-05T06:54:50Z
+  topic: Sprint S4 — ajustements suite feedback
+  did: |
+    - Mise à jour des instructions (`AGENTS.md`) pour consulter `INTERACTIONS.yaml` et bloquer les nouvelles US en cas de pending/KO
+    - Ajout des colonnes `Start`/`End` dans `BOARD.md` (templates et S4) et retrait de US-21 de la planification
+  ask: |
+    Confirmer que ces ajustements répondent aux attentes.
+  context: repo
+  status: pending

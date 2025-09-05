@@ -10,12 +10,12 @@
 
 > Déplacer les US sélectionnées dans la colonne correspondante. Chaque transition doit être justifiée dans les artefacts sprint.
 
-| ID    | Title | SP  | Owner      | Status    |
-| ----- | ----- | --- | ---------- | --------- |
-| US-.. | …     | 3   | serverless | Selected  |
-| US-.. | …     | 2   | data       | InSprint  |
-| US-.. | …     | 5   | frontend   | Delivered |
-| US-.. | …     | 3   | qa         | Spillover |
+| ID    | Title | SP  | Owner      | Start    | End      | Status    |
+| ----- | ----- | --- | ---------- | -------- | -------- | --------- |
+| US-.. | …     | 3   | serverless | 00:00:00 |          | Selected  |
+| US-.. | …     | 2   | data       | 00:05:00 |          | InSprint  |
+| US-.. | …     | 5   | frontend   | 00:00:00 | 00:10:00 | Delivered |
+| US-.. | …     | 3   | qa         | 00:00:00 |          | Spillover |
 
 ## 3) Légende statuts
 

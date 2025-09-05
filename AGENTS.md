@@ -34,7 +34,9 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
    - Consulter `docs/sprints/S<N-1>/INTERACTIONS.yaml` :
      - US `Delivered` validées par le PO → passer en `Done`.
      - Corrections demandées → créer les US de fix et ajuster le backlog/capacité.
-     - Ce fichier prévaut sur `REVIEW.md` pour l'état des US ; en cas de `reply: KO`, laisser l'US en `Delivered`.
+     - Ce fichier prévaut sur `REVIEW.md` pour l'état des US.
+     - Tant qu'une entrée est `pending` ou `reply: KO`, **ne sélectionner aucune nouvelle US** ; traiter ces actions d'abord.
+     - En cas de `reply: KO`, laisser l'US en `Delivered` jusqu'à correction.
 4. **Collecte & grooming automatique**
    - Lire `BACKLOG.md` (`Ready`) et `PO_NOTES.md`.
    - **Si aucune US `Ready`** :
@@ -56,8 +58,8 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
      - **Gate B — Data**.
      - **Gate C — Front**.
      - **Gate D — QA**.
-
    - Mettre à jour `owner` (serverless→data→frontend→qa) et `BOARD.md`. Déplacer en `Spillover` si dépassement.
+   - À l'entrée en `InSprint`, noter `start` (horodatage ISO `HH:MM:SS`), et à la transition `Delivered`, noter `end` dans `BOARD.md`.
 
 8. **Checkpoint T+22 (gel)** : figer code ; compléter `DEMO.md`, `REVIEW.md`, `RETRO.md`, finaliser `PREFLIGHT.md` ; renseigner `INTERACTIONS.yaml` (tests prod).
 9. **Clôture & PR unique** : calculer `committed_sp` vs `delivered_sp`, consigner la **vélocité** dans `REVIEW.md` et `SPRINT_HISTORY` ; ouvrir **une PR** `work→main` `Sprint S<N>: …`. Après merge, les US restent en `Delivered` jusqu'à validation PO ; elles passeront en `Done` au sprint suivant.
