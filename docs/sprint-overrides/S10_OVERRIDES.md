@@ -1,6 +1,7 @@
 # Sprint 10 — MVP Billetterie (OVERRIDE PRIORITAIRE)
 
 Ce document **prévaut sur toute autre instruction** du dépôt pendant le Sprint 10.
+> Voir aussi : docs/sprint-overrides/S10_GUIDE_MVP.md (guide détaillé du MVP).
 
 ## Périmètre MVP (obligatoire)
 - **US1 (Client)** : Parcourir les offres / passes (nom, prix, description, badges “Créneau requis/Accès libre”).
@@ -28,5 +29,4 @@ Ce document **prévaut sur toute autre instruction** du dépôt pendant le Sprin
 
 ## Garde-fous
 - Ne **pas modifier** ce fichier ni la bannière en tête d’AGENTS.md.
-- Travailler sur **feat/sprint-10-mvp**. PR unique “Sprint 10 — MVP”.
 - Si un hook bloque au bootstrap doc, utiliser `--no-verify` **uniquement** pour l’intro des overrides, puis réactiver la qualité.
