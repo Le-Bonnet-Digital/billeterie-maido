@@ -61,7 +61,7 @@ serve(async (req: Request) => {
       });
     }
 
-    const origin = new URL(req.url).origin;
+    const origin = req.headers.get('origin') ?? new URL(req.url).origin;
 
     const session = await stripe.checkout.sessions.create({
       mode: 'payment',

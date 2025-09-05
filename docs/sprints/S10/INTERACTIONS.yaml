@@ -24,3 +24,13 @@
   context: |
     tests: npm test
   status: done
+- who: ChatGPT
+  when: 2025-09-05T22:55:00Z
+  topic: Stripe success redirect
+  did: |
+    - Corrigé l'URL de redirection en utilisant l'en-tête Origin
+  ask: |
+    Vérifier que la page de succès s'affiche après paiement
+  context: |
+    commit: fix: respect request origin for Stripe URLs
+  status: pending
