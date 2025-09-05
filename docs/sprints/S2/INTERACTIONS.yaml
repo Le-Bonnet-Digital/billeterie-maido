@@ -1,0 +1,12 @@
+- who: ChatGPT
+  when: 2025-09-05T00:35:04+00:00
+  topic: Sprint S2 — validation prod
+  did: |
+    - Initialisation du sprint S2
+    - Migration get_passes_with_activities et logger
+  ask: |
+    Tester en prod :
+    1) Afficher la page des passes sans erreur
+    2) Vérifier la présence du log `fetchPasses`
+  context: env: http://localhost:5173 ; PR: Sprint S2
+  status: pending

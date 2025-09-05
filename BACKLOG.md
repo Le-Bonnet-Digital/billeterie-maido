@@ -144,10 +144,10 @@ persona: client
 title: Corriger liste passes (fonction get_passes_with_activities)
 value: pouvoir vérifier les passes en prod
 priority: P1
-status: Ready
+status: Selected
 owner: data
 sp: 1
-sprint: null
+sprint: 2
 type: fix
 origin: po
 links:
@@ -157,6 +157,29 @@ ac:
   - Page Passes affiche les passes sans erreur et badge "Créneau requis" le cas échéant
 notes:
   - RLS: vérifier que la fonction respecte les policies existantes
+```
+
+### IMP-02
+
+```yaml
+id: IMP-02
+persona: dev
+title: Observabilité minimale
+value: faciliter le diagnostic
+priority: P2
+status: Selected
+owner: serverless
+sp: 1
+sprint: 2
+type: improvement
+origin: auto
+links:
+  - api: ./src/lib/logger.ts
+ac:
+  - Logger centralisé pour les appels critiques
+  - Les logs n'exposent aucune donnée sensible
+notes:
+  - Sécurité: éviter PII dans les logs
 ```
 
 ---
