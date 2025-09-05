@@ -72,7 +72,6 @@ status: review
   status: pending
 
 - who: PO
-  when: 2025-09-04T16:20:00+02:00
   topic: Sprint S<N> — validation prod
   reply: OK | KO
   details: "…"
