@@ -17,7 +17,7 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 
 ### Corrigé
 
-- …
+- Ajout de la colonne `guaranteed_runs` dans `passes`
 
 ---
 
