@@ -12,6 +12,36 @@ if [ "$BRANCH" = "main" ]; then
   exit $?
 fi
 
+STAGED="$(git diff --cached --name-only)"
+ALLOW_EMPTY_SPRINT=${ALLOW_EMPTY_SPRINT:-0}
+if [ "$1" = "--allow-empty-sprint" ]; then
+  ALLOW_EMPTY_SPRINT=1
+fi
+
+if [ "$ALLOW_EMPTY_SPRINT" -eq 0 ]; then
+  DOCS_ONLY=1
+  for f in $STAGED; do
+    case "$f" in
+      *.md|*.markdown|*.mdx|*.txt|*.yaml|*.yml|docs/*)
+        ;;
+      *)
+        DOCS_ONLY=0
+        break
+        ;;
+    esac
+  done
+  if [ "$DOCS_ONLY" -eq 1 ]; then
+    echo "📝 Commit docs-only détecté : vérifications sprint allégées."
+    ALLOW_EMPTY_SPRINT=1
+  fi
+fi
+
+if [ "$ALLOW_EMPTY_SPRINT" -eq 1 ]; then
+  command -v git-secrets >/dev/null 2>&1 && git-secrets --scan
+  lint-staged
+  exit $?
+fi
+
 # 1) Sprint courant = dernier dossier docs/sprints/S<N>/
 SPRINT_DIR="$(ls -d docs/sprints/S*/ 2>/dev/null | sort -V | tail -n1)"
 if [ -z "$SPRINT_DIR" ]; then
@@ -51,7 +81,6 @@ grep -qi "DB audit" "$PREF"   || { echo "❌ PREFLIGHT.md: section 'DB audit' ma
 }
 
 # 5) Si migrations STAGÉES → exiger schema.sql stagé OU justification 'unchanged'
-STAGED="$(git diff --cached --name-only)"
 if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migrations/|migrations/)'; then
   if ! echo "$STAGED" | grep -q '^schema.sql$'; then
     if ! grep -qi "unchanged" "$PREF"; then
