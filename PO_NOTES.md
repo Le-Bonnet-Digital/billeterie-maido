@@ -45,12 +45,12 @@
 ## 3) SPRINT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-sprint_id: 4
+sprint_id: 6
 highlights: |
-  - Processus ajusté selon feedback PO (horodatage des US, blocage si pending/KO)
+  - US-22 validée par le PO, seed luge disponible
 risks_or_todo: |
-  - Résoudre les entrées pending du sprint précédent avant tout nouveau développement
-interaction_log: ./docs/sprints/S4/INTERACTIONS.yaml
+  - Remplacer le script de seed par une migration et corriger le nommage Supabase
+interaction_log: ./docs/sprints/S5/INTERACTIONS.yaml
 status: pending
 ```
 
