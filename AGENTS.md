@@ -91,6 +91,8 @@ Avant **tout commit**, le hook **`.husky/pre-commit`** doit réussir. Il vérifi
 
 5. Si des **migrations** sont modifiées → `schema.sql` est mis à jour, **ou** `PREFLIGHT.md` justifie `unchanged`. ⚠️ **ChatGPT ne les applique pas**, le PO exécute les commandes fournies.
 
+> ✍️ **Commit docs-only** : si le commit ne touche que des fichiers de documentation (`*.md`, `*.yml`, `docs/…`), le hook détecte un mode "allow-empty-sprint". Les contrôles d'artefacts sprint et les tests complets sont ignorés au profit de `lint-staged`. Pour forcer ce mode, lancer `git commit` avec `ALLOW_EMPTY_SPRINT=1` (ou en appelant le hook avec `--allow-empty-sprint`).
+
 ---
 
 ## 5) Rôles & switching (rappel)
