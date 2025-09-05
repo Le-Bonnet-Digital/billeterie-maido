@@ -16,3 +16,14 @@
   reply: OK
   details: "L'affichage des passes se fait bien sans erreur"
   action: none
+
+- who: ChatGPT
+  when: 2025-09-05T01:13:44Z
+  topic: Sprint S3 — documentation
+  did: |
+    - Ajout du fichier DoD.md
+    - Mise à jour de AGENTS.md et README.md
+  ask: |
+    Vérifier que les liens vers DoD.md sont corrects.
+  context: repo
+  status: pending

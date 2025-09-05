@@ -13,7 +13,7 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 - **Timebox** : 25 min (gel **T+22** pour docs/review/rétro/PO_NOTES).
 - **Autonomie produit** : si besoin, ChatGPT **propose, crée et sélectionne** des US (MVP + qualité irréprochable).
 - **Rôle du PO** : fournit **OK/KO**, **secrets/clé API**, **orientations** dans `PO_NOTES.md`.
-- **Qualité** : respecter `QUALITY-GATES.md` et `DoD.md`.
+- **Qualité** : respecter [QUALITY-GATES.md](QUALITY-GATES.md) et [DoD.md](DoD.md).
 - **Sécurité** : pas de secrets en repo ; idempotence ; **RLS/policies** testées ; en‑têtes sécurité ; rate‑limit endpoints publics.
 - **Garde‑fous locaux** : tout commit doit passer le **hook Husky** `.husky/pre-commit`. Aucune dépendance à GitHub Actions.
 

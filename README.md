@@ -114,8 +114,8 @@ npx husky install
 
 ## 6) Qualité & sécurité
 
-- **Quality Gates** : `QUALITY-GATES.md` (Gate 0/A/B/C/D/S)
-- **DoD** : CI locale verte, couverture ≥ 80% des nouvelles lignes, docs à jour, sécurité OK
+- **Quality Gates** : [`QUALITY-GATES.md`](QUALITY-GATES.md) (Gate 0/A/B/C/D/S)
+- **DoD** : [`DoD.md`](DoD.md) — CI locale verte, couverture ≥ 80% des nouvelles lignes, docs à jour, sécurité OK
 - **Sécurité** :
   - Jamais de secrets en repo/PR
   - Webhooks Stripe **signés**, logique **idempotente**
