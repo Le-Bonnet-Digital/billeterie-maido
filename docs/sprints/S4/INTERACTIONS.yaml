@@ -49,3 +49,19 @@
     2) Ouvrir `/provider/luge-counter` et vérifier le compteur
   context: env: http://localhost:5173 ; PR: Sprint S4
   status: pending
+
+- who: PO
+  topic: Sprint S4 — validation prod US-21
+  reply: ko
+  details: |
+    - Les explications pour tester la création de quelques validations luge est insuffisante ou alros il aurait fallu avoir ders jeux de données en BDD.
+    - Le compteur apparait donc bien mais il est à 0 faute de jeux de données ou d'explication claire sur la ddémarche à suivre pour créer des validation luge.
+    - Améliortations : |
+      - La section 2 : Mode Sprint du fichiers AGENTS.md, ne doit pas se faire uniquement avec la commande "Passe au sprint suivant " mais doit être appliqué à chaque demande -> Faire les ajustements nécessaire dans les instructions.
+      - Je ne vois pas d'exécution (A→B→C→D) (section 7 du fichier AGENTS.md) -> s'assurer de l'execution de ce workflow en faisant des ajustement si nécessaire dans les instructions.
+      - Rajouter dans le processus une DoR et veiller à sa mise en oeuvre. Les Us doivents être bien rédigé selon les bonnes pratiques.
+      - Fixer un problème de migration récurent : Je ne suis toujours obligé de faire la commande "supabase migration repair --status reverted 20250829" en local pour que les migration passent (faut-il changer son nom, problème de nommage à explorer).
+      - Je me demande s'il ne faudrait pas un suivi QA_CHECKLIST.md pour chaque sprint afin de s'assurer qu'il soit respecté -> faire le nécessaire pour QUALITY_GATES également tout en veillant à la logique avec toutes les différentes instructinos pour faire les ajustements nécessaires.
+      - Le changelog.md n'a pas l'air d'être mis à jour à chaque sprint, Vérifier sa pertinence et cohérence avec le reste dfes instruction et appliquer les ajustement nécessaire.
+      - Toujours pas d'affinage de la vélocité, la review n'indique pas le temps pris pour la réalisation des US, ni le temps du SPRINT afin de s'ajuster pour avoir des SPRINTS qui dure 25 minutes. Actuellement l'équipe s'engage sur peu de SP. Les objectifs de sprint doivent être fixé à 25 minutes -> faire en sorte que ça soit appliqué systématiquement.
+  action: fixe
