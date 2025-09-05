@@ -94,4 +94,4 @@ fi
 
 # 6) Sécurité & qualité locales
 command -v git-secrets >/dev/null 2>&1 && git-secrets --scan
-npm run -s lint && npm test && lint-staged
+npm run -s lint && npm run -s validate:backlog && npm test && lint-staged
