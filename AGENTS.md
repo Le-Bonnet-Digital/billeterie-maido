@@ -22,8 +22,8 @@ Manuel d’exécution pour **ChatGPT**. À la commande **« Passe au sprint suiv
 ## 2) Mode Sprint (commande : « Passe au sprint suivant »)
 
 1. **Bootstrap & minuteur**
+   - Exécuter `npm run sprint:init` (crée `/docs/sprints/S<N>` depuis `docs/templates`).
    - Démarrer un **minuteur 25 min** (checkpoints **T+10**, **T+22**).
-   - Créer `/docs/sprints/S<N>/` si absent et initialiser : `PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`, `INTERACTIONS.yaml` (depuis templates).
 
 2. **Pré‑vol (audit existant) → `PREFLIGHT.md`**
    - **Code** : cartographier endpoints/contrats/tests, relever doublons, **code mort**, dette bloquante ; proposer refactors **≤ timebox**.
