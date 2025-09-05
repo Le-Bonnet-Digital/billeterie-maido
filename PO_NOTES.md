@@ -45,14 +45,13 @@
 ## 3) SPRINT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-sprint_id: 2
+sprint_id: 3
 highlights: |
-  - US-13 corrigée (fonction get_passes_with_activities)
-  - Logger centralisé
+  - Migration guaranteed_runs ajoutée
 risks_or_todo: |
-  - Tests RLS prestataires à étoffer
-interaction_log: ./docs/sprints/S2/INTERACTIONS.yaml
-status: review
+  - Tests RLS prestataires à compléter
+interaction_log: ./docs/sprints/S3/INTERACTIONS.yaml
+status: wip
 ```
 
 ---

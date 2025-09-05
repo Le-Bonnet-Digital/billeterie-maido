@@ -144,8 +144,8 @@ persona: client
 title: Corriger liste passes (fonction get_passes_with_activities)
 value: pouvoir vérifier les passes en prod
 priority: P1
-status: Selected
-owner: data
+status: Delivered
+owner: qa
 sp: 1
 sprint: 2
 type: fix
@@ -167,8 +167,8 @@ persona: dev
 title: Observabilité minimale
 value: faciliter le diagnostic
 priority: P2
-status: Selected
-owner: serverless
+status: Delivered
+owner: qa
 sp: 1
 sprint: 2
 type: improvement
@@ -180,6 +180,29 @@ ac:
   - Les logs n'exposent aucune donnée sensible
 notes:
   - Sécurité: éviter PII dans les logs
+```
+
+### US-14
+
+```yaml
+id: US-14
+persona: dev
+title: Ajouter colonne guaranteed_runs aux passes
+value: corriger la fonction get_passes_with_activities
+priority: P1
+status: Delivered
+owner: qa
+sp: 1
+sprint: 3
+type: fix
+origin: po
+links:
+  - api: ./supabase/migrations/20250905003500_get_passes_with_activities.sql
+ac:
+  - Migration ajoute la colonne guaranteed_runs integer à passes
+  - `supabase db push` s'exécute sans erreur
+notes:
+  - RLS: colonne lecture seule, policies existantes suffisantes
 ```
 
 ---

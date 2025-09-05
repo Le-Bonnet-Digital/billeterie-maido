@@ -901,6 +901,7 @@ CREATE TABLE IF NOT EXISTS "public"."passes" (
     "created_at" timestamp with time zone DEFAULT "now"(),
     "is_park" boolean DEFAULT false,
     "pass_type" "text",
+    "guaranteed_runs" integer,
     CONSTRAINT "passes_pass_type_check" CHECK ((("pass_type" IS NULL) OR ("pass_type" = ANY (ARRAY['moins_8'::"text", 'plus_8'::"text", 'luge_seule'::"text", 'baby_poney'::"text"]))))
 );
 

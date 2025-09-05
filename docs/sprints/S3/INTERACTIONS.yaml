@@ -1,0 +1,12 @@
+- who: ChatGPT
+  when: 2025-09-05T00:55:18Z
+  topic: Sprint S3 — validation prod
+  did: |
+    - Initialisation du sprint S3
+    - Préparation de la migration guaranteed_runs
+  ask: |
+    Tester en prod :
+    1) Exécuter `supabase db push --include-all --yes`
+    2) Vérifier affichage des passes sans erreur
+  context: env: http://localhost:5173 ; PR: Sprint S3
+  status: pending

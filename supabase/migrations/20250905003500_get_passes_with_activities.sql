@@ -1,4 +1,6 @@
 -- Function to retrieve passes with their activities and remaining stock
+ALTER TABLE passes ADD COLUMN IF NOT EXISTS guaranteed_runs integer;
+
 CREATE OR REPLACE FUNCTION get_passes_with_activities(event_uuid uuid)
 RETURNS json
 LANGUAGE sql
