@@ -1,92 +1,87 @@
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
-import { toDataURL } from 'https://esm.sh/qrcode@1?target=deno';
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { toDataURL } from "https://esm.sh/qrcode@1?target=deno";
 
-function getEnvVar(name: string): string {
-  const value = Deno.env.get(name);
-  if (!value) {
-    throw new Error(`Missing environment variable: ${name}`);
-  }
-  return value;
+function env(name: string): string {
+  const v = Deno.env.get(name);
+  if (!v) throw new Error(`Missing env var ${name}`);
+  return v;
 }
-
-const supabase = createClient(
-  getEnvVar('SUPABASE_URL'),
-  getEnvVar('SUPABASE_SERVICE_ROLE_KEY'),
-);
-
 function isValidEmail(email: string): boolean {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 }
 
-interface Reservation {
-  id: string;
-  client_email: string;
-  reservation_number: string | null;
-}
+const SUPABASE_URL = env("SUPABASE_URL");
+const SUPABASE_SERVICE_ROLE_KEY = env("SUPABASE_SERVICE_ROLE_KEY");
+const RESEND_API_KEY = env("RESEND_API_KEY");
+const FROM_EMAIL = env("FROM_EMAIL");
 
-serve(async (req: Request) => {
+const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY);
+
+Deno.serve(async (req) => {
+  if (req.method !== "POST") {
+    return new Response(JSON.stringify({ error: "Method not allowed" }), {
+      status: 405,
+      headers: { "content-type": "application/json" },
+    });
+  }
+
   try {
-    if (req.method !== 'POST') {
-      return new Response(JSON.stringify({ error: 'Method not allowed' }), {
-        status: 405,
-      });
-    }
-
-    const { email, reservationId } = (await req.json()) as {
-      email?: string;
-      reservationId?: string;
-    };
-
+    const { email, reservationId } = await req.json();
     if (!email || !isValidEmail(email) || !reservationId) {
-      return new Response(JSON.stringify({ error: 'Invalid request' }), {
+      return new Response(JSON.stringify({ error: "Invalid request" }), {
         status: 400,
+        headers: { "content-type": "application/json" },
       });
     }
 
     const { data, error } = await supabase
-      .from('reservations')
-      .select('id, client_email, reservation_number')
-      .eq('id', reservationId)
-      .eq('client_email', email)
-      .single<Reservation>();
+      .from("reservations")
+      .select("id, client_email, reservation_number")
+      .eq("id", reservationId)
+      .eq("client_email", email)
+      .single();
 
     if (error || !data) {
-      return new Response(JSON.stringify({ error: 'Reservation not found' }), {
+      return new Response(JSON.stringify({ error: "Reservation not found" }), {
         status: 404,
+        headers: { "content-type": "application/json" },
       });
     }
 
-    const apiKey = getEnvVar('RESEND_API_KEY');
-    const fromEmail = getEnvVar('FROM_EMAIL');
-
     const qr = await toDataURL(data.id);
-
-    const sendRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+    const resp = await fetch("https://api.resend.com/emails", {
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
-        Authorization: `Bearer ${apiKey}`,
+        "content-type": "application/json",
+        Authorization: `Bearer ${RESEND_API_KEY}`,
       },
       body: JSON.stringify({
-        from: fromEmail,
+        from: FROM_EMAIL,
         to: email,
-        subject: 'Votre billet',
-        html: `<p>Votre réservation ${data.reservation_number ?? data.id} est confirmée.</p><img src="${qr}" alt="QR"/>`,
+        subject: "Votre billet",
+        html: `<p>Votre réservation <b>${
+          data.reservation_number ?? data.id
+        }</b> est confirmée.</p><img src="${qr}" alt="QR"/>`,
       }),
     });
 
-    if (!sendRes.ok) {
-      const text = await sendRes.text();
+    if (!resp.ok) {
+      const text = await resp.text();
+      console.error("RESEND_ERROR", text);
       return new Response(
         JSON.stringify({ error: `Email send failed: ${text}` }),
-        { status: 500 },
+        { status: 502, headers: { "content-type": "application/json" } }
       );
     }
 
-    return new Response(JSON.stringify({ sent: true }), { status: 200 });
-  } catch (err: unknown) {
-    const message = err instanceof Error ? err.message : 'Unknown error';
-    return new Response(JSON.stringify({ error: message }), { status: 500 });
+    return new Response(JSON.stringify({ sent: true }), {
+      status: 200,
+      headers: { "content-type": "application/json" },
+    });
+  } catch (e: any) {
+    return new Response(JSON.stringify({ error: e?.message ?? "Unknown error" }), {
+      status: 500,
+      headers: { "content-type": "application/json" },
+    });
   }
 });
