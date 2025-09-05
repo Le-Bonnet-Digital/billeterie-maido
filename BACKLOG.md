@@ -236,10 +236,10 @@ persona: parc
 title: Compteur jour Luge
 value: suivre le flux
 priority: P2
-status: Selected
+status: Ready
 owner: data
 sp: 2
-sprint: 4
+sprint: null
 type: feature
 origin: po
 ac:

@@ -45,13 +45,13 @@
 ## 3) SPRINT — EN‑TÊTE (renseigné par ChatGPT)
 
 ```yaml
-sprint_id: 3
+sprint_id: 4
 highlights: |
-  - Migration guaranteed_runs ajoutée
+  - Processus ajusté selon feedback PO (horodatage des US, blocage si pending/KO)
 risks_or_todo: |
-  - Tests RLS prestataires à compléter
-interaction_log: ./docs/sprints/S3/INTERACTIONS.yaml
-status: wip
+  - Résoudre les entrées pending du sprint précédent avant tout nouveau développement
+interaction_log: ./docs/sprints/S4/INTERACTIONS.yaml
+status: pending
 ```
 
 ---
