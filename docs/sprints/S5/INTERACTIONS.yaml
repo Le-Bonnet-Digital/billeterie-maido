@@ -18,6 +18,9 @@
 - who: PO
   when: 2025-09-05T08:10:00Z
   topic: Sprint S5 — validation prod
-  reply: pending
-  details: ""
-  action: none
+  reply: ok
+  details: |
+    - Les test en local on fonctionner, j'ai du modifier le script SQL.
+    - Pour les prochaines fois, préfère les migrations plutot que les scripts.
+    - Et j'aimerai que le problème m'obligeant à toujours faire un "supabase migration repair --status reverted 20250829 " soit résolu. Il doit sagir d'un problème de nommage car je vois que l'horodatage du début du nom du ficheir ne correspond pas au meme format que les autres.
+  action: 
