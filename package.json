@@ -19,8 +19,10 @@
     "test:coverage": "npx vitest --coverage",
     "sprint:init": "node scripts/sprint-init.js",
     "prepare": "husky",
-    "format": "prettier --write ."
-  },
+    "format": "prettier --write .",
+    "validate:backlog": "node scripts/validate-backlog.js"
+  
+
   "dependencies": {
     "@dnd-kit/core": "^6.0.8",
     "@dnd-kit/sortable": "^7.0.0",
