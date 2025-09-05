@@ -91,6 +91,11 @@ if echo "$STAGED" | grep -Eq '^(supabase/migrations/|Infrastructure/.*/Migration
   echo "ℹ️ Des migrations sont présentes dans le commit. ChatGPT ne les applique pas."
   echo "   ➜ Applique-les manuellement après merge (ex: supabase db reset/apply, EF Core update, etc.)."
 fi
+# Refuser des \n littéraux dans les migrations SQL
+if git diff --cached --name-only -- 'supabase/migrations/**/*.sql' | xargs -r grep -n "\\n"; then
+  echo "❌ Des \n littéraux détectés dans des migrations."
+  exit 1
+fi
 
 # 6) Sécurité & qualité locales
 command -v git-secrets >/dev/null 2>&1 && git-secrets --scan
