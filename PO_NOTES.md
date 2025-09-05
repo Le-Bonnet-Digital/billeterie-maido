@@ -14,6 +14,7 @@
 - **Journal d’interaction** :
   - Écrire dans `INTERACTIONS.yaml` une **entrée horodatée** avec : `did` (fait/livré), `ask` (tests prod PO), `context` (URLs, comptes de test), `status: pending`.
   - Le **PO** répond **dans le même fichier** (`who: PO`, `reply: OK|KO`, `details`).
+  - En cas de reprise du développement, se fier au **dernier** `INTERACTIONS.yaml` (PO), qui prime sur `REVIEW.md` ou tout autre artefact.
 
 - **Seeds & fixtures** : ChatGPT **génère/maintient** les scripts/fixtures et fournit **une commande** (ex. `npm run seed`, `dotnet run --project tools/Seeder`, `psql -f seed.sql`). Le PO **exécute la commande** si demandé.
 - **Migrations & schéma** : ChatGPT **propose** les migrations et documente les commandes. Le **PO** les **applique** si validées. `schema.sql` est **rafraîchi par le PO** ou noté `unchanged` (justifié) dans `PREFLIGHT.md`.

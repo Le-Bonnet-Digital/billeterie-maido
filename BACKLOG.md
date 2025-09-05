@@ -85,7 +85,7 @@ persona: client
 title: Parcourir offres & passes
 value: choisir facilement
 priority: P1
-status: Done
+status: Delivered
 owner: qa
 sp: 3
 sprint: 1
@@ -104,7 +104,7 @@ persona: client
 title: Panier + CGV
 value: préparer ma commande
 priority: P1
-status: Done
+status: Delivered
 owner: qa
 sp: 3
 sprint: 1
@@ -134,6 +134,29 @@ links:
 ac:
   - Redirection Checkout + retour success/cancel
   - Email confirmation avec n° de réservation + QR
+```
+
+### US-13
+
+```yaml
+id: US-13
+persona: client
+title: Corriger liste passes (fonction get_passes_with_activities)
+value: pouvoir vérifier les passes en prod
+priority: P1
+status: Ready
+owner: data
+sp: 1
+sprint: null
+type: fix
+origin: po
+links:
+  - api: ./src/shared/contracts/passes.ts
+ac:
+  - Fonction SQL get_passes_with_activities(event_uuid) disponible via Supabase
+  - Page Passes affiche les passes sans erreur et badge "Créneau requis" le cas échéant
+notes:
+  - RLS: vérifier que la fonction respecte les policies existantes
 ```
 
 ---
