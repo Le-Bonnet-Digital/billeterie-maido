@@ -1,3 +1,6 @@
+> [S10 – OVERRIDE] Le périmètre MVP du Sprint 10 prévaut : US1, US2, US3, US4.  
+> Tout autre item est **hors scope** pour ce sprint (reporté).
+
 # BACKLOG — Billeterie Maïdo (MVP)
 
 > Statuts US : `Ready | Selected | InSprint | Delivered | Done | Spillover`
