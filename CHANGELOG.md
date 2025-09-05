@@ -81,3 +81,15 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 - N/A
 
 ---
+
+## \[Sprint S5] — 2025-09-05
+
+### Ajouté
+
+- Script de seed pour validations Luge (US-22)
+
+### Modifié
+
+### Corrigé
+
+---

@@ -3,43 +3,35 @@
 ## 1) Contexte
 
 - **Sprint**: S5
-- **Date review**: …
+- **Date review**: 2025-09-05
 - **Participants**: ChatGPT (équipe) + PO
 
 ## 2) Bilan du sprint
 
-- **Capacité engagée**: … SP
-- **SP livrés**: … SP
-- **Focus factor**: … (livrés/engagés)
+- **Capacité engagée**: 1 SP
+- **SP livrés**: 1 SP
+- **Focus factor**: 1.0
 
 ## 3) Objectifs atteints
 
-- US-.. ✔️
-- US-.. ❌ (Spillover)
+- US-22 ✔️
 
 ## 4) Dérogations / écarts
 
-- US-.. : … (raison, impact)
-- Qualité: Lighthouse à 85 (cause: …)
-- Schéma BDD: `unchanged` justifié (aucune modif réelle)
+- N/A
+- Schéma BDD: `unchanged` justifié (aucune migration)
 
 ## 5) Feedback PO
 
-- Validation prod: OK/KO
-- Retours fonctionnels: …
+- Validation prod: pending
+- Retours fonctionnels: n/a
 
 ## 6) Actions d’amélioration (reportées en rétro)
 
-- Améliorer tests RLS prestataires
-- Stabiliser webhook Stripe (retry/alerte)
+- n/a
 
 ## 7) Décisions
 
-- Maintenir Stripe Checkout uniquement (pas d’autres moyens de paiement)
-- Standardiser logs (format JSON + correlation)
-
-## 8) Suivi
-
-- PR merge: `Sprint S5: …`
-- CHANGELOG mis à jour (`[Unreleased]`)
+- PR merge: `Sprint S5: données test compteur luge`
+- CHANGELOG mis à jour (`[Sprint S5]`)
 - Tickets follow‑up créés si besoin
