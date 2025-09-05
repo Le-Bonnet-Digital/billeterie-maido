@@ -12,3 +12,17 @@ export function formatPrice(amount: number): string {
   }
 }
 
+export function parsePrice(value: string | number): number {
+  if (typeof value === 'number') {
+    return value;
+  }
+  const normalized = value
+    .replace(/[\s\u00A0]/g, '')
+    .replace('€', '')
+    .replace(',', '.');
+  const parsed = Number(normalized);
+  if (Number.isNaN(parsed)) {
+    throw new Error('Invalid price format');
+  }
+  return parsed;
+}

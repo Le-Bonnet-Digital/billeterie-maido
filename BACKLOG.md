@@ -389,6 +389,98 @@ ac:
   - CA total période, ventes par pass, courbe journalière
 ```
 
+### US-100
+
+```yaml
+id: US-100
+persona: dev
+title: Utilitaire parsePrice
+value: standardiser la saisie de prix
+priority: P2
+status: Delivered
+owner: frontend
+sp: 5
+sprint: 7
+type: improvement
+origin: auto
+links:
+  - api: ./src/lib/money.ts
+ac:
+  - "12,50 €" est converti en 12.5
+  - un format invalide déclenche une erreur
+notes:
+  - Sécurité: validation côté client uniquement, aucun impact RLS
+```
+
+### US-101
+
+```yaml
+id: US-101
+persona: dev
+title: Utilitaire formatDate
+value: affichage cohérent des dates
+priority: P2
+status: Delivered
+owner: frontend
+sp: 5
+sprint: 7
+type: improvement
+origin: auto
+links:
+  - api: ./src/lib/date.ts
+ac:
+  - une date ISO est affichée en jj/mm/aaaa
+  - le paramètre locale modifie le format
+notes:
+  - Sécurité: pas de données sensibles, RLS non applicable
+```
+
+### US-102
+
+```yaml
+id: US-102
+persona: dev
+title: Utilitaire slugify
+value: générer des URLs propres
+priority: P2
+status: Delivered
+owner: frontend
+sp: 5
+sprint: 7
+type: improvement
+origin: auto
+links:
+  - api: ./src/lib/string.ts
+ac:
+  - accents et espaces sont normalisés en tirets
+  - les tirets en bord de chaîne sont retirés
+notes:
+  - Sécurité: sanitation côté client, RLS non applicable
+```
+
+### US-103
+
+```yaml
+id: US-103
+persona: dev
+title: Utilitaire clamp
+value: contraindre une valeur numérique
+priority: P3
+status: Delivered
+owner: frontend
+sp: 5
+sprint: 7
+type: improvement
+origin: auto
+links:
+  - api: ./src/lib/math.ts
+ac:
+  - une valeur sous le minimum renvoie le minimum
+  - une valeur au-dessus du maximum renvoie le maximum
+notes:
+  - Sécurité: aucune donnée externe, RLS non applicable
+```
+
 ---
 
 ## Règles pour US auto‑générées (par ChatGPT)
