@@ -265,7 +265,7 @@ export default function ReservationValidationForm({
             ) : (
               <>
                 <strong>Ordinateur :</strong> Saisissez le numéro de réservation manuellement ou utilisez 
-                "Activer la webcam" pour scanner avec votre caméra d'ordinateur.
+                "Activer la webcam\" pour scanner avec votre caméra d'ordinateur.
               </>
             )}
           </div>
