@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
 import { CheckCircle, QrCode, XCircle, Camera, Smartphone, Flashlight, RefreshCw, ClipboardPaste } from 'lucide-react';
-import { BrowserMultiFormatReader, NotFoundException, Result } from '@zxing/browser';
+import { BrowserMultiFormatReader, Result } from '@zxing/browser';
+import { NotFoundException } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
 
@@ -145,7 +146,7 @@ export default function ReservationValidationForm({
       toast.success('Caméra active. Présentez le QR code.');
     } catch (error) {
       console.error('Erreur caméra:', error);
-      toast.error('Impossible d’accéder à la caméra. Essayez la saisie manuelle ou une photo.');
+      toast.error('Impossible d'accéder à la caméra. Essayez la saisie manuelle ou une photo.');
     }
   };
 
@@ -155,7 +156,7 @@ export default function ReservationValidationForm({
     try {
       await applyTorch(track, !torchOn);
     } catch {
-      toast.error('La torche n’est pas supportée par cet appareil.');
+      toast.error('La torche n'est pas supportée par cet appareil.');
     }
   };
 
@@ -238,7 +239,7 @@ export default function ReservationValidationForm({
       if (txt) setCode(txt.trim());
       else toast('Presse-papiers vide');
     } catch {
-      toast.error('Impossible d’accéder au presse-papiers');
+      toast.error('Impossible d'accéder au presse-papiers');
     }
   };
 
