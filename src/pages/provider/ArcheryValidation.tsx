@@ -2,10 +2,12 @@ import ReservationValidationForm from '../../components/validation/ReservationVa
 
 export default function ArcheryValidation() {
   return (
-    <ReservationValidationForm
-      activity="tir_arc"
-      title="Validation Tir à l'arc"
-      help="Scannez le QR/numéro de réservation pour valider l'inscription tir à l'arc."
-    />
+    <div className="max-w-2xl mx-auto">
+      <ReservationValidationForm
+        activity="tir_arc"
+        title="Validation Tir à l'arc"
+        help="Scannez le QR code du billet ou saisissez manuellement le numéro de réservation pour valider l'accès à l'activité tir à l'arc."
+      />
+    </div>
   );
 }

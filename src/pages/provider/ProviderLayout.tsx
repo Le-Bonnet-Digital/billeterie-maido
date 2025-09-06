@@ -3,7 +3,7 @@ import { Outlet, Link, useLocation } from 'react-router-dom';
 import { getCurrentUser, signOut } from '../../lib/auth';
 import type { User } from '../../lib/auth';
 import ProviderLogin from '../../components/ProviderLogin';
-import { QrCode, LogOut } from 'lucide-react';
+import { QrCode, LogOut, Menu, X } from 'lucide-react';
 
 const ALLOWED: User['role'][] = [
   'pony_provider',
@@ -17,6 +17,7 @@ export default function ProviderLayout() {
   const location = useLocation();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -81,34 +82,85 @@ export default function ProviderLayout() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="bg-white border-b">
-        <div className="max-w-5xl mx-auto px-4 py-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-900 font-semibold">
-            <QrCode className="h-5 w-5 text-blue-600" />
-            Espace Prestataire
+        <div className="max-w-5xl mx-auto px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2 text-gray-900 font-semibold">
+              <QrCode className="h-5 w-5 text-blue-600" />
+              Espace Prestataire
+            </div>
+            
+            {/* Desktop Navigation */}
+            <div className="hidden md:flex items-center gap-6">
+              <nav className="flex items-center gap-4">
+                {nav.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    className={`text-sm ${location.pathname === n.to ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+              </nav>
+              <button
+                onClick={async () => {
+                  await signOut();
+                  setUser(null);
+                }}
+                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
+              >
+                <LogOut className="h-4 w-4" />
+                Déconnexion
+              </button>
+            </div>
+
+            {/* Mobile Menu Button */}
+            <div className="md:hidden">
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors"
+                aria-label="Menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-6 w-6" />
+                ) : (
+                  <Menu className="h-6 w-6" />
+                )}
+              </button>
+            </div>
           </div>
-          <div className="flex items-center gap-6">
-            <nav className="hidden md:flex items-center gap-4">
-              {nav.map((n) => (
-                <Link
-                  key={n.to}
-                  to={n.to}
-                  className={`text-sm ${location.pathname === n.to ? 'text-blue-600' : 'text-gray-600 hover:text-gray-900'}`}
+
+          {/* Mobile Navigation Menu */}
+          {mobileMenuOpen && (
+            <div className="md:hidden mt-4 pb-4 border-t border-gray-200">
+              <nav className="flex flex-col space-y-2 pt-4">
+                {nav.map((n) => (
+                  <Link
+                    key={n.to}
+                    to={n.to}
+                    onClick={() => setMobileMenuOpen(false)}
+                    className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
+                      location.pathname === n.to 
+                        ? 'bg-blue-100 text-blue-700' 
+                        : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    }`}
+                  >
+                    {n.label}
+                  </Link>
+                ))}
+                <button
+                  onClick={async () => {
+                    await signOut();
+                    setUser(null);
+                  }}
+                  className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-md transition-colors text-left"
                 >
-                  {n.label}
-                </Link>
-              ))}
-            </nav>
-            <button
-              onClick={async () => {
-                await signOut();
-                setUser(null);
-              }}
-              className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900"
-            >
-              <LogOut className="h-4 w-4" />
-              Déconnexion
-            </button>
-          </div>
+                  <LogOut className="h-4 w-4" />
+                  Déconnexion
+                </button>
+              </nav>
+            </div>
+          )}
         </div>
       </header>
       <main className="max-w-5xl mx-auto px-4 py-6">
