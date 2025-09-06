@@ -1,9 +1,24 @@
+/* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
-import { QrCode, Camera, XCircle, Flashlight, RefreshCw, CheckCircle } from 'lucide-react';
+import {
+  QrCode,
+  Camera,
+  XCircle,
+  Flashlight,
+  RefreshCw,
+  CheckCircle,
+} from 'lucide-react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
-import { NotFoundException, BarcodeFormat, DecodeHintType } from '@zxing/library';
+import {
+  NotFoundException,
+  BarcodeFormat,
+  DecodeHintType,
+} from '@zxing/library';
 import { toast } from 'react-hot-toast';
-import { validateReservation, type ValidationActivity } from '../../lib/validation';
+import {
+  validateReservation,
+  type ValidationActivity,
+} from '../../lib/validation';
 
 /**
  * Fix principal: s'assurer que <video> est MONTÉ avant d'appeler decodeFromConstraints.
@@ -17,25 +32,28 @@ const CONSENSUS_HITS = 2;
 
 const isMobile = () =>
   typeof window !== 'undefined' &&
-  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768);
+  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
+    navigator.userAgent,
+  ) ||
+    window.innerWidth <= 768);
 
 function explainGetUserMediaError(err: any): string {
   const name = (err?.name || '').toString();
   switch (name) {
     case 'NotAllowedError':
     case 'PermissionDeniedError':
-      return "Permission caméra refusée. Autorisez l’accès dans le navigateur (réglages du site).";
+      return 'Permission caméra refusée. Autorisez l’accès dans le navigateur (réglages du site).';
     case 'NotFoundError':
     case 'DevicesNotFoundError':
-      return "Aucune caméra détectée sur l’appareil.";
+      return 'Aucune caméra détectée sur l’appareil.';
     case 'NotReadableError':
     case 'TrackStartError':
-      return "La caméra est occupée par une autre application. Fermez les autres apps/onglets et réessayez.";
+      return 'La caméra est occupée par une autre application. Fermez les autres apps/onglets et réessayez.';
     case 'OverconstrainedError':
     case 'ConstraintNotSatisfiedError':
-      return "La caméra ne supporte pas ces contraintes. On va réessayer automatiquement avec des contraintes plus souples.";
+      return 'La caméra ne supporte pas ces contraintes. On va réessayer automatiquement avec des contraintes plus souples.';
     case 'SecurityError':
-      return "Contexte non sécurisé. Utilisez HTTPS (et iframes avec allow=\"camera\").";
+      return 'Contexte non sécurisé. Utilisez HTTPS (et iframes avec allow="camera").';
     case 'TypeError':
       return 'Paramètres getUserMedia invalides.';
     default:
@@ -50,7 +68,12 @@ interface Props {
   autoValidate?: boolean;
 }
 
-export default function ReservationValidationForm({ activity, title, help, autoValidate = true }: Props) {
+export default function ReservationValidationForm({
+  activity,
+  title,
+  help,
+  autoValidate = true,
+}: Props) {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -59,7 +82,9 @@ export default function ReservationValidationForm({ activity, title, help, autoV
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
+  const [selectedDeviceId, setSelectedDeviceId] = useState<
+    string | undefined
+  >();
 
   const videoRef = useRef<HTMLVideoElement>(null);
   const currentTrackRef = useRef<MediaStreamTrack | null>(null);
@@ -101,7 +126,9 @@ export default function ReservationValidationForm({ activity, title, help, autoV
   }, []);
 
   const stopScan = () => {
-    try { reader?.reset(); } catch {}
+    try {
+      reader?.reset();
+    } catch {}
     const v = videoRef.current;
     if (v) {
       const stream = v.srcObject as MediaStream | null;
@@ -125,13 +152,20 @@ export default function ReservationValidationForm({ activity, title, help, autoV
     }
   };
 
-  const requestPermissionAndPickDevice = async (): Promise<string | undefined> => {
+  const requestPermissionAndPickDevice = async (): Promise<
+    string | undefined
+  > => {
     let tmp: MediaStream | null = null;
     try {
-      tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      tmp = await navigator.mediaDevices.getUserMedia({
+        video: { facingMode: 'environment' },
+        audio: false,
+      });
       const list = await navigator.mediaDevices.enumerateDevices();
       const cams = list.filter((d) => d.kind === 'videoinput');
-      const back = cams.find((d) => /back|rear|environment|arrière/i.test(d.label));
+      const back = cams.find((d) =>
+        /back|rear|environment|arrière/i.test(d.label),
+      );
       return (back ?? cams[0])?.deviceId;
     } finally {
       tmp?.getTracks().forEach((t) => t.stop());
@@ -158,25 +192,40 @@ export default function ReservationValidationForm({ activity, title, help, autoV
       await new Promise((r) => requestAnimationFrame(() => r(undefined)));
 
       // 2) choisir l’appareil
-      const deviceId = selectedDeviceId || (await requestPermissionAndPickDevice());
+      const deviceId =
+        selectedDeviceId || (await requestPermissionAndPickDevice());
       // si rien: on va tenter des fallbacks sans deviceId
 
       const tries: MediaStreamConstraints[] = [];
       if (deviceId && deviceId.trim() !== '') {
-        tries.push({ audio: false, video: { deviceId: { exact: deviceId } as any } });
+        tries.push({
+          audio: false,
+          video: { deviceId: { exact: deviceId } as any },
+        });
       }
-      tries.push({ audio: false, video: { facingMode: { exact: 'environment' } as any } });
-      tries.push({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+      tries.push({
+        audio: false,
+        video: { facingMode: { exact: 'environment' } as any },
+      });
+      tries.push({
+        audio: false,
+        video: { facingMode: { ideal: 'environment' } },
+      });
       tries.push({ audio: false, video: { facingMode: 'user' as any } });
       tries.push({ audio: false, video: true });
 
       const onResult = (res?: Result, err?: unknown) => {
-        if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
+        if (err && !(err instanceof NotFoundException))
+          console.error('Decode error', err);
         if (!res) return;
         if (validatingRef.current) return;
         if (cooldownRef.current && Date.now() < cooldownRef.current) return;
         const text = res.getText().trim();
-        if (text === consensusTextRef.current) consensusHitsRef.current += 1; else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
+        if (text === consensusTextRef.current) consensusHitsRef.current += 1;
+        else {
+          consensusTextRef.current = text;
+          consensusHitsRef.current = 1;
+        }
         if (consensusHitsRef.current < CONSENSUS_HITS) return;
         validatingRef.current = true;
         consensusHitsRef.current = 0;
@@ -195,20 +244,32 @@ export default function ReservationValidationForm({ activity, title, help, autoV
           break;
         } catch (e) {
           lastErr = e;
-          try { reader.reset(); } catch {}
+          try {
+            reader.reset();
+          } catch {}
         }
       }
-      if (!started) throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
+      if (!started)
+        throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
 
       // 3) playback inline + torch
       const v = videoRef.current!;
       v.setAttribute('playsinline', 'true');
       v.setAttribute('muted', 'true');
-      try { await v.play(); } catch {}
+      try {
+        await v.play();
+      } catch {}
 
       const stream = v.srcObject as MediaStream;
       const track = stream?.getVideoTracks?.()[0];
-      if (track) { currentTrackRef.current = track; try { await applyTorch(track, false); } catch { setTorchSupported(false); } }
+      if (track) {
+        currentTrackRef.current = track;
+        try {
+          await applyTorch(track, false);
+        } catch {
+          setTorchSupported(false);
+        }
+      }
 
       toast.success('Scanner prêt. Cadrez le QR.');
     } catch (err) {
@@ -221,8 +282,13 @@ export default function ReservationValidationForm({ activity, title, help, autoV
   };
 
   const toggleTorch = async () => {
-    const track = currentTrackRef.current; if (!track) return;
-    try { await applyTorch(track, !torchOn); } catch { toast.error("La torche n'est pas supportée."); }
+    const track = currentTrackRef.current;
+    if (!track) return;
+    try {
+      await applyTorch(track, !torchOn);
+    } catch {
+      toast.error("La torche n'est pas supportée.");
+    }
   };
 
   const handleDecoded = async (text: string) => {
@@ -282,7 +348,10 @@ export default function ReservationValidationForm({ activity, title, help, autoV
             </select>
             <button
               type="button"
-              onClick={() => { stopScan(); setTimeout(() => startLiveScan(), 50); }}
+              onClick={() => {
+                stopScan();
+                setTimeout(() => startLiveScan(), 50);
+              }}
               title="Basculer sur cet appareil"
               className="p-2 rounded-md border hover:bg-gray-50"
             >
@@ -292,20 +361,30 @@ export default function ReservationValidationForm({ activity, title, help, autoV
         )}
       </div>
 
-      {help && <p className="text-sm text-gray-600 mb-4 leading-relaxed">{help}</p>}
+      {help && (
+        <p className="text-sm text-gray-600 mb-4 leading-relaxed">{help}</p>
+      )}
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">Numéro / QR (opaque)</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">
+            Numéro / QR (opaque)
+          </label>
           <input
             inputMode="search"
-            placeholder={isMobileDevice ? 'Saisissez le code…' : 'Saisissez le code ou scannez…'}
+            placeholder={
+              isMobileDevice
+                ? 'Saisissez le code…'
+                : 'Saisissez le code ou scannez…'
+            }
             className="w-full px-3 py-3 text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             value={code}
             onChange={(e) => setCode(e.target.value)}
           />
 
-          <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div
+            className={`mt-3 grid gap-2 ${scanning ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}
+          >
             <button
               type="button"
               onClick={startLiveScan}
@@ -316,19 +395,22 @@ export default function ReservationValidationForm({ activity, title, help, autoV
               {scanning ? 'Caméra active' : 'Activer le scanner'}
             </button>
 
-            <button
-              type="button"
-              onClick={stopScan}
-              disabled={!scanning}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100 text-gray-800 rounded-md font-medium transition-colors"
-            >
-              <XCircle className="h-5 w-5" />
-              Arrêter la caméra
-            </button>
+            {scanning && (
+              <button
+                type="button"
+                onClick={stopScan}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
+              >
+                <XCircle className="h-5 w-5" />
+                Arrêter la caméra
+              </button>
+            )}
           </div>
 
           {/* <video> est TOUJOURS monté pour garantir videoRef.current */}
-          <div className={`mt-4 bg-black rounded-xl overflow-hidden relative ${scanning ? '' : 'h-0 opacity-0 pointer-events-none'}`}>
+          <div
+            className={`mt-4 bg-black rounded-xl overflow-hidden relative ${scanning ? '' : 'h-0 opacity-0 pointer-events-none'}`}
+          >
             <video
               ref={videoRef}
               className="w-full h-64 object-cover"
@@ -368,16 +450,29 @@ export default function ReservationValidationForm({ activity, title, help, autoV
       </form>
 
       {status !== 'idle' && (
-        <div className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
-          <div className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-            {status === 'success' ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <XCircle className="h-5 w-5 flex-shrink-0" />}
+        <div
+          className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
+        >
+          <div
+            className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}
+          >
+            {status === 'success' ? (
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 flex-shrink-0" />
+            )}
             <span className="text-sm font-medium">{message}</span>
           </div>
         </div>
       )}
 
       <div className="mt-4 text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p><strong>Astuce :</strong> si le site est affiché dans une <em>iframe</em>, ajoutez <code>allow="camera; microphone; fullscreen"</code>. Sur iOS/Safari, un tap est requis pour démarrer la caméra.</p>
+        <p>
+          <strong>Astuce :</strong> si le site est affiché dans une{' '}
+          <em>iframe</em>, ajoutez{' '}
+          <code>allow="camera; microphone; fullscreen"</code>. Sur iOS/Safari,
+          un tap est requis pour démarrer la caméra.
+        </p>
       </div>
     </div>
   );

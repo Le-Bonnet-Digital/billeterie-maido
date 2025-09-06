@@ -1,6 +1,8 @@
 import { supabase } from './supabase';
 import { getCurrentUser } from './auth';
 
+const CODE_PATTERN = /^RES-[A-Za-z0-9]+$/;
+
 export type ValidationActivity = 'poney' | 'tir_arc' | 'luge_bracelet';
 
 interface ReservationLookup {
@@ -17,6 +19,8 @@ export async function validateReservation(
 > {
   const trimmed = reservationCode.trim();
   if (!trimmed) return { ok: false, reason: 'Code de réservation manquant' };
+  if (!CODE_PATTERN.test(trimmed))
+    return { ok: false, reason: 'Format de code invalide' };
 
   const me = await getCurrentUser();
   if (!me) return { ok: false, reason: 'Non authentifié' };
