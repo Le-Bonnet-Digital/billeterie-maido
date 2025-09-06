@@ -37,9 +37,17 @@ export async function validateReservation(
       };
     }
   | {
+      ok: true;
+      alreadyValidated: true;
+      validation: {
+        validated_at: string;
+        validated_by: string;
+        validated_by_email?: string;
+      };
+    }
+  | {
       ok: false;
       reason: string;
-      validation?: { validated_at: string; validated_by: string };
     }
 > {
   const trimmed = reservationCode.trim();
@@ -77,21 +85,21 @@ export async function validateReservation(
     .limit(1);
   if (existing && existing.length > 0) {
     const first = existing[0];
-    let who = first.validated_by as string;
+    const validation = {
+      validated_at: first.validated_at as string,
+      validated_by: first.validated_by as string,
+    } as {
+      validated_at: string;
+      validated_by: string;
+      validated_by_email?: string;
+    };
     const { data: agent } = await supabase
       .from('users')
       .select('email')
       .eq('id', first.validated_by)
       .single();
-    if (agent?.email) who = agent.email;
-    return {
-      ok: false,
-      reason: 'Déjà validé',
-      validation: {
-        validated_at: first.validated_at as string,
-        validated_by: who,
-      },
-    };
+    if (agent?.email) validation.validated_by_email = agent.email;
+    return { ok: true, alreadyValidated: true, validation };
   }
 
   // 4) Insert validation

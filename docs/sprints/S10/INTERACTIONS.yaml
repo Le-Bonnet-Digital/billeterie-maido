@@ -175,3 +175,15 @@
   context: |
     commit: fix ensure reservation matches activity
   status: pending
+- who: ChatGPT
+  when: 2025-09-07T23:40:00Z
+  topic: Double validation details
+  did: |
+    - Retourne ok:true et alreadyValidated avec les infos agent
+    - Met à jour le formulaire de validation
+    - Ajuste les tests unitaires et E2E
+  ask: |
+    Vérifier qu'une revalidation affiche bien l'agent et la date
+  context: |
+    commit: feat return previous validation info
+  status: pending

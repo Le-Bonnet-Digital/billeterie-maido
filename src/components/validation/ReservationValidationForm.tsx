@@ -303,21 +303,23 @@ export default function ReservationValidationForm({
     try {
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
-        setStatus('success');
-        setMessage(`Réservation ${res.reservation.number} validée`);
-        if ('vibrate' in navigator) navigator.vibrate?.(60);
-        setTimeout(() => setCode(''), 250);
-      } else {
-        setStatus('error');
-        if (res.reason === 'Déjà validé' && res.validation) {
+        if ('alreadyValidated' in res && res.alreadyValidated) {
+          setStatus('error');
           const when = new Date(res.validation.validated_at);
-          const who = res.validation.validated_by;
+          const who =
+            res.validation.validated_by_email ?? res.validation.validated_by;
           setMessage(
             `Réservation ${value.trim()} déjà validée le ${when.toLocaleDateString()} à ${when.toLocaleTimeString()} par ${who}`,
           );
         } else {
-          setMessage(res.reason ?? 'Billet invalide');
+          setStatus('success');
+          setMessage(`Réservation ${res.reservation.number} validée`);
+          if ('vibrate' in navigator) navigator.vibrate?.(60);
+          setTimeout(() => setCode(''), 250);
         }
+      } else {
+        setStatus('error');
+        setMessage(res.reason ?? 'Billet invalide');
       }
     } catch (e) {
       console.error(e);

@@ -225,11 +225,12 @@ describe.skip('E2E happy path', () => {
       'luge_bracelet',
     );
     expect(second).toMatchObject({
-      ok: false,
-      reason: 'Déjà validé',
+      ok: true,
+      alreadyValidated: true,
       validation: {
         validated_at: expect.any(String),
-        validated_by: 'p@test.com',
+        validated_by: expect.any(String),
+        validated_by_email: 'p@test.com',
       },
     });
   });
