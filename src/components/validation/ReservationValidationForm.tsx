@@ -6,17 +6,14 @@ import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
 
 /**
- * Composant focalisé sur le FIX « impossible d'accéder à la caméra » + bonnes pratiques :
- *  - Handshake permission iOS (getUserMedia simple -> enumerateDevices -> deviceId)
- *  - decodeFromConstraints avec deviceId exact (mobile & desktop)
- *  - Hints ZXing (QR only + TRY_HARDER)
- *  - Verrou/consensus/cooldown pour éviter le spam
- *  - Diagnostics d'erreurs getUserMedia détaillés (toasts utiles)
- *  - Pas d'option « photo en secours » ici (tu peux la réactiver si besoin)
+ * Fix principal: s'assurer que <video> est MONTÉ avant d'appeler decodeFromConstraints.
+ * - Le <video> est rendu en permanence (visuellement caché quand non-scanning) pour garantir videoRef.current.
+ * - startLiveScan: setScanning(true) -> attendre un frame -> lancer ZXing.
+ * - Fallbacks de contraintes pour éviter TypeError (constraints invalides).
  */
 
-const DECODE_COOLDOWN_MS = 1500; // ignore les lectures durant cette fenêtre
-const CONSENSUS_HITS = 2;        // exiger 2 lectures identiques d’affilée
+const DECODE_COOLDOWN_MS = 1500;
+const CONSENSUS_HITS = 2;
 
 const isMobile = () =>
   typeof window !== 'undefined' &&
@@ -33,14 +30,14 @@ function explainGetUserMediaError(err: any): string {
       return "Aucune caméra détectée sur l’appareil.";
     case 'NotReadableError':
     case 'TrackStartError':
-      return "La caméra est occupée par une autre application (ou en erreur). Fermez les autres apps/onglets et réessayez.";
+      return "La caméra est occupée par une autre application. Fermez les autres apps/onglets et réessayez.";
     case 'OverconstrainedError':
     case 'ConstraintNotSatisfiedError':
-      return "La caméra ne supporte pas ces contraintes (ex. caméra arrière). On va réessayer automatiquement avec des contraintes plus souples.";
+      return "La caméra ne supporte pas ces contraintes. On va réessayer automatiquement avec des contraintes plus souples.";
     case 'SecurityError':
-      return "Contexte non sécurisé. Le site doit être en HTTPS ou l’iframe doit autoriser la caméra.";
+      return "Contexte non sécurisé. Utilisez HTTPS (et iframes avec allow=\"camera\").";
     case 'TypeError':
-      return "Paramètres getUserMedia invalides.";
+      return 'Paramètres getUserMedia invalides.';
     default:
       return err?.message || 'Accès caméra impossible.';
   }
@@ -53,12 +50,7 @@ interface Props {
   autoValidate?: boolean;
 }
 
-export default function ReservationValidationForm({
-  activity,
-  title,
-  help,
-  autoValidate = true,
-}: Props) {
+export default function ReservationValidationForm({ activity, title, help, autoValidate = true }: Props) {
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState('');
@@ -66,22 +58,18 @@ export default function ReservationValidationForm({
   const [scanning, setScanning] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
-  // multi‑cam (desktop)
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
 
-  // camera/reader refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const currentTrackRef = useRef<MediaStreamTrack | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
-  // verrous lecture
   const validatingRef = useRef(false);
   const cooldownRef = useRef<number | null>(null);
   const consensusTextRef = useRef('');
   const consensusHitsRef = useRef(0);
 
-  // torch
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
 
@@ -92,7 +80,6 @@ export default function ReservationValidationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Précharge la liste des caméras (desktop) — sur iOS, labels vides tant que pas de permission
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     (async () => {
@@ -103,7 +90,6 @@ export default function ReservationValidationForm({
     })();
   }, []);
 
-  // ZXing avec hints
   const reader = useMemo(() => {
     if (!readerRef.current) {
       const hints = new Map<DecodeHintType, unknown>();
@@ -116,11 +102,11 @@ export default function ReservationValidationForm({
 
   const stopScan = () => {
     try { reader?.reset(); } catch {}
-    const video = videoRef.current;
-    if (video) {
-      const stream = video.srcObject as MediaStream | null;
+    const v = videoRef.current;
+    if (v) {
+      const stream = v.srcObject as MediaStream | null;
       stream?.getTracks().forEach((t) => t.stop());
-      video.srcObject = null;
+      v.srcObject = null;
     }
     currentTrackRef.current = null;
     setTorchSupported(false);
@@ -139,10 +125,6 @@ export default function ReservationValidationForm({
     }
   };
 
-  /**
-   * iOS/Safari: pour obtenir les labels et l’ID de la back‑camera, il faut d’abord
-   * accorder la permission une fois. On ouvre un flux temporaire puis on le ferme.
-   */
   const requestPermissionAndPickDevice = async (): Promise<string | undefined> => {
     let tmp: MediaStream | null = null;
     try {
@@ -156,96 +138,91 @@ export default function ReservationValidationForm({
     }
   };
 
-  // Remplace entièrement ta fonction actuelle
   const startLiveScan = async () => {
-  if (scanning) return;
-  if (!navigator.mediaDevices?.getUserMedia) {
-    toast.error("Caméra non supportée par ce navigateur.");
-    return;
-  }
-  if (!window.isSecureContext) {
-    toast.error("HTTPS requis pour accéder à la caméra.");
-    return;
-  }
-
-  try {
-    setStatus('idle');
-    setMessage('');
-
-    // 🔧 Fallbacks successifs pour éviter TypeError (params invalides)
-    const tries: MediaStreamConstraints[] = [];
-    if (selectedDeviceId && selectedDeviceId.trim() !== '') {
-      tries.push({ audio: false, video: { deviceId: { exact: selectedDeviceId } as any } });
+    if (scanning) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error('Caméra non supportée par ce navigateur.');
+      return;
     }
-    // back cam stricte puis souple
-    tries.push({ audio: false, video: { facingMode: { exact: 'environment' } as any } });
-    tries.push({ audio: false, video: { facingMode: { ideal: 'environment' } } });
-    // front en dernier recours puis générique
-    tries.push({ audio: false, video: { facingMode: 'user' as any } });
-    tries.push({ audio: false, video: true });
+    if (!window.isSecureContext) {
+      toast.error('HTTPS requis pour accéder à la caméra.');
+      return;
+    }
 
-    const onResult = (res?: Result, err?: unknown) => {
-      if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
-      if (!res) return;
+    try {
+      setStatus('idle');
+      setMessage('');
 
-      if (validatingRef.current) return;
-      if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+      // 1) garantir que <video> est monté avant ZXing
+      setScanning(true);
+      await new Promise((r) => requestAnimationFrame(() => r(undefined)));
 
-      const text = res.getText().trim();
-      if (text === consensusTextRef.current) consensusHitsRef.current += 1;
-      else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
-      if (consensusHitsRef.current < CONSENSUS_HITS) return;
+      // 2) choisir l’appareil
+      const deviceId = selectedDeviceId || (await requestPermissionAndPickDevice());
+      // si rien: on va tenter des fallbacks sans deviceId
 
-      validatingRef.current = true;
-      consensusHitsRef.current = 0;
-      handleDecoded(text).finally(() => {
-        cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-        validatingRef.current = false;
-      });
-    };
-
-    let started = false;
-    let lastErr: any = null;
-    for (const c of tries) {
-      try {
-        await reader.decodeFromConstraints(c, videoRef.current!, onResult);
-        started = true;
-        break;
-      } catch (e) {
-        lastErr = e;
-        try { reader.reset(); } catch {}
+      const tries: MediaStreamConstraints[] = [];
+      if (deviceId && deviceId.trim() !== '') {
+        tries.push({ audio: false, video: { deviceId: { exact: deviceId } as any } });
       }
+      tries.push({ audio: false, video: { facingMode: { exact: 'environment' } as any } });
+      tries.push({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+      tries.push({ audio: false, video: { facingMode: 'user' as any } });
+      tries.push({ audio: false, video: true });
+
+      const onResult = (res?: Result, err?: unknown) => {
+        if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
+        if (!res) return;
+        if (validatingRef.current) return;
+        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+        const text = res.getText().trim();
+        if (text === consensusTextRef.current) consensusHitsRef.current += 1; else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
+        if (consensusHitsRef.current < CONSENSUS_HITS) return;
+        validatingRef.current = true;
+        consensusHitsRef.current = 0;
+        handleDecoded(text).finally(() => {
+          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+          validatingRef.current = false;
+        });
+      };
+
+      let started = false;
+      let lastErr: any = null;
+      for (const c of tries) {
+        try {
+          await reader.decodeFromConstraints(c, videoRef.current!, onResult);
+          started = true;
+          break;
+        } catch (e) {
+          lastErr = e;
+          try { reader.reset(); } catch {}
+        }
+      }
+      if (!started) throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
+
+      // 3) playback inline + torch
+      const v = videoRef.current!;
+      v.setAttribute('playsinline', 'true');
+      v.setAttribute('muted', 'true');
+      try { await v.play(); } catch {}
+
+      const stream = v.srcObject as MediaStream;
+      const track = stream?.getVideoTracks?.()[0];
+      if (track) { currentTrackRef.current = track; try { await applyTorch(track, false); } catch { setTorchSupported(false); } }
+
+      toast.success('Scanner prêt. Cadrez le QR.');
+    } catch (err) {
+      console.error('Erreur caméra:', err);
+      const msg = explainGetUserMediaError(err);
+      toast.error(msg);
+      // échec: couper proprement
+      stopScan();
     }
-    if (!started) throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
-
-    setScanning(true);
-
-    // iOS : inline playback obligatoire
-    const v = videoRef.current!;
-    v.setAttribute('playsinline', 'true');
-    v.setAttribute('muted', 'true');
-    try { await v.play(); } catch {}
-
-    // Torch si dispo
-    const stream = v.srcObject as MediaStream;
-    const track = stream?.getVideoTracks?.()[0];
-    if (track) {
-      currentTrackRef.current = track;
-      try { await applyTorch(track, false); } catch { setTorchSupported(false); }
-    }
-
-    toast.success('Scanner prêt. Cadrez le QR.');
-  } catch (err) {
-    console.error('Erreur caméra:', err);
-    const msg = explainGetUserMediaError(err);
-    toast.error(msg);
-  }
-};
-
+  };
 
   const toggleTorch = async () => {
     const track = currentTrackRef.current; if (!track) return;
-    try { await applyTorch(track, !torchOn); } catch { toast.error("La torche n'est pas supportée par cet appareil."); }
+    try { await applyTorch(track, !torchOn); } catch { toast.error("La torche n'est pas supportée."); }
   };
 
   const handleDecoded = async (text: string) => {
@@ -305,7 +282,7 @@ export default function ReservationValidationForm({
             </select>
             <button
               type="button"
-              onClick={() => { if (scanning) { stopScan(); setTimeout(() => startLiveScan(), 50); } }}
+              onClick={() => { stopScan(); setTimeout(() => startLiveScan(), 50); }}
               title="Basculer sur cet appareil"
               className="p-2 rounded-md border hover:bg-gray-50"
             >
@@ -350,32 +327,35 @@ export default function ReservationValidationForm({
             </button>
           </div>
 
-          {scanning && (
-            <div className="mt-4 bg-black rounded-xl overflow-hidden relative">
-              <video
-                ref={videoRef}
-                className="w-full h-64 object-cover"
-                autoPlay
-                muted
-                playsInline
-              />
-              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                <div className="w-48 h-48 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-              </div>
-              <div className="absolute bottom-2 right-2 flex gap-2">
-                {torchSupported && (
-                  <button
-                    type="button"
-                    onClick={toggleTorch}
-                    className={`px-3 py-2 rounded-md text-white ${torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'}`}
-                    title="Torche"
-                  >
-                    <Flashlight className="h-5 w-5" />
-                  </button>
-                )}
-              </div>
-            </div>
-          )}
+          {/* <video> est TOUJOURS monté pour garantir videoRef.current */}
+          <div className={`mt-4 bg-black rounded-xl overflow-hidden relative ${scanning ? '' : 'h-0 opacity-0 pointer-events-none'}`}>
+            <video
+              ref={videoRef}
+              className="w-full h-64 object-cover"
+              autoPlay
+              muted
+              playsInline
+            />
+            {scanning && (
+              <>
+                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                  <div className="w-48 h-48 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+                </div>
+                <div className="absolute bottom-2 right-2 flex gap-2">
+                  {torchSupported && (
+                    <button
+                      type="button"
+                      onClick={toggleTorch}
+                      className={`px-3 py-2 rounded-md text-white ${torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+                      title="Torche"
+                    >
+                      <Flashlight className="h-5 w-5" />
+                    </button>
+                  )}
+                </div>
+              </>
+            )}
+          </div>
         </div>
 
         <button
@@ -397,7 +377,7 @@ export default function ReservationValidationForm({
       )}
 
       <div className="mt-4 text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <p><strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un tap. Si l’accès échoue, vérifie : HTTPS, permission Caméra autorisée pour le site, aucune autre app n’utilise la caméra, et évite les navigateurs intégrés (Facebook/Instagram).</p>
+        <p><strong>Astuce :</strong> si le site est affiché dans une <em>iframe</em>, ajoutez <code>allow="camera; microphone; fullscreen"</code>. Sur iOS/Safari, un tap est requis pour démarrer la caméra.</p>
       </div>
     </div>
   );
