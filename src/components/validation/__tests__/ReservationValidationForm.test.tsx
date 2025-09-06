@@ -12,7 +12,11 @@ vi.mock('react-hot-toast', () => ({
 }));
 
 vi.mock('../../../lib/auth', () => ({
-  getCurrentUser: vi.fn(async () => ({ id: 'prov-1', email: 'p@test.com', role: 'pony_provider' })),
+  getCurrentUser: vi.fn(async () => ({
+    id: 'prov-1',
+    email: 'p@test.com',
+    role: 'pony_provider',
+  })),
 }));
 
 describe('ReservationValidationForm', () => {
@@ -25,18 +29,15 @@ describe('ReservationValidationForm', () => {
     const builder: any = {
       select: vi.fn(() => builder),
       eq: vi.fn(() => builder),
-      gt: vi.fn(() => builder),
-      limit: vi.fn(() => builder),
       single: vi.fn(async () => ({
         data: {
           id: 'res-1',
           payment_status: 'paid',
-          time_slots: { activity: 'poney' },
         },
         error: null,
       })),
     };
-    // first select: reservations .single -> paid + activity poney
+    // first select: reservations .single -> paid
     // second select: reservation_validations -> none existing
     const builder2: any = {
       select: vi.fn(() => builder2),
@@ -57,7 +58,10 @@ describe('ReservationValidationForm', () => {
 
     const { default: Form } = await import('../ReservationValidationForm');
     render(<Form activity="poney" title="Validation Poney" />);
-    fireEvent.change(screen.getByPlaceholderText(/Scannez ou saisissez le code/i), { target: { value: 'RES2025-0001' } });
+    fireEvent.change(
+      screen.getByPlaceholderText(/Scannez ou saisissez le code/i),
+      { target: { value: 'RES2025-0001' } },
+    );
     fireEvent.click(screen.getByRole('button', { name: /Valider/i }));
     await waitFor(() => expect(successToast).toHaveBeenCalled());
   });
@@ -71,7 +75,6 @@ describe('ReservationValidationForm', () => {
         data: {
           id: 'res-1',
           payment_status: 'paid',
-          time_slots: { activity: 'poney' },
         },
         error: null,
       })),
@@ -79,7 +82,9 @@ describe('ReservationValidationForm', () => {
     const builder2: any = {
       select: vi.fn(() => builder2),
       eq: vi.fn(() => builder2),
-      limit: vi.fn(() => Promise.resolve({ data: [{ id: 'v1' }], error: null })),
+      limit: vi.fn(() =>
+        Promise.resolve({ data: [{ id: 'v1' }], error: null }),
+      ),
       insert: vi.fn(() => ({ error: null })),
     };
     from.mockImplementation((table: string) => {
@@ -94,8 +99,15 @@ describe('ReservationValidationForm', () => {
 
     const { default: Form } = await import('../ReservationValidationForm');
     render(<Form activity="poney" title="Validation Poney" />);
-    fireEvent.change(screen.getByPlaceholderText(/Scannez ou saisissez le code/i), { target: { value: 'RES2025-0001' } });
+    fireEvent.change(
+      screen.getByPlaceholderText(/Scannez ou saisissez le code/i),
+      { target: { value: 'RES2025-0001' } },
+    );
     fireEvent.click(screen.getByRole('button', { name: /Valider/i }));
-    await waitFor(() => expect(errorToast).toHaveBeenCalledWith(expect.stringMatching(/Déjà validé/)));
+    await waitFor(() =>
+      expect(errorToast).toHaveBeenCalledWith(
+        expect.stringMatching(/Déjà validé/),
+      ),
+    );
   });
 });
