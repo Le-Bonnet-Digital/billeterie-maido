@@ -108,6 +108,6 @@ describe.skip('send-reservation-email edge function', () => {
         body: expect.stringContaining('data:qr'),
       }),
     );
-    expect(qrMock).toHaveBeenCalledWith('1');
+    expect(qrMock).toHaveBeenCalledWith('ABC');
   });
 });

@@ -59,8 +59,20 @@
   status: done
 - who: PO
   topic: Validation mobile & format code
-  reply: 
+  reply:
   details: |
     - C'est bon pour le bouton stop
     - Fix: le code renseigner par dans la zone de saisie après le scan avec la caméra est le numrero "reservation_id" de la table "reservation_validations". Il faut définir quel numéro on choisi : le "reservation_number" ou reservation_id ? Prendre la meilleure décision.
-  action:
+  action: use reservation_number for QR and validation
+
+- who: ChatGPT
+  when: 2025-09-06T00:30:00Z
+  topic: Validation mobile & format code
+  did: |
+    - Choisi `reservation_number` comme identifiant pour le QR et la saisie
+    - L'edge function d'envoi email encode désormais `reservation_number`
+  ask: |
+    Confirmer que le scan du QR dans l'email renvoie bien le `reservation_number`
+  context: |
+    commit: fix use reservation number for QR codes
+  status: pending
