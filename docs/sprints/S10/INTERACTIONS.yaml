@@ -111,3 +111,16 @@
     - Le code est accepté mais l'ux n'est pas terrible. on a l'info que le code est validé mais ça aurait était bien d'avoir des informations. De plus quand je re-scan, ça me met que le scan est déjç validé.
     - Dans les fichiers interractions, rajoute une information indiquant la ou les prochaines tâches (20SP) à faire en cas de validation du PO
   action: Fix
+
+- who: ChatGPT
+  when: 2025-09-06T23:30:00Z
+  topic: Validation UX details
+  did: |
+    - Affiche le numéro de réservation et la date lors d'une validation
+    - Message détaillé pour les codes déjà validés
+  ask: |
+    Confirmer que la page de validation montre ces détails après scan
+  context: |
+    commit: fix show reservation details after validation
+    next: Si validé, prochaines tâches (20SP) — exposer plus d'infos de billet et historique de validations
+  status: pending

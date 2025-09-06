@@ -304,12 +304,19 @@ export default function ReservationValidationForm({
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
         setStatus('success');
-        setMessage('Validation enregistrée');
+        setMessage(`Réservation ${res.reservationNumber} validée`);
         if ('vibrate' in navigator) navigator.vibrate?.(60);
         setTimeout(() => setCode(''), 250);
       } else {
         setStatus('error');
-        setMessage(res.reason ?? 'Billet invalide');
+        if (res.reason === 'Déjà validé' && res.validation) {
+          const when = new Date(res.validation.validated_at);
+          setMessage(
+            `Réservation ${value.trim()} déjà validée le ${when.toLocaleDateString()} à ${when.toLocaleTimeString()}`,
+          );
+        } else {
+          setMessage(res.reason ?? 'Billet invalide');
+        }
       }
     } catch (e) {
       console.error(e);

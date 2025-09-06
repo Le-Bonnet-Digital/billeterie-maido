@@ -89,7 +89,12 @@ state.from = (table: string) => {
         }),
       }),
       insert: async (row: any) => {
-        validations.push(row);
+        const rec = {
+          id: `val-${validations.length + 1}`,
+          validated_at: new Date().toISOString(),
+          ...row,
+        };
+        validations.push(rec);
         return { error: null };
       },
     };
@@ -164,12 +169,23 @@ describe.skip('E2E happy path', () => {
       'RES-2025-001-0001',
       'luge_bracelet',
     );
-    expect(first).toEqual({ ok: true, reservationId: 'res-1' });
+    expect(first).toEqual({
+      ok: true,
+      reservationId: 'res-1',
+      reservationNumber: 'RES-2025-001-0001',
+    });
 
     const second = await validateReservation(
       'RES-2025-001-0001',
       'luge_bracelet',
     );
-    expect(second).toEqual({ ok: false, reason: 'Déjà validé' });
+    expect(second).toMatchObject({
+      ok: false,
+      reason: 'Déjà validé',
+      validation: {
+        validated_at: expect.any(String),
+        validated_by: 'prov-1',
+      },
+    });
   });
 });

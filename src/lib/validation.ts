@@ -18,7 +18,16 @@ export async function validateReservation(
   reservationCode: string,
   activity: ValidationActivity,
 ): Promise<
-  { ok: true; reservationId: string } | { ok: false; reason: string }
+  | {
+      ok: true;
+      reservationId: string;
+      reservationNumber: string;
+    }
+  | {
+      ok: false;
+      reason: string;
+      validation?: { validated_at: string; validated_by: string };
+    }
 > {
   const trimmed = reservationCode.trim();
   if (!trimmed) return { ok: false, reason: 'Code de réservation manquant' };
@@ -44,12 +53,20 @@ export async function validateReservation(
   // 3) Prevent duplicate validation (idempotent check)
   const { data: existing } = await supabase
     .from('reservation_validations')
-    .select('id')
+    .select('id,validated_at,validated_by')
     .eq('reservation_id', data.id)
     .eq('activity', activity)
     .limit(1);
   if (existing && existing.length > 0) {
-    return { ok: false, reason: 'Déjà validé' };
+    const first = existing[0];
+    return {
+      ok: false,
+      reason: 'Déjà validé',
+      validation: {
+        validated_at: first.validated_at as string,
+        validated_by: first.validated_by as string,
+      },
+    };
   }
 
   // 4) Insert validation
@@ -59,5 +76,9 @@ export async function validateReservation(
   if (insertError)
     return { ok: false, reason: 'Erreur enregistrement validation' };
 
-  return { ok: true, reservationId: data.id };
+  return {
+    ok: true,
+    reservationId: data.id,
+    reservationNumber: data.reservation_number,
+  };
 }
