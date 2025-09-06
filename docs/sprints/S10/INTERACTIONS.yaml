@@ -82,3 +82,14 @@
   details: |
     - Je ne recois pas de QR code dans l'email. je recçois "Votre réservation RES-2025-249-4992 est confirmée." et juste en dessus, un petit carré qui indique qu'il n'y a pas d'image et à coté de ce petit carré il est noté "QR"
   action: Fix
+
+- who: ChatGPT
+  when: 2025-09-06T01:00:00Z
+  topic: QR code email
+  did: |
+    - Envoi du QR comme pièce jointe inline pour affichage fiable
+  ask: |
+    Confirmer que l'email affiche bien le QR code
+  context: |
+    commit: fix inline QR attachment in reservation email
+  status: pending

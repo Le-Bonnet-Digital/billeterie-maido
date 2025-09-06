@@ -12,7 +12,7 @@ const fromMock = {
 const clientMock = { from: vi.fn(() => fromMock) };
 const fetchMock = vi.fn();
 
-const qrMock = vi.fn().mockResolvedValue('data:qr');
+const qrMock = vi.fn().mockResolvedValue('data:image/png;base64,QRDATA');
 
 vi.mock('https://esm.sh/@supabase/supabase-js@2', () => ({
   createClient: vi.fn(() => clientMock),
@@ -22,13 +22,7 @@ vi.mock('https://esm.sh/qrcode@1?target=deno', () => ({
   toDataURL: qrMock,
 }));
 
-vi.mock('https://deno.land/std@0.224.0/http/server.ts', () => ({
-  serve: (cb: (req: Request) => Promise<Response>) => {
-    handler = cb;
-  },
-}));
-
-describe.skip('send-reservation-email edge function', () => {
+describe('send-reservation-email edge function', () => {
   beforeEach(async () => {
     vi.clearAllMocks();
     global.fetch = fetchMock as unknown as typeof fetch;
@@ -38,10 +32,16 @@ describe.skip('send-reservation-email edge function', () => {
     process.env.FROM_EMAIL = 'from@example.com';
     (
       globalThis as unknown as {
-        Deno: { env: { get: (name: string) => string | undefined } };
+        Deno: {
+          env: { get: (name: string) => string | undefined };
+          serve: (cb: (req: Request) => Promise<Response>) => void;
+        };
       }
     ).Deno = {
       env: { get: (name: string) => process.env[name] },
+      serve: (cb: (req: Request) => Promise<Response>) => {
+        handler = cb;
+      },
     };
     singleMock.mockResolvedValue({
       data: {
@@ -103,11 +103,16 @@ describe.skip('send-reservation-email edge function', () => {
     await expect(res.json()).resolves.toEqual({ sent: true });
     expect(fetchMock).toHaveBeenCalledWith(
       'https://api.resend.com/emails',
-      expect.objectContaining({
-        method: 'POST',
-        body: expect.stringContaining('data:qr'),
-      }),
+      expect.any(Object),
     );
+    const [, options] = fetchMock.mock.calls[0] as [string, RequestInit];
+    const body = JSON.parse(options.body as string);
+    expect(body.html).toContain('cid:qr.png');
+    expect(body.attachments[0]).toMatchObject({
+      filename: 'qr.png',
+      content: 'QRDATA',
+      cid: 'qr.png',
+    });
     expect(qrMock).toHaveBeenCalledWith('ABC');
   });
 });
