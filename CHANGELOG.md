@@ -15,6 +15,7 @@ Toutes les modifications sont consignées ici. Suivre le format **Keep a Changel
 - Utilitaires parsePrice, formatDate, slugify et clamp (US-100 à US-103)
 - Script de calcul de vélocité (IMP-06)
 - Aucun changement fonctionnel livré au sprint S9 (Spillover complet)
+- Affichage de l'opérateur et de la date lors d'une revalidation de billet
 
 ### Modifié
 

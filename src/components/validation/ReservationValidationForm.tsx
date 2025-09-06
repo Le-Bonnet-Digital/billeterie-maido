@@ -311,8 +311,9 @@ export default function ReservationValidationForm({
         setStatus('error');
         if (res.reason === 'Déjà validé' && res.validation) {
           const when = new Date(res.validation.validated_at);
+          const who = res.validation.validated_by;
           setMessage(
-            `Réservation ${value.trim()} déjà validée le ${when.toLocaleDateString()} à ${when.toLocaleTimeString()}`,
+            `Réservation ${value.trim()} déjà validée le ${when.toLocaleDateString()} à ${when.toLocaleTimeString()} par ${who}`,
           );
         } else {
           setMessage(res.reason ?? 'Billet invalide');
