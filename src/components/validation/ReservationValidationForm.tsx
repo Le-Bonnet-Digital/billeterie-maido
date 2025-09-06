@@ -1,9 +1,18 @@
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
 import { CheckCircle, QrCode, XCircle, Camera, Smartphone, Flashlight, RefreshCw, ClipboardPaste, ImageIcon } from 'lucide-react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
-import { NotFoundException } from '@zxing/library';
+import { NotFoundException, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
+
+const DECODE_COOLDOWN_MS = 1500;   // anti-spam
+const CONSENSUS_HITS = 2;          // nb de lectures identiques requises
+
+const validatingRef = useRef(false);
+const cooldownRef = useRef<number | null>(null);
+const consensusTextRef = useRef<string>('');
+const consensusHitsRef = useRef(0);
+
 
 const isMobile = () =>
   typeof window !== 'undefined' &&
@@ -63,9 +72,13 @@ export default function ReservationValidationForm({
   }, []);
 
   const reader = useMemo(() => {
-    if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader();
-    return readerRef.current!;
+    const hints = new Map();
+    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+    hints.set(DecodeHintType.TRY_HARDER, true);
+    // 300ms entre tentatives internes (évite de sur-solliciter le CPU)
+    return new BrowserMultiFormatReader(hints, 300);
   }, []);
+
 
   const stopScan = () => {
     try { reader.reset(); } catch {}
@@ -93,6 +106,9 @@ export default function ReservationValidationForm({
 
   // ✅ Live scan unifié (mobile & desktop)
   const startLiveScan = async () => {
+    await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
+    setScanning(true);
+
     if (scanning) return;
 
     try {
@@ -109,11 +125,33 @@ export default function ReservationValidationForm({
       };
 
       const resultCallback = (res: Result | undefined, err: unknown) => {
-        if (res) {
-          handleDecoded(res.getText());
-        } else if (err && !(err instanceof NotFoundException)) {
+        if (err && !(err instanceof NotFoundException)) {
           console.error('Decode error', err);
         }
+        if (!res) return;
+      
+        if (validatingRef.current) return;                    // on valide déjà quelque chose
+        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+      
+        const text = res.getText().trim();
+      
+        // consensus: même code 2 fois d'affilée
+        if (text === consensusTextRef.current) {
+          consensusHitsRef.current += 1;
+        } else {
+          consensusTextRef.current = text;
+          consensusHitsRef.current = 1;
+        }
+        if (consensusHitsRef.current < CONSENSUS_HITS) return;
+      
+        // on accepte : on déclenche la validation et on verrouille
+        validatingRef.current = true;
+        consensusHitsRef.current = 0;
+        handleDecoded(text)
+          .finally(() => {
+            cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+            validatingRef.current = false;
+          });
       };
 
       await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
@@ -159,33 +197,34 @@ export default function ReservationValidationForm({
   };
 
   const handleDecoded = async (text: string) => {
-    const now = Date.now();
-    if (text === lastDecoded && now - lastDecodedAt < 2000) return; // anti-doublon 2s
-    setLastDecoded(text); setLastDecodedAt(now);
-
     setCode(text);
-    toast.success('QR détecté');
-    if (autoValidate) await doValidate(text);
+    if (autoValidate) {
+      await doValidate(text);
+    }
   };
-
+  
   const doValidate = async (value: string) => {
-    setLoading(true); setStatus('idle'); setMessage('');
+    setLoading(true);
+    setStatus('idle');
+    setMessage('');
     try {
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
-        setStatus('success'); setMessage('Validation enregistrée');
-        toast.success('Validation réussie ✅');
-        if ('vibrate' in navigator) navigator.vibrate?.(80);
-        setTimeout(() => setCode(''), 300);
-        // Option : stopScan(); // si tu veux fermer la caméra après succès
+        setStatus('success');
+        setMessage('Validation enregistrée');
+        if ('vibrate' in navigator) navigator.vibrate?.(60);
+        setTimeout(() => setCode(''), 200);
+        // Option: stopScan(); // si tu veux fermer après succès
       } else {
-        setStatus('error'); setMessage(res.reason);
-        toast.error(res.reason ?? 'Billet invalide');
+        setStatus('error');
+        setMessage(res.reason ?? 'Billet invalide');
+        toast.error(res.reason ?? 'Billet invalide');   // un seul toast
         if ('vibrate' in navigator) navigator.vibrate?.([20, 60, 20]);
       }
     } catch (e) {
       console.error(e);
-      setStatus('error'); setMessage('Erreur réseau, réessayez.');
+      setStatus('error');
+      setMessage('Erreur réseau, réessayez.');
       toast.error('Erreur réseau');
     } finally {
       setLoading(false);
