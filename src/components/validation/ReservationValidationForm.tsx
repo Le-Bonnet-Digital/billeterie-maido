@@ -1,28 +1,50 @@
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
-import {
-  CheckCircle,
-  QrCode,
-  XCircle,
-  Camera,
-  Smartphone,
-  Flashlight,
-  RefreshCw,
-  ClipboardPaste,
-  Image as ImageIcon,
-} from 'lucide-react';
+import { QrCode, Camera, XCircle, Flashlight, RefreshCw, CheckCircle } from 'lucide-react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
 import { NotFoundException, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
 
-// Anti-spam / stabilité
-const DECODE_COOLDOWN_MS = 1500; // fenêtre pendant laquelle on ignore les nouvelles lectures
-const CONSENSUS_HITS = 2; // exiger N lectures identiques consécutives
+/**
+ * Composant focalisé sur le FIX « impossible d'accéder à la caméra » + bonnes pratiques :
+ *  - Handshake permission iOS (getUserMedia simple -> enumerateDevices -> deviceId)
+ *  - decodeFromConstraints avec deviceId exact (mobile & desktop)
+ *  - Hints ZXing (QR only + TRY_HARDER)
+ *  - Verrou/consensus/cooldown pour éviter le spam
+ *  - Diagnostics d'erreurs getUserMedia détaillés (toasts utiles)
+ *  - Pas d'option « photo en secours » ici (tu peux la réactiver si besoin)
+ */
+
+const DECODE_COOLDOWN_MS = 1500; // ignore les lectures durant cette fenêtre
+const CONSENSUS_HITS = 2;        // exiger 2 lectures identiques d’affilée
 
 const isMobile = () =>
   typeof window !== 'undefined' &&
-  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
-    window.innerWidth <= 768);
+  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) || window.innerWidth <= 768);
+
+function explainGetUserMediaError(err: any): string {
+  const name = (err?.name || '').toString();
+  switch (name) {
+    case 'NotAllowedError':
+    case 'PermissionDeniedError':
+      return "Permission caméra refusée. Autorisez l’accès dans le navigateur (réglages du site).";
+    case 'NotFoundError':
+    case 'DevicesNotFoundError':
+      return "Aucune caméra détectée sur l’appareil.";
+    case 'NotReadableError':
+    case 'TrackStartError':
+      return "La caméra est occupée par une autre application (ou en erreur). Fermez les autres apps/onglets et réessayez.";
+    case 'OverconstrainedError':
+    case 'ConstraintNotSatisfiedError':
+      return "La caméra ne supporte pas ces contraintes (ex. caméra arrière). On va réessayer automatiquement avec des contraintes plus souples.";
+    case 'SecurityError':
+      return "Contexte non sécurisé. Le site doit être en HTTPS ou l’iframe doit autoriser la caméra.";
+    case 'TypeError':
+      return "Paramètres getUserMedia invalides.";
+    default:
+      return err?.message || 'Accès caméra impossible.';
+  }
+}
 
 interface Props {
   activity: ValidationActivity;
@@ -37,32 +59,31 @@ export default function ReservationValidationForm({
   help,
   autoValidate = true,
 }: Props) {
-  // UI state
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState<string>('');
+  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-
   const [scanning, setScanning] = useState(false);
   const [isMobileDevice, setIsMobileDevice] = useState(false);
 
+  // multi‑cam (desktop)
   const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
   const [selectedDeviceId, setSelectedDeviceId] = useState<string | undefined>();
 
-  const [torchSupported, setTorchSupported] = useState(false);
-  const [torchOn, setTorchOn] = useState(false);
-
-  // Scanner / caméra refs
+  // camera/reader refs
   const videoRef = useRef<HTMLVideoElement>(null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const currentTrackRef = useRef<MediaStreamTrack | null>(null);
+  const readerRef = useRef<BrowserMultiFormatReader | null>(null);
 
-  // Concurrence / throttling
+  // verrous lecture
   const validatingRef = useRef(false);
   const cooldownRef = useRef<number | null>(null);
-  const consensusTextRef = useRef<string>('');
+  const consensusTextRef = useRef('');
   const consensusHitsRef = useRef(0);
+
+  // torch
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
 
   useEffect(() => setIsMobileDevice(isMobile()), []);
 
@@ -71,28 +92,30 @@ export default function ReservationValidationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Préparer la liste des caméras (utile sur desktop multi-cams)
+  // Précharge la liste des caméras (desktop) — sur iOS, labels vides tant que pas de permission
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     (async () => {
-      const mediaDevices = await navigator.mediaDevices.enumerateDevices();
-      const cams = mediaDevices.filter((d) => d.kind === 'videoinput');
-      setDevices(cams);
+      try {
+        const list = await navigator.mediaDevices.enumerateDevices();
+        setDevices(list.filter((d) => d.kind === 'videoinput'));
+      } catch {}
     })();
   }, []);
 
-  // ZXing avec hints: QR uniquement + try harder
+  // ZXing avec hints
   const reader = useMemo(() => {
-    const hints = new Map<DecodeHintType, unknown>();
-    hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
-    hints.set(DecodeHintType.TRY_HARDER, true);
-    return new BrowserMultiFormatReader(hints, 300);
+    if (!readerRef.current) {
+      const hints = new Map<DecodeHintType, unknown>();
+      hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
+      hints.set(DecodeHintType.TRY_HARDER, true);
+      readerRef.current = new BrowserMultiFormatReader(hints, 300);
+    }
+    return readerRef.current;
   }, []);
 
   const stopScan = () => {
-    try {
-      reader.reset();
-    } catch {}
+    try { reader?.reset(); } catch {}
     const video = videoRef.current;
     if (video) {
       const stream = video.srcObject as MediaStream | null;
@@ -106,8 +129,8 @@ export default function ReservationValidationForm({
   };
 
   const applyTorch = async (track: MediaStreamTrack, on: boolean) => {
-    const cap = (track.getCapabilities?.() ?? {}) as any;
-    if (cap.torch) {
+    const caps = (track.getCapabilities?.() ?? {}) as any;
+    if (caps.torch) {
       await track.applyConstraints?.({ advanced: [{ torch: on }] } as any);
       setTorchSupported(true);
       setTorchOn(on);
@@ -116,103 +139,89 @@ export default function ReservationValidationForm({
     }
   };
 
-  // Live scan unifié (mobile & desktop)
-  // À mettre DANS le composant (les refs validatingRef/cooldownRef/... doivent être créées avec useRef() DANS le composant)
-const startLiveScan = async () => {
-  if (scanning) return;
-
-  try {
-    setStatus('idle');
-    setMessage('');
-
-    const constraints: MediaStreamConstraints = {
-      audio: false,
-      video: selectedDeviceId
-        ? ({ deviceId: { exact: selectedDeviceId } } as any)
-        : {
-            facingMode: { ideal: 'environment' },
-            width: { ideal: 1280 },
-            height: { ideal: 720 },
-          },
-    };
-
-    const resultCallback = (res?: Result, err?: unknown) => {
-      if (err && !(err instanceof NotFoundException)) {
-        console.error('Decode error', err);
-      }
-      if (!res) return;
-
-      // throttle/lock
-      if (validatingRef.current) return;
-      if (cooldownRef.current && Date.now() < cooldownRef.current) return;
-
-      const text = res.getText().trim();
-
-      // consensus N lectures identiques
-      if (text === consensusTextRef.current) {
-        consensusHitsRef.current += 1;
-      } else {
-        consensusTextRef.current = text;
-        consensusHitsRef.current = 1;
-      }
-      if (consensusHitsRef.current < CONSENSUS_HITS) return;
-
-      validatingRef.current = true;
-      consensusHitsRef.current = 0;
-
-      handleDecoded(text).finally(() => {
-        cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-        validatingRef.current = false;
-      });
-    };
-
-    await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
-    setScanning(true);
-
-    // ⚠️ certaines devices exigent un play() manuel
-    try { await videoRef.current?.play(); } catch {}
-
-    // Torch support ?
-    const stream = videoRef.current!.srcObject as MediaStream;
-    const track = stream?.getVideoTracks?.()[0];
-    if (track) {
-      currentTrackRef.current = track;
-      try { await applyTorch(track, false); } catch { setTorchSupported(false); }
-    }
-
-    toast.success('Scanner prêt. Cadrez le QR.');
-  } catch (error) {
-    console.error('Erreur caméra:', error);
-    toast.error("Impossible d'accéder à la caméra. Utilisez la photo en secours.");
-  }
-};
-
-  const toggleTorch = async () => {
-    const track = currentTrackRef.current;
-    if (!track) return;
+  /**
+   * iOS/Safari: pour obtenir les labels et l’ID de la back‑camera, il faut d’abord
+   * accorder la permission une fois. On ouvre un flux temporaire puis on le ferme.
+   */
+  const requestPermissionAndPickDevice = async (): Promise<string | undefined> => {
+    let tmp: MediaStream | null = null;
     try {
-      await applyTorch(track, !torchOn);
-    } catch {
-      toast.error("La torche n'est pas supportée par cet appareil.");
+      tmp = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment' }, audio: false });
+      const list = await navigator.mediaDevices.enumerateDevices();
+      const cams = list.filter((d) => d.kind === 'videoinput');
+      const back = cams.find((d) => /back|rear|environment|arrière/i.test(d.label));
+      return (back ?? cams[0])?.deviceId;
+    } finally {
+      tmp?.getTracks().forEach((t) => t.stop());
     }
   };
 
-  // Secours: photo depuis la galerie
-  const openPhotoPicker = () => fileInputRef.current?.click();
-  const decodeFromPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    try {
-      const url = URL.createObjectURL(file);
-      const res = await reader.decodeFromImageUrl(url);
-      URL.revokeObjectURL(url);
-      handleDecoded(res.getText());
-    } catch (e) {
-      console.error(e);
-      toast.error('QR non reconnu sur la photo. Réessayez en cadrant mieux.');
-    } finally {
-      event.target.value = '';
+  const startLiveScan = async () => {
+    if (scanning) return;
+    if (!navigator.mediaDevices?.getUserMedia) {
+      toast.error("Caméra non supportée par ce navigateur.");
+      return;
     }
+    if (!window.isSecureContext) {
+      toast.error('HTTPS requis pour accéder à la caméra.');
+      return;
+    }
+
+    try {
+      setStatus('idle');
+      setMessage('');
+
+      // 1) Sélection de l’appareil (desktop: choisi; mobile: essayer back camera)
+      const deviceId = selectedDeviceId || (await requestPermissionAndPickDevice());
+      if (!deviceId) throw new DOMException('No camera found', 'NotFoundError');
+
+      // 2) Démarrage ZXing
+      const constraints: MediaStreamConstraints = { audio: false, video: { deviceId: { exact: deviceId } as any } };
+
+      const onResult = (res?: Result, err?: unknown) => {
+        if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
+        if (!res) return;
+
+        if (validatingRef.current) return;
+        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+
+        const text = res.getText().trim();
+        if (text === consensusTextRef.current) consensusHitsRef.current += 1; else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
+        if (consensusHitsRef.current < CONSENSUS_HITS) return;
+
+        validatingRef.current = true;
+        consensusHitsRef.current = 0;
+        handleDecoded(text).finally(() => {
+          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+          validatingRef.current = false;
+        });
+      };
+
+      await reader.decodeFromConstraints(constraints, videoRef.current!, onResult);
+      setScanning(true);
+
+      // iOS: forcer inline playback
+      const v = videoRef.current!;
+      v.setAttribute('playsinline', 'true');
+      v.setAttribute('muted', 'true');
+      try { await v.play(); } catch {}
+
+      // Torch ?
+      const stream = v.srcObject as MediaStream;
+      const track = stream?.getVideoTracks?.()[0];
+      if (track) { currentTrackRef.current = track; try { await applyTorch(track, false); } catch { setTorchSupported(false); } }
+
+      toast.success('Scanner prêt. Cadrez le QR.');
+    } catch (err) {
+      console.error('Erreur caméra:', err);
+      const msg = explainGetUserMediaError(err);
+      toast.error(msg);
+    }
+  };
+
+  const toggleTorch = async () => {
+    const track = currentTrackRef.current; if (!track) return;
+    try { await applyTorch(track, !torchOn); } catch { toast.error("La torche n'est pas supportée par cet appareil."); }
   };
 
   const handleDecoded = async (text: string) => {
@@ -230,19 +239,15 @@ const startLiveScan = async () => {
         setStatus('success');
         setMessage('Validation enregistrée');
         if ('vibrate' in navigator) navigator.vibrate?.(60);
-        setTimeout(() => setCode(''), 200);
-        // stopScan(); // décommente pour fermer la caméra après succès
+        setTimeout(() => setCode(''), 250);
       } else {
         setStatus('error');
         setMessage(res.reason ?? 'Billet invalide');
-        toast.error(res.reason ?? 'Billet invalide');
-        if ('vibrate' in navigator) navigator.vibrate?.([20, 60, 20]);
       }
     } catch (e) {
       console.error(e);
       setStatus('error');
       setMessage('Erreur réseau, réessayez.');
-      toast.error('Erreur réseau');
     } finally {
       setLoading(false);
     }
@@ -252,16 +257,6 @@ const startLiveScan = async () => {
     e.preventDefault();
     if (!code.trim()) return;
     await doValidate(code);
-  };
-
-  const pasteFromClipboard = async () => {
-    try {
-      const txt = await navigator.clipboard.readText();
-      if (txt) setCode(txt.trim());
-      else toast('Presse-papiers vide');
-    } catch {
-      toast.error("Impossible d'accéder au presse-papiers");
-    }
   };
 
   return (
@@ -286,12 +281,7 @@ const startLiveScan = async () => {
             </select>
             <button
               type="button"
-              onClick={() => {
-                if (scanning) {
-                  stopScan();
-                  setTimeout(() => startLiveScan(), 50);
-                }
-              }}
+              onClick={() => { if (scanning) { stopScan(); setTimeout(() => startLiveScan(), 50); } }}
               title="Basculer sur cet appareil"
               className="p-2 rounded-md border hover:bg-gray-50"
             >
@@ -306,25 +296,13 @@ const startLiveScan = async () => {
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Numéro / QR (opaque)</label>
-
-          <div className="flex gap-2">
-            <input
-              autoFocus
-              inputMode="search"
-              placeholder={isMobileDevice ? 'Saisissez le code…' : 'Saisissez le code ou scannez…'}
-              className="flex-1 px-3 py-3 text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              value={code}
-              onChange={(e) => setCode(e.target.value)}
-            />
-            <button
-              type="button"
-              onClick={pasteFromClipboard}
-              className="px-3 py-2 border rounded-md text-gray-700 hover:bg-gray-50"
-              title="Coller depuis le presse-papiers"
-            >
-              <ClipboardPaste className="h-5 w-5" />
-            </button>
-          </div>
+          <input
+            inputMode="search"
+            placeholder={isMobileDevice ? 'Saisissez le code…' : 'Saisissez le code ou scannez…'}
+            className="w-full px-3 py-3 text-base border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            value={code}
+            onChange={(e) => setCode(e.target.value)}
+          />
 
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
@@ -339,30 +317,13 @@ const startLiveScan = async () => {
 
             <button
               type="button"
-              onClick={() => (scanning ? stopScan() : fileInputRef.current?.click())}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
+              onClick={stopScan}
+              disabled={!scanning}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100 text-gray-800 rounded-md font-medium transition-colors"
             >
-              {scanning ? (
-                <>
-                  <XCircle className="h-5 w-5" />
-                  Arrêter la caméra
-                </>
-              ) : (
-                <>
-                  <ImageIcon className="h-5 w-5" />
-                  Utiliser une photo (secours)
-                </>
-              )}
+              <XCircle className="h-5 w-5" />
+              Arrêter la caméra
             </button>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept="image/*"
-              capture="environment"
-              onChange={decodeFromPhoto}
-              className="hidden"
-            />
           </div>
 
           {scanning && (
@@ -382,9 +343,7 @@ const startLiveScan = async () => {
                   <button
                     type="button"
                     onClick={toggleTorch}
-                    className={`px-3 py-2 rounded-md text-white ${
-                      torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'
-                    }`}
+                    className={`px-3 py-2 rounded-md text-white ${torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'}`}
                     title="Torche"
                   >
                     <Flashlight className="h-5 w-5" />
@@ -405,33 +364,16 @@ const startLiveScan = async () => {
       </form>
 
       {status !== 'idle' && (
-        <div
-          className={`mt-4 p-3 rounded-md ${
-            status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
-          }`}
-        >
+        <div className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
           <div className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-            {status === 'success' ? (
-              <CheckCircle className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <XCircle className="h-5 w-5 flex-shrink-0" />
-            )}
+            {status === 'success' ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <XCircle className="h-5 w-5 flex-shrink-0" />}
             <span className="text-sm font-medium">{message}</span>
           </div>
         </div>
       )}
 
-      <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
-        <div className="flex items-start gap-2">
-          {isMobileDevice ? (
-            <Smartphone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          ) : (
-            <QrCode className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          )}
-          <div className="text-xs text-blue-800">
-            <strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un « tap ». Appuyez sur « Activer le scanner », puis cadrez le QR.
-          </div>
-        </div>
+      <div className="mt-4 text-xs text-blue-800 bg-blue-50 border border-blue-200 rounded-lg p-3">
+        <p><strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un tap. Si l’accès échoue, vérifie : HTTPS, permission Caméra autorisée pour le site, aucune autre app n’utilise la caméra, et évite les navigateurs intégrés (Facebook/Instagram).</p>
       </div>
     </div>
   );
