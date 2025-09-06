@@ -303,7 +303,7 @@ export default function ReservationValidationForm({
     try {
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
-        if ('alreadyValidated' in res && res.alreadyValidated) {
+        if (res.alreadyValidated) {
           setStatus('error');
           const when = new Date(res.validation.validated_at);
           const who =
@@ -313,7 +313,7 @@ export default function ReservationValidationForm({
           );
         } else {
           setStatus('success');
-          setMessage(`Réservation ${res.reservation.number} validée`);
+          setMessage(`Réservation ${res.reservation.number} validée avec succès`);
           if ('vibrate' in navigator) navigator.vibrate?.(60);
           setTimeout(() => setCode(''), 250);
         }

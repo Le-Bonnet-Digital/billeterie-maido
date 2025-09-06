@@ -77,29 +77,39 @@ export async function validateReservation(
     return { ok: false, reason: 'Réservation invalide pour cette activité' };
 
   // 3) Prevent duplicate validation (idempotent check)
-  const { data: existing } = await supabase
+  const { data: existing, error: validationError } = await supabase
     .from('reservation_validations')
-    .select('id,validated_at,validated_by')
+    .select('validated_at,validated_by')
     .eq('reservation_id', data.id)
     .eq('activity', activity)
     .limit(1);
+
+  if (validationError) {
+    return { ok: false, reason: 'Erreur vérification validation' };
+  }
+
   if (existing && existing.length > 0) {
     const first = existing[0];
-    const validation = {
+    const validationInfo = {
       validated_at: first.validated_at as string,
       validated_by: first.validated_by as string,
-    } as {
-      validated_at: string;
-      validated_by: string;
-      validated_by_email?: string;
     };
+
+    // Try to get the agent's email
     const { data: agent } = await supabase
       .from('users')
       .select('email')
       .eq('id', first.validated_by)
       .single();
-    if (agent?.email) validation.validated_by_email = agent.email;
-    return { ok: true, alreadyValidated: true, validation };
+
+    return {
+      ok: true,
+      alreadyValidated: true,
+      validation: {
+        ...validationInfo,
+        ...(agent?.email ? { validated_by_email: agent.email } : {}),
+      },
+    };
   }
 
   // 4) Insert validation
