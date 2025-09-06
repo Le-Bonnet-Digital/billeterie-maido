@@ -1,18 +1,23 @@
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
-import { CheckCircle, QrCode, XCircle, Camera, Smartphone, Flashlight, RefreshCw, ClipboardPaste, ImageIcon } from 'lucide-react';
+import {
+  CheckCircle,
+  QrCode,
+  XCircle,
+  Camera,
+  Smartphone,
+  Flashlight,
+  RefreshCw,
+  ClipboardPaste,
+  Image as ImageIcon,
+} from 'lucide-react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
 import { NotFoundException, BarcodeFormat, DecodeHintType } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
 
-const DECODE_COOLDOWN_MS = 1500;   // anti-spam
-const CONSENSUS_HITS = 2;          // nb de lectures identiques requises
-
-const validatingRef = useRef(false);
-const cooldownRef = useRef<number | null>(null);
-const consensusTextRef = useRef<string>('');
-const consensusHitsRef = useRef(0);
-
+// Anti-spam / stabilité
+const DECODE_COOLDOWN_MS = 1500; // fenêtre pendant laquelle on ignore les nouvelles lectures
+const CONSENSUS_HITS = 2; // exiger N lectures identiques consécutives
 
 const isMobile = () =>
   typeof window !== 'undefined' &&
@@ -32,6 +37,7 @@ export default function ReservationValidationForm({
   help,
   autoValidate = true,
 }: Props) {
+  // UI state
   const [code, setCode] = useState('');
   const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
   const [message, setMessage] = useState<string>('');
@@ -46,13 +52,17 @@ export default function ReservationValidationForm({
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
 
-  const [lastDecoded, setLastDecoded] = useState<string>('');
-  const [lastDecodedAt, setLastDecodedAt] = useState<number>(0);
-
+  // Scanner / caméra refs
   const videoRef = useRef<HTMLVideoElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const currentTrackRef = useRef<MediaStreamTrack | null>(null);
+
+  // Concurrence / throttling
+  const validatingRef = useRef(false);
+  const cooldownRef = useRef<number | null>(null);
+  const consensusTextRef = useRef<string>('');
+  const consensusHitsRef = useRef(0);
 
   useEffect(() => setIsMobileDevice(isMobile()), []);
 
@@ -61,31 +71,33 @@ export default function ReservationValidationForm({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Préparer la liste des caméras (utile sur desktop multi-cams)
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     (async () => {
       const mediaDevices = await navigator.mediaDevices.enumerateDevices();
       const cams = mediaDevices.filter((d) => d.kind === 'videoinput');
       setDevices(cams);
-      // on ne sélectionne pas ici : on laisse decodeFromConstraints choisir "environment"
     })();
   }, []);
 
+  // ZXing avec hints: QR uniquement + try harder
   const reader = useMemo(() => {
-    const hints = new Map();
+    const hints = new Map<DecodeHintType, unknown>();
     hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
     hints.set(DecodeHintType.TRY_HARDER, true);
-    // 300ms entre tentatives internes (évite de sur-solliciter le CPU)
     return new BrowserMultiFormatReader(hints, 300);
   }, []);
 
-
   const stopScan = () => {
-    try { reader.reset(); } catch {}
-    if (videoRef.current) {
-      const stream = videoRef.current.srcObject as MediaStream | null;
+    try {
+      reader.reset();
+    } catch {}
+    const video = videoRef.current;
+    if (video) {
+      const stream = video.srcObject as MediaStream | null;
       stream?.getTracks().forEach((t) => t.stop());
-      videoRef.current.srcObject = null;
+      video.srcObject = null;
     }
     currentTrackRef.current = null;
     setTorchSupported(false);
@@ -104,19 +116,18 @@ export default function ReservationValidationForm({
     }
   };
 
-  // ✅ Live scan unifié (mobile & desktop)
+  // Live scan unifié (mobile & desktop)
   const startLiveScan = async () => {
-    await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
-    setScanning(true);
-
     if (scanning) return;
 
     try {
-      setStatus('idle'); setMessage('');
+      setStatus('idle');
+      setMessage('');
+
       const constraints: MediaStreamConstraints = {
         audio: false,
         video: selectedDeviceId
-          ? { deviceId: { exact: selectedDeviceId } as any }
+          ? ({ deviceId: { exact: selectedDeviceId } } as any)
           : {
               facingMode: { ideal: 'environment' },
               width: { ideal: 1280 },
@@ -124,18 +135,19 @@ export default function ReservationValidationForm({
             },
       };
 
-      const resultCallback = (res: Result | undefined, err: unknown) => {
+      const resultCallback = (res?: Result, err?: unknown) => {
         if (err && !(err instanceof NotFoundException)) {
           console.error('Decode error', err);
         }
         if (!res) return;
-      
-        if (validatingRef.current) return;                    // on valide déjà quelque chose
+
+        // Throttle
+        if (validatingRef.current) return;
         if (cooldownRef.current && Date.now() < cooldownRef.current) return;
-      
+
         const text = res.getText().trim();
-      
-        // consensus: même code 2 fois d'affilée
+
+        // Consensus (N lectures identiques d'affilée)
         if (text === consensusTextRef.current) {
           consensusHitsRef.current += 1;
         } else {
@@ -143,25 +155,28 @@ export default function ReservationValidationForm({
           consensusHitsRef.current = 1;
         }
         if (consensusHitsRef.current < CONSENSUS_HITS) return;
-      
-        // on accepte : on déclenche la validation et on verrouille
+
         validatingRef.current = true;
         consensusHitsRef.current = 0;
-        handleDecoded(text)
-          .finally(() => {
-            cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-            validatingRef.current = false;
-          });
+        handleDecoded(text).finally(() => {
+          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+          validatingRef.current = false;
+        });
       };
 
       await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
       setScanning(true);
 
+      // Torch support?
       const stream = videoRef.current!.srcObject as MediaStream;
-      const track = stream?.getVideoTracks?.[0];
+      const track = stream?.getVideoTracks?.()[0];
       if (track) {
         currentTrackRef.current = track;
-        try { await applyTorch(track, false); } catch { setTorchSupported(false); }
+        try {
+          await applyTorch(track, false); // juste pour détecter le support
+        } catch {
+          setTorchSupported(false);
+        }
       }
 
       toast.success('Scanner prêt. Cadrez le QR.');
@@ -174,11 +189,14 @@ export default function ReservationValidationForm({
   const toggleTorch = async () => {
     const track = currentTrackRef.current;
     if (!track) return;
-    try { await applyTorch(track, !torchOn); }
-    catch { toast.error("La torche n'est pas supportée par cet appareil."); }
+    try {
+      await applyTorch(track, !torchOn);
+    } catch {
+      toast.error("La torche n'est pas supportée par cet appareil.");
+    }
   };
 
-  // 📷 Secours : photo
+  // Secours: photo depuis la galerie
   const openPhotoPicker = () => fileInputRef.current?.click();
   const decodeFromPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -198,11 +216,9 @@ export default function ReservationValidationForm({
 
   const handleDecoded = async (text: string) => {
     setCode(text);
-    if (autoValidate) {
-      await doValidate(text);
-    }
+    if (autoValidate) await doValidate(text);
   };
-  
+
   const doValidate = async (value: string) => {
     setLoading(true);
     setStatus('idle');
@@ -214,11 +230,11 @@ export default function ReservationValidationForm({
         setMessage('Validation enregistrée');
         if ('vibrate' in navigator) navigator.vibrate?.(60);
         setTimeout(() => setCode(''), 200);
-        // Option: stopScan(); // si tu veux fermer après succès
+        // stopScan(); // décommente pour fermer la caméra après succès
       } else {
         setStatus('error');
         setMessage(res.reason ?? 'Billet invalide');
-        toast.error(res.reason ?? 'Billet invalide');   // un seul toast
+        toast.error(res.reason ?? 'Billet invalide');
         if ('vibrate' in navigator) navigator.vibrate?.([20, 60, 20]);
       }
     } catch (e) {
@@ -254,7 +270,6 @@ export default function ReservationValidationForm({
           <QrCode className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         </div>
-        {/* Sélecteur caméra (desktop / multi devices) */}
         {!isMobileDevice && devices.length > 1 && (
           <div className="flex items-center gap-2">
             <select
@@ -271,7 +286,10 @@ export default function ReservationValidationForm({
             <button
               type="button"
               onClick={() => {
-                if (scanning) { stopScan(); setTimeout(() => startLiveScan(), 50); }
+                if (scanning) {
+                  stopScan();
+                  setTimeout(() => startLiveScan(), 50);
+                }
               }}
               title="Basculer sur cet appareil"
               className="p-2 rounded-md border hover:bg-gray-50"
@@ -307,7 +325,6 @@ export default function ReservationValidationForm({
             </button>
           </div>
 
-          {/* Actions scanner + secours photo */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
             <button
               type="button"
@@ -321,7 +338,7 @@ export default function ReservationValidationForm({
 
             <button
               type="button"
-              onClick={scanning ? stopScan : openPhotoPicker}
+              onClick={() => (scanning ? stopScan() : fileInputRef.current?.click())}
               className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
             >
               {scanning ? (
@@ -347,7 +364,6 @@ export default function ReservationValidationForm({
             />
           </div>
 
-          {/* Aperçu + viseur + torche */}
           {scanning && (
             <div className="mt-4 bg-black rounded-xl overflow-hidden relative">
               <video
@@ -365,7 +381,9 @@ export default function ReservationValidationForm({
                   <button
                     type="button"
                     onClick={toggleTorch}
-                    className={`px-3 py-2 rounded-md text-white ${torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'}`}
+                    className={`px-3 py-2 rounded-md text-white ${
+                      torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
                     title="Torche"
                   >
                     <Flashlight className="h-5 w-5" />
@@ -386,9 +404,17 @@ export default function ReservationValidationForm({
       </form>
 
       {status !== 'idle' && (
-        <div className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+        <div
+          className={`mt-4 p-3 rounded-md ${
+            status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'
+          }`}
+        >
           <div className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
-            {status === 'success' ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <XCircle className="h-5 w-5 flex-shrink-0" />}
+            {status === 'success' ? (
+              <CheckCircle className="h-5 w-5 flex-shrink-0" />
+            ) : (
+              <XCircle className="h-5 w-5 flex-shrink-0" />
+            )}
             <span className="text-sm font-medium">{message}</span>
           </div>
         </div>
@@ -396,9 +422,13 @@ export default function ReservationValidationForm({
 
       <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="flex items-start gap-2">
-          {isMobileDevice ? <Smartphone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" /> : <QrCode className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />}
+          {isMobileDevice ? (
+            <Smartphone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          ) : (
+            <QrCode className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
+          )}
           <div className="text-xs text-blue-800">
-            <strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un « tap ». Appuyez sur “Activer le scanner”, puis cadrez le QR.
+            <strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un « tap ». Appuyez sur « Activer le scanner », puis cadrez le QR.
           </div>
         </div>
       </div>
