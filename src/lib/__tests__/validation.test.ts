@@ -41,8 +41,7 @@ describe('validateReservation', () => {
           event_activities: { activities: { name: 'poney' } },
           time_slots: {
             id: 'slot-1',
-            start_at: '2025-01-02T10:00:00.000Z',
-            end_at: '2025-01-02T11:00:00.000Z',
+            slot_time: '2025-01-02T10:00:00.000Z',
           },
         },
         error: null,
@@ -78,8 +77,7 @@ describe('validateReservation', () => {
         activity: 'poney',
         time_slot: {
           id: 'slot-1',
-          start_at: '2025-01-02T10:00:00.000Z',
-          end_at: '2025-01-02T11:00:00.000Z',
+          slot_time: '2025-01-02T10:00:00.000Z',
         },
       },
     });
@@ -90,7 +88,7 @@ describe('validateReservation', () => {
     });
   });
 
-  it('returns error with details if already validated', async () => {
+  it('returns alreadyValidated info without reinserting', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
       id: string;
     });
@@ -147,11 +145,12 @@ describe('validateReservation', () => {
 
     const res = await validateReservation('RES-2025-001-0001', 'poney');
     expect(res).toEqual({
-      ok: false,
-      reason: 'Déjà validé',
+      ok: true,
+      alreadyValidated: true,
       validation: {
         validated_at: '2025-01-01T10:00:00.000Z',
-        validated_by: 'agent2@example.com',
+        validated_by: 'agent-2',
+        validated_by_email: 'agent2@example.com',
       },
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();
