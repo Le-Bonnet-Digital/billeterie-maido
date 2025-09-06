@@ -16,7 +16,7 @@ interface ReservationLookup {
   created_at: string;
   pass?: { id: string; name: string } | null;
   event_activities?: { activities?: { name: string } | null } | null;
-  time_slots?: { id: string; start_at: string; end_at: string } | null;
+  time_slots?: { id: string; slot_time: string } | null;
 }
 
 export async function validateReservation(
@@ -33,7 +33,7 @@ export async function validateReservation(
         created_at: string;
         pass: { id: string; name: string } | null;
         activity: string;
-        time_slot: { id: string; start_at: string; end_at: string } | null;
+        time_slot: { id: string; slot_time: string } | null;
       };
     }
   | {
@@ -54,7 +54,7 @@ export async function validateReservation(
   const { data, error } = await supabase
     .from('reservations')
     .select(
-      'id,reservation_number,client_email,payment_status,created_at,pass:passes(id,name),event_activities(activities(name)),time_slots(id,start_at,end_at)',
+      'id,reservation_number,client_email,payment_status,created_at,pass:passes(id,name),event_activities(activities(name)),time_slots(id,slot_time)',
     )
     .eq('reservation_number', trimmed)
     .single<ReservationLookup>();
@@ -114,8 +114,7 @@ export async function validateReservation(
       time_slot: data.time_slots
         ? {
             id: data.time_slots.id,
-            start_at: data.time_slots.start_at,
-            end_at: data.time_slots.end_at,
+            slot_time: data.time_slots.slot_time,
           }
         : null,
     },
