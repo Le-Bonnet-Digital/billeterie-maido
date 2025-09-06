@@ -1,0 +1,9 @@
+# supabase/config.toml
+
+# Le webhook Stripe doit être public (pas de JWT)
+[functions.stripe-webhook]
+verify_jwt = false
+
+# La fonction d'email reste protégée (appelée avec service_role)
+[functions.send-reservation-email]
+verify_jwt = true
