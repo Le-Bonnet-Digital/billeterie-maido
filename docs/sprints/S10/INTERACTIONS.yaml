@@ -57,3 +57,10 @@
   context: |
     commit: fix improve validation UI and code checking
   status: done
+- who: PO
+  topic: Validation mobile & format code
+  reply: 
+  details: |
+    - C'est bon pour le bouton stop
+    - Fix: le code renseigner par dans la zone de saisie après le scan avec la caméra est le numrero "reservation_id" de la table "reservation_validations". Il faut définir quel numéro on choisi : le "reservation_number" ou reservation_id ? Prendre la meilleure décision.
+  action:
