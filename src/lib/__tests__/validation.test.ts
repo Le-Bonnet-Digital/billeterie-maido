@@ -34,8 +34,16 @@ describe('validateReservation', () => {
         data: {
           id: 'res-1',
           reservation_number: 'RES-2025-001-0001',
+          client_email: 'c@example.com',
           payment_status: 'paid',
+          created_at: '2025-01-01T09:00:00.000Z',
+          pass: { id: 'pass-1', name: 'Pass Poney' },
           event_activities: { activities: { name: 'poney' } },
+          time_slots: {
+            id: 'slot-1',
+            start_at: '2025-01-02T10:00:00.000Z',
+            end_at: '2025-01-02T11:00:00.000Z',
+          },
         },
         error: null,
       }),
@@ -60,8 +68,20 @@ describe('validateReservation', () => {
     const res = await validateReservation('RES-2025-001-0001', 'poney');
     expect(res).toEqual({
       ok: true,
-      reservationId: 'res-1',
-      reservationNumber: 'RES-2025-001-0001',
+      reservation: {
+        id: 'res-1',
+        number: 'RES-2025-001-0001',
+        client_email: 'c@example.com',
+        payment_status: 'paid',
+        created_at: '2025-01-01T09:00:00.000Z',
+        pass: { id: 'pass-1', name: 'Pass Poney' },
+        activity: 'poney',
+        time_slot: {
+          id: 'slot-1',
+          start_at: '2025-01-02T10:00:00.000Z',
+          end_at: '2025-01-02T11:00:00.000Z',
+        },
+      },
     });
     expect(validationsTable.insert).toHaveBeenCalledWith({
       reservation_id: 'res-1',
@@ -82,7 +102,9 @@ describe('validateReservation', () => {
         data: {
           id: 'res-1',
           reservation_number: 'RES-2025-001-0001',
+          client_email: 'c@example.com',
           payment_status: 'paid',
+          created_at: '2025-01-01T09:00:00.000Z',
           event_activities: { activities: { name: 'poney' } },
         },
         error: null,
@@ -147,7 +169,9 @@ describe('validateReservation', () => {
         data: {
           id: 'res-1',
           reservation_number: 'RES-2025-001-0001',
+          client_email: 'c@example.com',
           payment_status: 'paid',
+          created_at: '2025-01-01T09:00:00.000Z',
           event_activities: { activities: { name: 'tir_arc' } },
         },
         error: null,

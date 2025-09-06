@@ -304,7 +304,7 @@ export default function ReservationValidationForm({
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
         setStatus('success');
-        setMessage(`Réservation ${res.reservationNumber} validée`);
+        setMessage(`Réservation ${res.reservation.number} validée`);
         if ('vibrate' in navigator) navigator.vibrate?.(60);
         setTimeout(() => setCode(''), 250);
       } else {

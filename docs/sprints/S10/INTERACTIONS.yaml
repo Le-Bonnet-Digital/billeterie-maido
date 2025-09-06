@@ -154,6 +154,17 @@
     - L'email de l'agent s'affiche correctement lors d'une double validation
   action: Implement activity guard for reservations
 - who: ChatGPT
+  when: 2025-09-07T12:00:00Z
+  topic: Validation enriched response
+  did: |
+    - Retourne les informations billet (email, pass, créneau...) lors de la validation
+  ask: |
+    Confirmer que le poste de contrôle affiche bien ces détails
+  context: |
+    commit: feat include reservation details in validation
+    next: Ajouter l'historique des validations (20SP)
+  status: pending
+- who: ChatGPT
   when: 2025-09-07T10:00:00Z
   topic: Activity guard validation
   did: |
