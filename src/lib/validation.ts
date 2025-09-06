@@ -11,8 +11,12 @@ export type ValidationActivity = 'poney' | 'tir_arc' | 'luge_bracelet';
 interface ReservationLookup {
   id: string;
   reservation_number: string;
+  client_email: string;
   payment_status: 'paid' | 'pending' | 'refunded';
+  created_at: string;
+  pass?: { id: string; name: string } | null;
   event_activities?: { activities?: { name: string } | null } | null;
+  time_slots?: { id: string; start_at: string; end_at: string } | null;
 }
 
 export async function validateReservation(
@@ -21,8 +25,16 @@ export async function validateReservation(
 ): Promise<
   | {
       ok: true;
-      reservationId: string;
-      reservationNumber: string;
+      reservation: {
+        id: string;
+        number: string;
+        client_email: string;
+        payment_status: 'paid' | 'pending' | 'refunded';
+        created_at: string;
+        pass: { id: string; name: string } | null;
+        activity: string;
+        time_slot: { id: string; start_at: string; end_at: string } | null;
+      };
     }
   | {
       ok: false;
@@ -42,7 +54,7 @@ export async function validateReservation(
   const { data, error } = await supabase
     .from('reservations')
     .select(
-      'id,reservation_number,payment_status,event_activities(activities(name))',
+      'id,reservation_number,client_email,payment_status,created_at,pass(id,name),event_activities(activities(name)),time_slots(id,start_at,end_at)',
     )
     .eq('reservation_number', trimmed)
     .single<ReservationLookup>();
@@ -91,7 +103,21 @@ export async function validateReservation(
 
   return {
     ok: true,
-    reservationId: data.id,
-    reservationNumber: data.reservation_number,
+    reservation: {
+      id: data.id,
+      number: data.reservation_number,
+      client_email: data.client_email,
+      payment_status: data.payment_status,
+      created_at: data.created_at,
+      pass: data.pass ? { id: data.pass.id, name: data.pass.name } : null,
+      activity: data.event_activities?.activities?.name as string,
+      time_slot: data.time_slots
+        ? {
+            id: data.time_slots.id,
+            start_at: data.time_slots.start_at,
+            end_at: data.time_slots.end_at,
+          }
+        : null,
+    },
   };
 }

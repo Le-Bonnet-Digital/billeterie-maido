@@ -56,6 +56,7 @@ state.from = (table: string) => {
               reservation_number: `RES-2025-001-${String(
                 reservations.length + 1,
               ).padStart(4, '0')}`,
+              created_at: new Date().toISOString(),
             };
             reservations.push(rec);
             return { data: { id }, error: null };
@@ -66,7 +67,31 @@ state.from = (table: string) => {
         eq: (_c: string, val: string) => ({
           single: async () => {
             const r = reservations.find((r) => r.reservation_number === val);
-            return r ? { data: r, error: null } : { data: null, error: {} };
+            return r
+              ? {
+                  data: {
+                    id: r.id,
+                    reservation_number: r.reservation_number,
+                    client_email: r.client_email,
+                    payment_status: r.payment_status,
+                    created_at: r.created_at,
+                    pass: r.pass_id
+                      ? { id: r.pass_id, name: 'Pass name' }
+                      : null,
+                    event_activities: {
+                      activities: { name: 'luge_bracelet' },
+                    },
+                    time_slots: r.time_slot_id
+                      ? {
+                          id: r.time_slot_id,
+                          start_at: new Date().toISOString(),
+                          end_at: new Date(Date.now() + 3600000).toISOString(),
+                        }
+                      : null,
+                  },
+                  error: null,
+                }
+              : { data: null, error: {} };
           },
         }),
       }),
@@ -183,8 +208,16 @@ describe.skip('E2E happy path', () => {
     );
     expect(first).toEqual({
       ok: true,
-      reservationId: 'res-1',
-      reservationNumber: 'RES-2025-001-0001',
+      reservation: {
+        id: 'res-1',
+        number: 'RES-2025-001-0001',
+        client_email: expect.any(String),
+        payment_status: expect.any(String),
+        created_at: expect.any(String),
+        pass: expect.anything(),
+        activity: 'luge_bracelet',
+        time_slot: expect.anything(),
+      },
     });
 
     const second = await validateReservation(
