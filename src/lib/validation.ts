@@ -1,7 +1,10 @@
 import { supabase } from './supabase';
 import { getCurrentUser } from './auth';
 
-const CODE_PATTERN = /^RES-[A-Za-z0-9]+$/;
+// Reservation numbers follow the pattern
+// RES-<year>-<day-of-year>-<4 random digits>
+// Example: RES-2025-249-7908
+const CODE_PATTERN = /^RES-\d{4}-\d{3}-\d{4}$/;
 
 export type ValidationActivity = 'poney' | 'tir_arc' | 'luge_bracelet';
 
