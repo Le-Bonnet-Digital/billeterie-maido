@@ -33,7 +33,7 @@ describe('validateReservation', () => {
       single: vi.fn().mockResolvedValue({
         data: {
           id: 'res-1',
-          reservation_number: 'RES-1',
+          reservation_number: 'RES-2025-001-0001',
           payment_status: 'paid',
         },
         error: null,
@@ -56,7 +56,7 @@ describe('validateReservation', () => {
       throw new Error('unknown table ' + table);
     });
 
-    const res = await validateReservation('RES-1', 'poney');
+    const res = await validateReservation('RES-2025-001-0001', 'poney');
     expect(res).toEqual({ ok: true, reservationId: 'res-1' });
     expect(validationsTable.insert).toHaveBeenCalledWith({
       reservation_id: 'res-1',

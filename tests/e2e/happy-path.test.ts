@@ -53,7 +53,9 @@ state.from = (table: string) => {
             const rec = {
               ...row,
               id,
-              reservation_number: `RES-${reservations.length + 1}`,
+              reservation_number: `RES-2025-001-${String(
+                reservations.length + 1,
+              ).padStart(4, '0')}`,
             };
             reservations.push(rec);
             return { data: { id }, error: null };
@@ -158,10 +160,16 @@ describe.skip('E2E happy path', () => {
     expect(reservations).toHaveLength(1);
     expect(emails[0]).toEqual({ email: 'a@b.c', reservationId: 'res-1' });
 
-    const first = await validateReservation('RES-1', 'luge_bracelet');
+    const first = await validateReservation(
+      'RES-2025-001-0001',
+      'luge_bracelet',
+    );
     expect(first).toEqual({ ok: true, reservationId: 'res-1' });
 
-    const second = await validateReservation('RES-1', 'luge_bracelet');
+    const second = await validateReservation(
+      'RES-2025-001-0001',
+      'luge_bracelet',
+    );
     expect(second).toEqual({ ok: false, reason: 'Déjà validé' });
   });
 });

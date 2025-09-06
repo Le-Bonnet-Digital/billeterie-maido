@@ -93,3 +93,14 @@
   context: |
     commit: fix inline QR attachment in reservation email
   status: pending
+- who: ChatGPT
+  when: 2025-09-06T22:45:00Z
+  topic: Validation code format
+  did: |
+    - Autorisé les codes de réservation avec tirets (RES-YYYY-DDD-NNNN)
+    - Mise à jour des tests de validation
+  ask: |
+    Vérifier qu'un code comme RES-2025-249-7908 est accepté
+  context: |
+    commit: fix accept hyphenated reservation codes
+  status: pending
