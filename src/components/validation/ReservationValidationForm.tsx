@@ -117,74 +117,75 @@ export default function ReservationValidationForm({
   };
 
   // Live scan unifié (mobile & desktop)
-  const startLiveScan = async () => {
-    if (scanning) return;
+  // À mettre DANS le composant (les refs validatingRef/cooldownRef/... doivent être créées avec useRef() DANS le composant)
+const startLiveScan = async () => {
+  if (scanning) return;
 
-    try {
-      setStatus('idle');
-      setMessage('');
+  try {
+    setStatus('idle');
+    setMessage('');
 
-      const constraints: MediaStreamConstraints = {
-        audio: false,
-        video: selectedDeviceId
-          ? ({ deviceId: { exact: selectedDeviceId } } as any)
-          : {
-              facingMode: { ideal: 'environment' },
-              width: { ideal: 1280 },
-              height: { ideal: 720 },
-            },
-      };
+    const constraints: MediaStreamConstraints = {
+      audio: false,
+      video: selectedDeviceId
+        ? ({ deviceId: { exact: selectedDeviceId } } as any)
+        : {
+            facingMode: { ideal: 'environment' },
+            width: { ideal: 1280 },
+            height: { ideal: 720 },
+          },
+    };
 
-      const resultCallback = (res?: Result, err?: unknown) => {
-        if (err && !(err instanceof NotFoundException)) {
-          console.error('Decode error', err);
-        }
-        if (!res) return;
-
-        // Throttle
-        if (validatingRef.current) return;
-        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
-
-        const text = res.getText().trim();
-
-        // Consensus (N lectures identiques d'affilée)
-        if (text === consensusTextRef.current) {
-          consensusHitsRef.current += 1;
-        } else {
-          consensusTextRef.current = text;
-          consensusHitsRef.current = 1;
-        }
-        if (consensusHitsRef.current < CONSENSUS_HITS) return;
-
-        validatingRef.current = true;
-        consensusHitsRef.current = 0;
-        handleDecoded(text).finally(() => {
-          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-          validatingRef.current = false;
-        });
-      };
-
-      await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
-      setScanning(true);
-
-      // Torch support?
-      const stream = videoRef.current!.srcObject as MediaStream;
-      const track = stream?.getVideoTracks?.()[0];
-      if (track) {
-        currentTrackRef.current = track;
-        try {
-          await applyTorch(track, false); // juste pour détecter le support
-        } catch {
-          setTorchSupported(false);
-        }
+    const resultCallback = (res?: Result, err?: unknown) => {
+      if (err && !(err instanceof NotFoundException)) {
+        console.error('Decode error', err);
       }
+      if (!res) return;
 
-      toast.success('Scanner prêt. Cadrez le QR.');
-    } catch (error) {
-      console.error('Erreur caméra:', error);
-      toast.error("Impossible d'accéder à la caméra. Utilisez la photo en secours.");
+      // throttle/lock
+      if (validatingRef.current) return;
+      if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+
+      const text = res.getText().trim();
+
+      // consensus N lectures identiques
+      if (text === consensusTextRef.current) {
+        consensusHitsRef.current += 1;
+      } else {
+        consensusTextRef.current = text;
+        consensusHitsRef.current = 1;
+      }
+      if (consensusHitsRef.current < CONSENSUS_HITS) return;
+
+      validatingRef.current = true;
+      consensusHitsRef.current = 0;
+
+      handleDecoded(text).finally(() => {
+        cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+        validatingRef.current = false;
+      });
+    };
+
+    await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
+    setScanning(true);
+
+    // ⚠️ certaines devices exigent un play() manuel
+    try { await videoRef.current?.play(); } catch {}
+
+    // Torch support ?
+    const stream = videoRef.current!.srcObject as MediaStream;
+    const track = stream?.getVideoTracks?.()[0];
+    if (track) {
+      currentTrackRef.current = track;
+      try { await applyTorch(track, false); } catch { setTorchSupported(false); }
     }
-  };
+
+    toast.success('Scanner prêt. Cadrez le QR.');
+  } catch (error) {
+    console.error('Erreur caméra:', error);
+    toast.error("Impossible d'accéder à la caméra. Utilisez la photo en secours.");
+  }
+};
 
   const toggleTorch = async () => {
     const track = currentTrackRef.current;
