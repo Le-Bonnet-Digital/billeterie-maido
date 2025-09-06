@@ -105,9 +105,19 @@ describe('validateReservation', () => {
       insert: vi.fn().mockResolvedValue({ error: null }),
     };
 
+    const usersBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: { email: 'agent2@example.com' },
+        error: null,
+      }),
+    };
+
     vi.mocked(supabase.from).mockImplementation((table: string) => {
       if (table === 'reservations') return reservationsBuilder as never;
       if (table === 'reservation_validations') return validationsTable as never;
+      if (table === 'users') return usersBuilder as never;
       throw new Error('unknown table ' + table);
     });
 
@@ -117,7 +127,7 @@ describe('validateReservation', () => {
       reason: 'Déjà validé',
       validation: {
         validated_at: '2025-01-01T10:00:00.000Z',
-        validated_by: 'agent-2',
+        validated_by: 'agent2@example.com',
       },
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();

@@ -59,12 +59,19 @@ export async function validateReservation(
     .limit(1);
   if (existing && existing.length > 0) {
     const first = existing[0];
+    let who = first.validated_by as string;
+    const { data: agent } = await supabase
+      .from('users')
+      .select('email')
+      .eq('id', first.validated_by)
+      .single();
+    if (agent?.email) who = agent.email;
     return {
       ok: false,
       reason: 'Déjà validé',
       validation: {
         validated_at: first.validated_at as string,
-        validated_by: first.validated_by as string,
+        validated_by: who,
       },
     };
   }
