@@ -28,6 +28,7 @@
     "@headlessui/react": "^2.2.7",
     "@hookform/resolvers": "^5.2.1",
     "@supabase/supabase-js": "^2.56.0",
+    "@zxing/browser": "^0.1.5",
     "date-fns": "^4.1.0",
     "lucide-react": "^0.344.0",
     "qrcode": "^1.5.4",
