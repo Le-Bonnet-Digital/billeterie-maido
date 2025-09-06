@@ -12,6 +12,7 @@ interface ReservationLookup {
   id: string;
   reservation_number: string;
   payment_status: 'paid' | 'pending' | 'refunded';
+  event_activities?: { activities?: { name: string } | null } | null;
 }
 
 export async function validateReservation(
@@ -40,7 +41,9 @@ export async function validateReservation(
   // 1) Lookup reservation by reservation_number
   const { data, error } = await supabase
     .from('reservations')
-    .select('id,reservation_number,payment_status')
+    .select(
+      'id,reservation_number,payment_status,event_activities(activities(name))',
+    )
     .eq('reservation_number', trimmed)
     .single<ReservationLookup>();
 
@@ -48,7 +51,10 @@ export async function validateReservation(
   if (data.payment_status !== 'paid')
     return { ok: false, reason: 'Paiement non validé' };
 
-  // 2) Activity guard - TODO: ensure reservation matches requested activity
+  // 2) Activity guard - ensure reservation matches requested activity
+  const reservedActivity = data.event_activities?.activities?.name;
+  if (!reservedActivity || reservedActivity !== activity)
+    return { ok: false, reason: 'Réservation invalide pour cette activité' };
 
   // 3) Prevent duplicate validation (idempotent check)
   const { data: existing } = await supabase

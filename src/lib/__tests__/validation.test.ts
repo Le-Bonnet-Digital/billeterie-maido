@@ -35,6 +35,7 @@ describe('validateReservation', () => {
           id: 'res-1',
           reservation_number: 'RES-2025-001-0001',
           payment_status: 'paid',
+          event_activities: { activities: { name: 'poney' } },
         },
         error: null,
       }),
@@ -82,6 +83,7 @@ describe('validateReservation', () => {
           id: 'res-1',
           reservation_number: 'RES-2025-001-0001',
           payment_status: 'paid',
+          event_activities: { activities: { name: 'poney' } },
         },
         error: null,
       }),
@@ -129,6 +131,49 @@ describe('validateReservation', () => {
         validated_at: '2025-01-01T10:00:00.000Z',
         validated_by: 'agent2@example.com',
       },
+    });
+    expect(validationsTable.insert).not.toHaveBeenCalled();
+  });
+
+  it('rejects reservation not matching activity', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
+      id: string;
+    });
+
+    const reservationsBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'res-1',
+          reservation_number: 'RES-2025-001-0001',
+          payment_status: 'paid',
+          event_activities: { activities: { name: 'tir_arc' } },
+        },
+        error: null,
+      }),
+    };
+
+    const validationsQuery = {
+      eq: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+
+    const validationsTable = {
+      select: vi.fn().mockReturnValue(validationsQuery),
+      insert: vi.fn().mockResolvedValue({ error: null }),
+    };
+
+    vi.mocked(supabase.from).mockImplementation((table: string) => {
+      if (table === 'reservations') return reservationsBuilder as never;
+      if (table === 'reservation_validations') return validationsTable as never;
+      throw new Error('unknown table ' + table);
+    });
+
+    const res = await validateReservation('RES-2025-001-0001', 'poney');
+    expect(res).toEqual({
+      ok: false,
+      reason: 'Réservation invalide pour cette activité',
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();
   });

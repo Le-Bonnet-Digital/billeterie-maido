@@ -147,3 +147,20 @@
   context: |
     commit: fix show agent email on double validation
   status: pending
+- who: PO
+  topic: Nom agent validation
+  reply: ok
+  details: |
+    - L'email de l'agent s'affiche correctement lors d'une double validation
+  action: Implement activity guard for reservations
+- who: ChatGPT
+  when: 2025-09-07T10:00:00Z
+  topic: Activity guard validation
+  did: |
+    - Contrôle que la réservation correspond bien à l'activité demandée
+    - Ajout d'un test pour une activité non correspondante
+  ask: |
+    Vérifier qu'un billet ne peut pas être validé pour une autre activité
+  context: |
+    commit: fix ensure reservation matches activity
+  status: pending
