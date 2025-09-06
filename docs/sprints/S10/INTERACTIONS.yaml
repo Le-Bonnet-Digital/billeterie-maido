@@ -131,3 +131,19 @@
     - La page de validation affiche les détails après scan
     - Implémente la suite
   action: Implement next step
+- who: PO
+  topic: Nom agent validation
+  reply: ko
+  details: |
+    - C'est le numéro de l'agent qui est renseigné et pas son nom
+  action: Fix
+- who: ChatGPT
+  when: 2025-09-07T00:00:00Z
+  topic: Nom agent validation
+  did: |
+    - Affiche l'email de l'agent lors d'une revalidation
+  ask: |
+    Vérifier que l'email de l'agent s'affiche correctement
+  context: |
+    commit: fix show agent email on double validation
+  status: pending

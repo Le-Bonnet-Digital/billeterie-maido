@@ -98,6 +98,18 @@ state.from = (table: string) => {
         return { error: null };
       },
     };
+  if (table === 'users')
+    return {
+      select: () => ({
+        eq: (_c: string, _val: string) => ({
+          single: () =>
+            Promise.resolve({
+              data: { email: 'p@test.com' },
+              error: null,
+            }),
+        }),
+      }),
+    };
   return {} as any;
 };
 
@@ -184,7 +196,7 @@ describe.skip('E2E happy path', () => {
       reason: 'Déjà validé',
       validation: {
         validated_at: expect.any(String),
-        validated_by: 'prov-1',
+        validated_by: 'p@test.com',
       },
     });
   });
