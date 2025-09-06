@@ -57,7 +57,11 @@ describe('validateReservation', () => {
     });
 
     const res = await validateReservation('RES-2025-001-0001', 'poney');
-    expect(res).toEqual({ ok: true, reservationId: 'res-1' });
+    expect(res).toEqual({
+      ok: true,
+      reservationId: 'res-1',
+      reservationNumber: 'RES-2025-001-0001',
+    });
     expect(validationsTable.insert).toHaveBeenCalledWith({
       reservation_id: 'res-1',
       activity: 'poney',
