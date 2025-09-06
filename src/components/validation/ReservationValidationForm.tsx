@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from 'react';
+import { useRef, useState, useEffect, type FormEvent } from 'react';
 import { CheckCircle, QrCode, XCircle, Camera, Smartphone } from 'lucide-react';
 import {
   validateReservation,
