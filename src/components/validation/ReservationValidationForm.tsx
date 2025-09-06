@@ -1,24 +1,20 @@
 import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
-import { CheckCircle, QrCode, XCircle, Camera, Smartphone, Flashlight, RefreshCw, ClipboardPaste } from 'lucide-react';
+import { CheckCircle, QrCode, XCircle, Camera, Smartphone, Flashlight, RefreshCw, ClipboardPaste, ImageIcon } from 'lucide-react';
 import { BrowserMultiFormatReader, Result } from '@zxing/browser';
 import { NotFoundException } from '@zxing/library';
 import { toast } from 'react-hot-toast';
 import { validateReservation, type ValidationActivity } from '../../lib/validation';
 
-// ---- helpers détection ----
-const isMobile = () => typeof window !== 'undefined'
-  && (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)
-      || window.innerWidth <= 768);
+const isMobile = () =>
+  typeof window !== 'undefined' &&
+  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent) ||
+    window.innerWidth <= 768);
 
-const preferBackCamera = (labels: string) =>
-  /(back|rear|trás|arrière|environment)/i.test(labels);
-
-// ---- composant ----
 interface Props {
   activity: ValidationActivity;
   title: string;
   help?: string;
-  autoValidate?: boolean; // déclencher la validation automatiquement à la lecture d'un QR
+  autoValidate?: boolean;
 }
 
 export default function ReservationValidationForm({
@@ -49,41 +45,30 @@ export default function ReservationValidationForm({
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
   const currentTrackRef = useRef<MediaStreamTrack | null>(null);
 
-  useEffect(() => {
-    setIsMobileDevice(isMobile());
-  }, []);
+  useEffect(() => setIsMobileDevice(isMobile()), []);
 
-  // cleanup on unmount
   useEffect(() => {
     return () => stopScan();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // init list devices
   useEffect(() => {
     if (!navigator.mediaDevices?.enumerateDevices) return;
     (async () => {
       const mediaDevices = await navigator.mediaDevices.enumerateDevices();
       const cams = mediaDevices.filter((d) => d.kind === 'videoinput');
       setDevices(cams);
-      // pick back cam if possible
-      const back = cams.find((d) => preferBackCamera(d.label));
-      setSelectedDeviceId(back?.deviceId ?? cams[0]?.deviceId);
+      // on ne sélectionne pas ici : on laisse decodeFromConstraints choisir "environment"
     })();
   }, []);
 
-  // ZXing instance memo
   const reader = useMemo(() => {
-    if (!readerRef.current) {
-      readerRef.current = new BrowserMultiFormatReader();
-    }
-    return readerRef.current;
+    if (!readerRef.current) readerRef.current = new BrowserMultiFormatReader();
+    return readerRef.current!;
   }, []);
 
   const stopScan = () => {
-    try {
-      reader?.reset();
-    } catch {}
+    try { reader.reset(); } catch {}
     if (videoRef.current) {
       const stream = videoRef.current.srcObject as MediaStream | null;
       stream?.getTracks().forEach((t) => t.stop());
@@ -96,7 +81,6 @@ export default function ReservationValidationForm({
   };
 
   const applyTorch = async (track: MediaStreamTrack, on: boolean) => {
-    // Torch via constraints si supporté
     const cap = (track.getCapabilities?.() ?? {}) as any;
     if (cap.torch) {
       await track.applyConstraints?.({ advanced: [{ torch: on }] } as any);
@@ -107,19 +91,23 @@ export default function ReservationValidationForm({
     }
   };
 
-  const startWebcamScan = async () => {
+  // ✅ Live scan unifié (mobile & desktop)
+  const startLiveScan = async () => {
     if (scanning) return;
-    if (!selectedDeviceId && devices.length === 0) {
-      toast.error('Aucune caméra détectée');
-      return;
-    }
 
     try {
-      setStatus('idle');
-      setMessage('');
-      const deviceId = selectedDeviceId ?? devices[0]?.deviceId;
+      setStatus('idle'); setMessage('');
+      const constraints: MediaStreamConstraints = {
+        audio: false,
+        video: selectedDeviceId
+          ? { deviceId: { exact: selectedDeviceId } as any }
+          : {
+              facingMode: { ideal: 'environment' },
+              width: { ideal: 1280 },
+              height: { ideal: 720 },
+            },
+      };
 
-      // Démarre le flux + decode en continu
       const resultCallback = (res: Result | undefined, err: unknown) => {
         if (res) {
           handleDecoded(res.getText());
@@ -128,45 +116,36 @@ export default function ReservationValidationForm({
         }
       };
 
-      await reader.decodeFromVideoDevice(deviceId, videoRef.current!, resultCallback);
+      await reader.decodeFromConstraints(constraints, videoRef.current!, resultCallback);
       setScanning(true);
 
-      // Torch capability?
       const stream = videoRef.current!.srcObject as MediaStream;
-      const track = stream?.getVideoTracks?.()[0];
+      const track = stream?.getVideoTracks?.[0];
       if (track) {
         currentTrackRef.current = track;
-        try {
-          await applyTorch(track, false); // juste pour détecter support
-        } catch {
-          setTorchSupported(false);
-        }
+        try { await applyTorch(track, false); } catch { setTorchSupported(false); }
       }
 
-      toast.success('Caméra active. Présentez le QR code.');
+      toast.success('Scanner prêt. Cadrez le QR.');
     } catch (error) {
       console.error('Erreur caméra:', error);
-      toast.error("Impossible d'accéder à la caméra. Essayez la saisie manuelle ou une photo.");
+      toast.error("Impossible d'accéder à la caméra. Utilisez la photo en secours.");
     }
   };
 
   const toggleTorch = async () => {
     const track = currentTrackRef.current;
     if (!track) return;
-    try {
-      await applyTorch(track, !torchOn);
-    } catch {
-      toast.error("La torche n'est pas supportée par cet appareil.");
-    }
+    try { await applyTorch(track, !torchOn); }
+    catch { toast.error("La torche n'est pas supportée par cet appareil."); }
   };
 
-  const handleMobileCapture = () => fileInputRef.current?.click();
-
-  const handleFileCapture = async (event: React.ChangeEvent<HTMLInputElement>) => {
+  // 📷 Secours : photo
+  const openPhotoPicker = () => fileInputRef.current?.click();
+  const decodeFromPhoto = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
     try {
-      // ZXing: decodeFromImageUrl
       const url = URL.createObjectURL(file);
       const res = await reader.decodeFromImageUrl(url);
       URL.revokeObjectURL(url);
@@ -175,52 +154,38 @@ export default function ReservationValidationForm({
       console.error(e);
       toast.error('QR non reconnu sur la photo. Réessayez en cadrant mieux.');
     } finally {
-      // reset input pour pouvoir reprendre la même photo si besoin
       event.target.value = '';
     }
   };
 
   const handleDecoded = async (text: string) => {
-    // Déduplication: ignore le même code pendant 2s
     const now = Date.now();
-    if (text === lastDecoded && now - lastDecodedAt < 2000) return;
-    setLastDecoded(text);
-    setLastDecodedAt(now);
+    if (text === lastDecoded && now - lastDecodedAt < 2000) return; // anti-doublon 2s
+    setLastDecoded(text); setLastDecodedAt(now);
 
     setCode(text);
     toast.success('QR détecté');
-
-    if (autoValidate) {
-      await doValidate(text);
-    }
+    if (autoValidate) await doValidate(text);
   };
 
   const doValidate = async (value: string) => {
-    setLoading(true);
-    setStatus('idle');
-    setMessage('');
+    setLoading(true); setStatus('idle'); setMessage('');
     try {
       const res = await validateReservation(value.trim(), activity);
       if (res.ok) {
-        setStatus('success');
-        setMessage('Validation enregistrée');
+        setStatus('success'); setMessage('Validation enregistrée');
         toast.success('Validation réussie ✅');
-        // feedback haptique
         if ('vibrate' in navigator) navigator.vibrate?.(80);
-        // garder le code visible quelques instants puis effacer
         setTimeout(() => setCode(''), 300);
-        // Option: arrêter scan après succès (décommente si souhaité)
-        // stopScan();
+        // Option : stopScan(); // si tu veux fermer la caméra après succès
       } else {
-        setStatus('error');
-        setMessage(res.reason);
+        setStatus('error'); setMessage(res.reason);
         toast.error(res.reason ?? 'Billet invalide');
         if ('vibrate' in navigator) navigator.vibrate?.([20, 60, 20]);
       }
     } catch (e) {
       console.error(e);
-      setStatus('error');
-      setMessage('Erreur réseau, réessayez.');
+      setStatus('error'); setMessage('Erreur réseau, réessayez.');
       toast.error('Erreur réseau');
     } finally {
       setLoading(false);
@@ -250,7 +215,7 @@ export default function ReservationValidationForm({
           <QrCode className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         </div>
-        {/* Sélecteur caméra (desktop / devices multiples) */}
+        {/* Sélecteur caméra (desktop / multi devices) */}
         {!isMobileDevice && devices.length > 1 && (
           <div className="flex items-center gap-2">
             <select
@@ -267,7 +232,7 @@ export default function ReservationValidationForm({
             <button
               type="button"
               onClick={() => {
-                if (scanning) { stopScan(); setTimeout(() => startWebcamScan(), 50); }
+                if (scanning) { stopScan(); setTimeout(() => startLiveScan(), 50); }
               }}
               title="Basculer sur cet appareil"
               className="p-2 rounded-md border hover:bg-gray-50"
@@ -282,9 +247,7 @@ export default function ReservationValidationForm({
 
       <form onSubmit={onSubmit} className="space-y-4">
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Numéro / QR (opaque)
-          </label>
+          <label className="block text-sm font-medium text-gray-700 mb-1">Numéro / QR (opaque)</label>
 
           <div className="flex gap-2">
             <input
@@ -305,53 +268,47 @@ export default function ReservationValidationForm({
             </button>
           </div>
 
-          {/* Options de scan */}
+          {/* Actions scanner + secours photo */}
           <div className="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-2">
-            {isMobileDevice ? (
-              <>
-                <button
-                  type="button"
-                  onClick={handleMobileCapture}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 text-white rounded-md font-medium transition-colors"
-                >
-                  <Camera className="h-5 w-5" />
-                  Prendre une photo du QR
-                </button>
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  capture="environment"
-                  onChange={handleFileCapture}
-                  className="hidden"
-                />
-              </>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={startWebcamScan}
-                  disabled={scanning}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md font-medium transition-colors"
-                >
-                  <Camera className="h-5 w-5" />
-                  {scanning ? 'Caméra active' : 'Activer la webcam'}
-                </button>
+            <button
+              type="button"
+              onClick={startLiveScan}
+              disabled={scanning}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md font-medium transition-colors"
+            >
+              <Camera className="h-5 w-5" />
+              {scanning ? 'Caméra active' : 'Activer le scanner'}
+            </button>
 
-                <button
-                  type="button"
-                  onClick={stopScan}
-                  disabled={!scanning}
-                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 disabled:bg-gray-100 text-gray-800 rounded-md font-medium transition-colors"
-                >
+            <button
+              type="button"
+              onClick={scanning ? stopScan : openPhotoPicker}
+              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
+            >
+              {scanning ? (
+                <>
                   <XCircle className="h-5 w-5" />
                   Arrêter la caméra
-                </button>
-              </>
-            )}
+                </>
+              ) : (
+                <>
+                  <ImageIcon className="h-5 w-5" />
+                  Utiliser une photo (secours)
+                </>
+              )}
+            </button>
+
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              onChange={decodeFromPhoto}
+              className="hidden"
+            />
           </div>
 
-          {/* Aperçu webcam + torche */}
+          {/* Aperçu + viseur + torche */}
           {scanning && (
             <div className="mt-4 bg-black rounded-xl overflow-hidden relative">
               <video
@@ -361,12 +318,9 @@ export default function ReservationValidationForm({
                 muted
                 playsInline
               />
-              {/* Overlay UX: viseur */}
               <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
                 <div className="w-48 h-48 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
               </div>
-
-              {/* Actions overlay */}
               <div className="absolute bottom-2 right-2 flex gap-2">
                 {torchSupported && (
                   <button
@@ -393,46 +347,19 @@ export default function ReservationValidationForm({
       </form>
 
       {status !== 'idle' && (
-        <div
-          className={`mt-4 p-3 rounded-md ${
-            status === 'success'
-              ? 'bg-green-50 border border-green-200'
-              : 'bg-red-50 border border-red-200'
-          }`}
-        >
-          <div
-            className={`flex items-center gap-2 ${
-              status === 'success' ? 'text-green-700' : 'text-red-700'
-            }`}
-          >
-            {status === 'success' ? (
-              <CheckCircle className="h-5 w-5 flex-shrink-0" />
-            ) : (
-              <XCircle className="h-5 w-5 flex-shrink-0" />
-            )}
+        <div className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}>
+          <div className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}>
+            {status === 'success' ? <CheckCircle className="h-5 w-5 flex-shrink-0" /> : <XCircle className="h-5 w-5 flex-shrink-0" />}
             <span className="text-sm font-medium">{message}</span>
           </div>
         </div>
       )}
 
-      {/* Tips */}
       <div className="mt-4 bg-blue-50 border border-blue-200 rounded-lg p-3">
         <div className="flex items-start gap-2">
-          {isMobileDevice ? (
-            <Smartphone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          ) : (
-            <QrCode className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />
-          )}
+          {isMobileDevice ? <Smartphone className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" /> : <QrCode className="h-4 w-4 text-blue-600 mt-0.5 flex-shrink-0" />}
           <div className="text-xs text-blue-800">
-            {isMobileDevice ? (
-              <>
-                <strong>Mobile :</strong> Prenez une photo nette du QR (bonne lumière) ou scannez avec une appli native et collez le code.
-              </>
-            ) : (
-              <>
-                <strong>Ordinateur :</strong> Activez la webcam et centrez le QR dans le viseur. Utilisez la torche si disponible.
-              </>
-            )}
+            <strong>Astuce :</strong> sur iOS/Safari, l’ouverture de la caméra exige un « tap ». Appuyez sur “Activer le scanner”, puis cadrez le QR.
           </div>
         </div>
       </div>
