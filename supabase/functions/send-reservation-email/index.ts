@@ -62,6 +62,7 @@ Deno.serve(async (req) => {
       );
     }
     const qr = await toDataURL(data.reservation_number);
+    const base64 = qr.split(',')[1];
     const resp = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -72,7 +73,14 @@ Deno.serve(async (req) => {
         from: FROM_EMAIL,
         to: email,
         subject: 'Votre billet',
-        html: `<p>Votre réservation <b>${data.reservation_number}</b> est confirmée.</p><img src="${qr}" alt="QR"/>`,
+        html: `<p>Votre réservation <b>${data.reservation_number}</b> est confirmée.</p><img src="cid:qr.png" alt="QR"/>`,
+        attachments: [
+          {
+            filename: 'qr.png',
+            content: base64,
+            cid: 'qr.png',
+          },
+        ],
       }),
     });
     if (!resp.ok) {
