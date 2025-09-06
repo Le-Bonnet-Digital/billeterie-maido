@@ -124,3 +124,10 @@
     commit: fix show reservation details after validation
     next: Si validé, prochaines tâches (20SP) — exposer plus d'infos de billet et historique de validations
   status: pending
+- who: PO
+  topic: Validation UX details
+  reply: ok
+  details: |
+    - La page de validation affiche les détails après scan
+    - Implémente la suite
+  action: Implement next step
