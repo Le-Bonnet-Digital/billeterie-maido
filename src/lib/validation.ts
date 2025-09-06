@@ -54,7 +54,7 @@ export async function validateReservation(
   const { data, error } = await supabase
     .from('reservations')
     .select(
-      'id,reservation_number,client_email,payment_status,created_at,pass(id,name),event_activities(activities(name)),time_slots(id,start_at,end_at)',
+      'id,reservation_number,client_email,payment_status,created_at,pass:passes(id,name),event_activities(activities(name)),time_slots(id,start_at,end_at)',
     )
     .eq('reservation_number', trimmed)
     .single<ReservationLookup>();
