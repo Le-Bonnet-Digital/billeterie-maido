@@ -42,9 +42,9 @@ export default function ReservationValidationForm({
       });
       if (videoRef.current) {
         videoRef.current.srcObject = stream;
+        setScanning(true);
         await videoRef.current.play();
       }
-      setScanning(true);
       // eslint-disable-next-line @typescript-eslint/no-explicit-any -- BarcodeDetector types not widely supported
       const detector = new (window as any).BarcodeDetector({
         formats: ['qr_code'],
@@ -118,7 +118,13 @@ export default function ReservationValidationForm({
           </p>
           {scanning && (
             <div className="mt-2">
-              <video ref={videoRef} className="w-full h-auto" />
+              <video
+                ref={videoRef}
+                className="w-full h-auto"
+                autoPlay
+                muted
+                playsInline
+              />
               <button
                 type="button"
                 onClick={stopScan}

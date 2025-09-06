@@ -34,3 +34,14 @@
   context: |
     commit: fix: respect request origin for Stripe URLs
   status: pending
+- who: ChatGPT
+  when: 2025-09-05T23:10:00Z
+  topic: Validation billet — prévisualisation caméra
+  did: |
+    - Analyse du formulaire de validation
+    - Ajout de l'aperçu caméra (autoplay, playsInline)
+  ask: |
+    Vérifier l'affichage de la caméra lors du scan
+  context: |
+    commit: fix ensure camera preview visible during scan
+  status: pending
