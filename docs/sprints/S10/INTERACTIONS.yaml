@@ -104,3 +104,10 @@
   context: |
     commit: fix accept hyphenated reservation codes
   status: pending
+- who: PO
+  topic: Validation code format
+  reply: ko
+  details: |
+    - Le code est accepté mais l'ux n'est pas terrible. on a l'info que le code est validé mais ça aurait était bien d'avoir des informations. De plus quand je re-scan, ça me met que le scan est déjç validé.
+    - Dans les fichiers interractions, rajoute une information indiquant la ou les prochaines tâches (20SP) à faire en cas de validation du PO
+  action: Fix
