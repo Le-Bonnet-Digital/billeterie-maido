@@ -76,3 +76,9 @@
   context: |
     commit: fix use reservation number for QR codes
   status: pending
+- who: PO
+  topic: Validation mobile & format code
+  reply: ko
+  details: |
+    - Je ne recois pas de QR code dans l'email. je recçois "Votre réservation RES-2025-249-4992 est confirmée." et juste en dessus, un petit carré qui indique qu'il n'y a pas d'image et à coté de ce petit carré il est noté "QR"
+  action: Fix
