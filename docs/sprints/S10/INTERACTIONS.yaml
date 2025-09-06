@@ -45,3 +45,15 @@
   context: |
     commit: fix ensure camera preview visible during scan
   status: pending
+- who: ChatGPT
+  when: 2025-09-06T00:00:00Z
+  topic: Validation mobile & format code
+  did: |
+    - Masqué le bouton "Arrêter la caméra" hors scan sur mobile
+    - Ajout de la validation de format pour les codes de réservation
+    - Couverture de tests pour validateReservation
+  ask: |
+    Vérifier sur mobile que le bouton stop n'apparaît qu'après activation
+  context: |
+    commit: fix improve validation UI and code checking
+  status: done

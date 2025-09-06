@@ -21,5 +21,8 @@ test('affiche le compteur de luge', async () => {
   await waitFor(() => {
     expect(screen.getByText('5')).toBeInTheDocument();
   });
-  expect(screen.getByText(/Compteur Luge aujourd'hui/)).toBeInTheDocument();
+  expect(
+    screen.getByRole('heading', { name: /Compteur Luge/i }),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/validations aujourd'hui/)).toBeInTheDocument();
 });
