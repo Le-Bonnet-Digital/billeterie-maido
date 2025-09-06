@@ -156,68 +156,92 @@ export default function ReservationValidationForm({
     }
   };
 
+  // Remplace entièrement ta fonction actuelle
   const startLiveScan = async () => {
-    if (scanning) return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error("Caméra non supportée par ce navigateur.");
-      return;
+  if (scanning) return;
+  if (!navigator.mediaDevices?.getUserMedia) {
+    toast.error("Caméra non supportée par ce navigateur.");
+    return;
+  }
+  if (!window.isSecureContext) {
+    toast.error("HTTPS requis pour accéder à la caméra.");
+    return;
+  }
+
+  try {
+    setStatus('idle');
+    setMessage('');
+
+    // 🔧 Fallbacks successifs pour éviter TypeError (params invalides)
+    const tries: MediaStreamConstraints[] = [];
+    if (selectedDeviceId && selectedDeviceId.trim() !== '') {
+      tries.push({ audio: false, video: { deviceId: { exact: selectedDeviceId } as any } });
     }
-    if (!window.isSecureContext) {
-      toast.error('HTTPS requis pour accéder à la caméra.');
-      return;
+    // back cam stricte puis souple
+    tries.push({ audio: false, video: { facingMode: { exact: 'environment' } as any } });
+    tries.push({ audio: false, video: { facingMode: { ideal: 'environment' } } });
+    // front en dernier recours puis générique
+    tries.push({ audio: false, video: { facingMode: 'user' as any } });
+    tries.push({ audio: false, video: true });
+
+    const onResult = (res?: Result, err?: unknown) => {
+      if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
+      if (!res) return;
+
+      if (validatingRef.current) return;
+      if (cooldownRef.current && Date.now() < cooldownRef.current) return;
+
+      const text = res.getText().trim();
+      if (text === consensusTextRef.current) consensusHitsRef.current += 1;
+      else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
+      if (consensusHitsRef.current < CONSENSUS_HITS) return;
+
+      validatingRef.current = true;
+      consensusHitsRef.current = 0;
+      handleDecoded(text).finally(() => {
+        cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+        validatingRef.current = false;
+      });
+    };
+
+    let started = false;
+    let lastErr: any = null;
+    for (const c of tries) {
+      try {
+        await reader.decodeFromConstraints(c, videoRef.current!, onResult);
+        started = true;
+        break;
+      } catch (e) {
+        lastErr = e;
+        try { reader.reset(); } catch {}
+      }
+    }
+    if (!started) throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
+
+    setScanning(true);
+
+    // iOS : inline playback obligatoire
+    const v = videoRef.current!;
+    v.setAttribute('playsinline', 'true');
+    v.setAttribute('muted', 'true');
+    try { await v.play(); } catch {}
+
+    // Torch si dispo
+    const stream = v.srcObject as MediaStream;
+    const track = stream?.getVideoTracks?.()[0];
+    if (track) {
+      currentTrackRef.current = track;
+      try { await applyTorch(track, false); } catch { setTorchSupported(false); }
     }
 
-    try {
-      setStatus('idle');
-      setMessage('');
+    toast.success('Scanner prêt. Cadrez le QR.');
+  } catch (err) {
+    console.error('Erreur caméra:', err);
+    const msg = explainGetUserMediaError(err);
+    toast.error(msg);
+  }
+};
 
-      // 1) Sélection de l’appareil (desktop: choisi; mobile: essayer back camera)
-      const deviceId = selectedDeviceId || (await requestPermissionAndPickDevice());
-      if (!deviceId) throw new DOMException('No camera found', 'NotFoundError');
-
-      // 2) Démarrage ZXing
-      const constraints: MediaStreamConstraints = { audio: false, video: { deviceId: { exact: deviceId } as any } };
-
-      const onResult = (res?: Result, err?: unknown) => {
-        if (err && !(err instanceof NotFoundException)) console.error('Decode error', err);
-        if (!res) return;
-
-        if (validatingRef.current) return;
-        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
-
-        const text = res.getText().trim();
-        if (text === consensusTextRef.current) consensusHitsRef.current += 1; else { consensusTextRef.current = text; consensusHitsRef.current = 1; }
-        if (consensusHitsRef.current < CONSENSUS_HITS) return;
-
-        validatingRef.current = true;
-        consensusHitsRef.current = 0;
-        handleDecoded(text).finally(() => {
-          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-          validatingRef.current = false;
-        });
-      };
-
-      await reader.decodeFromConstraints(constraints, videoRef.current!, onResult);
-      setScanning(true);
-
-      // iOS: forcer inline playback
-      const v = videoRef.current!;
-      v.setAttribute('playsinline', 'true');
-      v.setAttribute('muted', 'true');
-      try { await v.play(); } catch {}
-
-      // Torch ?
-      const stream = v.srcObject as MediaStream;
-      const track = stream?.getVideoTracks?.()[0];
-      if (track) { currentTrackRef.current = track; try { await applyTorch(track, false); } catch { setTorchSupported(false); } }
-
-      toast.success('Scanner prêt. Cadrez le QR.');
-    } catch (err) {
-      console.error('Erreur caméra:', err);
-      const msg = explainGetUserMediaError(err);
-      toast.error(msg);
-    }
-  };
 
   const toggleTorch = async () => {
     const track = currentTrackRef.current; if (!track) return;
