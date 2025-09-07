@@ -915,6 +915,9 @@ CREATE TABLE IF NOT EXISTS "public"."reservation_validations" (
     "activity" "text" NOT NULL,
     "validated_by" "uuid" NOT NULL,
     "validated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "revoked_at" timestamp with time zone,
+    "revoked_by" "uuid",
+    "revoke_reason" text,
     CONSTRAINT "reservation_validations_activity_check" CHECK (("activity" = ANY (ARRAY['poney'::"text", 'tir_arc'::"text", 'luge_bracelet'::"text"])))
 );
 
@@ -1216,6 +1219,9 @@ CREATE INDEX "idx_passes_is_park" ON "public"."passes" USING "btree" ("is_park")
 
 CREATE INDEX "idx_reservations_email" ON "public"."reservations" USING "btree" ("client_email");
 
+CREATE INDEX "idx_reservation_validations_validated_at_desc" ON "public"."reservation_validations" USING "btree" ("validated_at" DESC);
+CREATE INDEX "idx_reservation_validations_activity" ON "public"."reservation_validations" USING "btree" ("activity");
+CREATE INDEX "idx_reservation_validations_validated_by" ON "public"."reservation_validations" USING "btree" ("validated_by");
 
 
 CREATE INDEX "idx_shop_products_shop_id" ON "public"."shop_products" USING "btree" ("shop_id");
@@ -1392,6 +1398,10 @@ CREATE POLICY "Admins can manage activity resources" ON "public"."activity_resou
 
 
 
+CREATE POLICY "Staff can read reservations" ON "public"."reservations" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."users"
+  WHERE (("users"."id" = "auth"."uid"()) AND ("users"."role" = ANY (ARRAY['admin'::text,'pony_provider'::text,'archery_provider'::text,'luge_provider'::text,'atlm_collaborator'::text]))))));
+
 CREATE POLICY "Admins can manage all reservations" ON "public"."reservations" TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."users"
   WHERE (("users"."id" = "auth"."uid"()) AND ("users"."role" = 'admin'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
@@ -1471,6 +1481,10 @@ CREATE POLICY "Admins can manage time slots" ON "public"."time_slots" TO "authen
 
 
 CREATE POLICY "Admins can read all users" ON "public"."users" FOR SELECT TO "authenticated" USING ("public"."is_admin"());
+
+CREATE POLICY "Staff can read users" ON "public"."users" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."users" u
+  WHERE ((u.id = auth.uid()) AND (u.role = ANY (ARRAY['admin'::text,'pony_provider'::text,'archery_provider'::text,'luge_provider'::text,'atlm_collaborator'::text]))))));
 
 
 
@@ -1571,6 +1585,12 @@ CREATE POLICY "Providers can insert validations" ON "public"."reservation_valida
 CREATE POLICY "Providers can read validations" ON "public"."reservation_validations" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."users" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = ANY (ARRAY['admin'::"text", 'pony_provider'::"text", 'archery_provider'::"text", 'luge_provider'::"text", 'atlm_collaborator'::"text"]))))));
+
+CREATE POLICY "Admins can revoke validations" ON "public"."reservation_validations" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."users" "u"
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
+   FROM "public"."users" "u"
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text")))));
 
 
 
