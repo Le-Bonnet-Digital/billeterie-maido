@@ -1,4 +1,4 @@
--- Create view for counting today's luge validations
+-- Ensure luge_validations_today view runs with invoker rights
 DROP VIEW IF EXISTS public.luge_validations_today;
 CREATE VIEW public.luge_validations_today WITH (security_invoker = true) AS
 SELECT count(*) AS count
