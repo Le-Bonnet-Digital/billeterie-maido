@@ -223,3 +223,14 @@
   context: |
     commit: feat return activity mismatch meta
   status: pending
+- who: ChatGPT
+  when: 2025-09-08T20:00:00Z
+  topic: Auth error handling
+  did: |
+    - Empêché la création automatique d'un utilisateur si la récupération du rôle échoue
+    - Ajout d'un test pour l'erreur de récupération de rôle
+  ask: |
+    Confirmer que la connexion échoue proprement en cas d'erreur serveur
+  context: |
+    commit: fix prevent user auto-creation on role fetch error
+  status: pending
