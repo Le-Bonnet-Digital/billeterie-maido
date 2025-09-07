@@ -206,32 +206,27 @@ describe.skip('E2E happy path', () => {
       'RES-2025-001-0001',
       'luge_bracelet',
     );
-    expect(first).toEqual({
-      ok: true,
-      reservation: {
-        id: 'res-1',
-        number: 'RES-2025-001-0001',
-        client_email: expect.any(String),
-        payment_status: expect.any(String),
-        created_at: expect.any(String),
-        pass: expect.anything(),
-        activity: 'luge_bracelet',
-        time_slot: expect.anything(),
-      },
+    expect(first.status.validated).toBe(true);
+    expect(first.reservation).toMatchObject({
+      id: 'res-1',
+      number: 'RES-2025-001-0001',
+      client_email: expect.any(String),
+      payment_status: expect.any(String),
+      created_at: expect.any(String),
+      pass: expect.anything(),
+      activity_expected: 'luge_bracelet',
+      time_slot: expect.anything(),
     });
 
     const second = await validateReservation(
       'RES-2025-001-0001',
       'luge_bracelet',
     );
-    expect(second).toMatchObject({
-      ok: true,
-      alreadyValidated: true,
-      validation: {
-        validated_at: expect.any(String),
-        validated_by: expect.any(String),
-        validated_by_email: 'p@test.com',
-      },
+    expect(second.status.alreadyValidated).toBe(true);
+    expect(second.history[0]).toMatchObject({
+      validated_at: expect.any(String),
+      validated_by: expect.any(String),
+      validated_by_email: 'p@test.com',
     });
   });
 });

@@ -302,40 +302,46 @@ export default function ReservationValidationForm({
     setMessage('');
     try {
       const res = await validateReservation(value.trim(), activity);
-      if (res.ok) {
-        if (res.alreadyValidated) {
-          setStatus('error');
-          const when = new Date(res.validation.validated_at);
-          const who =
-            res.validation.validated_by_email ?? res.validation.validated_by;
-          setMessage(
-            `Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who}`,
-          );
-        } else {
-          setStatus('success');
-          const details = [
-            `Réservation: ${res.reservation.number}`,
-            `Client: ${res.reservation.client_email}`,
-            res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
-            res.reservation.time_slot
-              ? `Créneau: ${new Date(res.reservation.time_slot.slot_time).toLocaleTimeString('fr-FR')}`
-              : null,
-          ]
-            .filter(Boolean)
-            .join(' • ');
-          setMessage(`✅ Validation réussie • ${details}`);
-          if ('vibrate' in navigator) navigator.vibrate?.(60);
-          setTimeout(() => setCode(''), 250);
-        }
+      if (res.status.validated) {
+        setStatus('success');
+        const details = [
+          `Réservation: ${res.reservation.number}`,
+          `Client: ${res.reservation.client_email}`,
+          res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
+          res.reservation.time_slot
+            ? `Créneau: ${new Date(res.reservation.time_slot.slot_time).toLocaleTimeString('fr-FR')}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' • ');
+        setMessage(`✅ Validation réussie • ${details}`);
+        if ('vibrate' in navigator) navigator.vibrate?.(60);
+        setTimeout(() => setCode(''), 250);
+      } else if (res.status.alreadyValidated && res.history[0]) {
+        setStatus('error');
+        const first = res.history[0];
+        const when = new Date(first.validated_at);
+        const who = first.validated_by_email ?? first.validated_by;
+        setMessage(
+          `Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who}`,
+        );
+      } else if (res.status.wrongActivity) {
+        setStatus('error');
+        setMessage(
+          `Réservation invalide pour cette activité (billet pour ${res.reservation.activity_expected}, activité ${res.requested_activity})`,
+        );
+      } else if (res.status.unpaid) {
+        setStatus('error');
+        setMessage('Paiement non validé');
+      } else if (res.status.notFound) {
+        setStatus('error');
+        setMessage('Réservation introuvable');
+      } else if (res.status.invalid) {
+        setStatus('error');
+        setMessage('Code de réservation invalide');
       } else {
         setStatus('error');
-        if (res.meta?.reservedActivity && res.meta?.requested) {
-          setMessage(
-            `${res.reason} (billet pour ${res.meta.reservedActivity}, activité ${res.meta.requested})`,
-          );
-        } else {
-          setMessage(res.reason ?? 'Billet invalide');
-        }
+        setMessage('Billet invalide');
       }
     } catch (e) {
       console.error(e);
