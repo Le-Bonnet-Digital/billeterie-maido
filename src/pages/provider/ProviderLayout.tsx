@@ -76,17 +76,6 @@ export default function ProviderLayout() {
         'admin',
       ],
     });
-    items.push({
-      to: '/provider/history',
-      label: 'Historique',
-      roles: [
-        'pony_provider',
-        'archery_provider',
-        'luge_provider',
-        'atlm_collaborator',
-        'admin',
-      ],
-    });
     return items.filter((n) => n.roles?.includes(user.role));
   })();
 
@@ -99,7 +88,7 @@ export default function ProviderLayout() {
               <QrCode className="h-5 w-5 text-blue-600" />
               Espace Prestataire
             </div>
-
+            
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-6">
               <nav className="flex items-center gap-4">
@@ -151,8 +140,8 @@ export default function ProviderLayout() {
                     to={n.to}
                     onClick={() => setMobileMenuOpen(false)}
                     className={`px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                      location.pathname === n.to
-                        ? 'bg-blue-100 text-blue-700'
+                      location.pathname === n.to 
+                        ? 'bg-blue-100 text-blue-700' 
                         : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
                     }`}
                   >
