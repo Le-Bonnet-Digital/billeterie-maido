@@ -1,9 +1,9 @@
-> [S10 – OVERRIDE] Le périmètre MVP du Sprint 10 prévaut : US1, US2, US3, US4.  
-> Tout autre item est **hors scope** pour ce sprint (reporté).
+> ⚠️ **[S10 – OVERRIDE] Sprint 10 MVP – Seules US1..US4 sont dans le scope (le reste est reporté)**
 
 # BACKLOG — Billeterie Maïdo (MVP)
 
 > Statuts US : `Ready | Selected | InSprint | Delivered | Done | Spillover`
+> NB: Une US Delivered reste en attente de validation. Elle ne passe à Done qu’après un retour OK du PO (via INTERACTIONS.yaml lors du sprint suivant). ChatGPT ne doit donc marquer une US Done qu’avec cette confirmation.
 > Champs : `owner`, `sp`, `sprint`, `type` (feature|improvement|fix), `origin` (po|auto), `links.api`
 
 ---
