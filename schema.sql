@@ -1950,7 +1950,7 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 -- View: public.luge_validations_today
 --
 DROP VIEW IF EXISTS public.luge_validations_today;
-CREATE VIEW public.luge_validations_today AS
+CREATE VIEW public.luge_validations_today SECURITY INVOKER AS
  SELECT count(*) AS count
    FROM public.reservation_validations
   WHERE activity = 'luge_bracelet'::text
