@@ -74,31 +74,9 @@ export const signInWithEmail = async (
         .from('users')
         .select('role')
         .eq('id', data.user.id)
-        .single();
+        .maybeSingle();
 
       if (userError) {
-        if (userError.code === 'PGRST116') {
-          logger.warn(
-            'Utilisateur non trouvé dans la table users, création...',
-            {
-              error: userError,
-              query: { table: 'users', action: 'select', userId: data.user.id },
-            },
-          );
-          try {
-            return await createUser(data.user.id, data.user.email!, 'client');
-          } catch (createError) {
-            logger.error('Erreur création utilisateur', {
-              error: createError,
-              query: { table: 'users', action: 'insert', userId: data.user.id },
-            });
-            toast.error(
-              getErrorMessage(createError) || 'Erreur lors de la connexion',
-            );
-            return null;
-          }
-        }
-
         logger.error('Erreur rôle utilisateur', {
           error: userError,
           query: { table: 'users', action: 'select', userId: data.user.id },
@@ -107,6 +85,24 @@ export const signInWithEmail = async (
           getErrorMessage(userError) || 'Erreur lors de la connexion',
         );
         return null;
+      }
+
+      if (!userData) {
+        logger.warn('Utilisateur non trouvé dans la table users, création...', {
+          query: { table: 'users', action: 'select', userId: data.user.id },
+        });
+        try {
+          return await createUser(data.user.id, data.user.email!, 'client');
+        } catch (createError) {
+          logger.error('Erreur création utilisateur', {
+            error: createError,
+            query: { table: 'users', action: 'insert', userId: data.user.id },
+          });
+          toast.error(
+            getErrorMessage(createError) || 'Erreur lors de la connexion',
+          );
+          return null;
+        }
       }
 
       return {
@@ -161,9 +157,9 @@ export const getCurrentUser = async (): Promise<User | null> => {
       .from('users')
       .select('role')
       .eq('id', user.id)
-      .single();
+      .maybeSingle();
 
-    if (error) return null;
+    if (error || !userData) return null;
 
     return {
       id: user.id,
