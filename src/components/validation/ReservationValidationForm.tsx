@@ -322,8 +322,20 @@ export default function ReservationValidationForm({
         const first = res.history[0];
         const when = new Date(first.validated_at);
         const who = first.validated_by_email ?? first.validated_by;
+        const details = [
+          `Réservation: ${res.reservation.number}`,
+          `Client: ${res.reservation.client_email}`,
+          res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
+          res.reservation.time_slot
+            ? `Créneau: ${new Date(
+                res.reservation.time_slot.slot_time,
+              ).toLocaleTimeString('fr-FR')}`
+            : null,
+        ]
+          .filter(Boolean)
+          .join(' • ');
         setMessage(
-          `Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who}`,
+          `Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who} • ${details}`,
         );
       } else if (res.status.wrongActivity) {
         setStatus('error');
