@@ -245,3 +245,14 @@
   context: |
     migration: 20250905070420_luge_validations_today.sql
   status: pending
+
+- who: ChatGPT
+  when: 2025-09-07T23:30:00+00:00
+  topic: Sprint S10 — security invoker view
+  did: |
+    - Recreated luge_validations_today view with `security_invoker` option
+  ask: |
+    Ensure database lint passes for security_definer_view
+  context: |
+    migration: 20250907120000_luge_validations_today_security_invoker.sql
+  status: pending
