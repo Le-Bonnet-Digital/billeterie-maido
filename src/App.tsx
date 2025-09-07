@@ -34,7 +34,6 @@ import ArcheryValidation from './pages/provider/ArcheryValidation';
 import LugeValidation from './pages/provider/LugeValidation';
 import ProviderStats from './pages/provider/Stats';
 import LugeCounter from './pages/provider/LugeCounter';
-import ValidationHistory from './pages/provider/ValidationHistory';
 
 export default function App() {
   return (
@@ -84,7 +83,6 @@ export default function App() {
             <Route path="luge" element={<LugeValidation />} />
             <Route path="luge-counter" element={<LugeCounter />} />
             <Route path="stats" element={<ProviderStats />} />
-            <Route path="history" element={<ValidationHistory />} />
           </Route>
         </Routes>
 
