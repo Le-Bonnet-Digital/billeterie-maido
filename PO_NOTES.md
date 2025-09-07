@@ -10,8 +10,10 @@
 ## 1) INSTRUCTIONS (pour ChatGPT)
 
 - Sprint **timebox 25 min** (gel **T+22**), **branche `work`**, **PR unique** fin de sprint.
+- Réponses concises privilégiées : l’agent fournit directement les livrables attendus (code, plans, rapports) sans explications superflues, sauf si demandé.
 - Artefacts sprint à tenir à jour : `/docs/sprints/S<N>/{PLAN.md, BOARD.md, DEMO.md, REVIEW.md, RETRO.md, PREFLIGHT.md, INTERACTIONS.yaml}`.
 - **Journal d’interaction** :
+  - Chaque entrée ajoutée par ChatGPT doit suivre le gabarit ci-dessous à la lettre (mêmes champs, même ordre). En particulier, `topic` doit commencer par "Sprint S<N>" exactement, et `status: pending` pour déclencher la revue du PO.
   - Écrire dans `INTERACTIONS.yaml` une **entrée horodatée** avec : `did` (fait/livré), `ask` (tests prod PO), `context` (URLs, comptes de test), `status: pending`.
   - Le **PO** répond **dans le même fichier** (`who: PO`, `reply: OK|KO`, `details`).
   - En cas de reprise du développement, se fier au **dernier** `INTERACTIONS.yaml` (PO), qui prime sur `REVIEW.md` ou tout autre artefact.
@@ -22,6 +24,8 @@
 ---
 
 ## 2) ACTIONS_PO (à exécuter seulement si listé par ChatGPT)
+
+(ChatGPT liste ces actions sans les exécuter, le PO les réalise après coup.)
 
 - **Secrets/API** : mettre à jour `.env.local` (ex: `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, `MAIL_API_KEY`, …)
 - **Snapshot schéma** :
@@ -57,6 +61,8 @@ interaction_log: ./docs/sprints/S9/INTERACTIONS.yaml
 status: pending
 ```
 
+(ChatGPT renseigne ce YAML dès le début du sprint, avec le bon sprint_id, les highlights du plan courant et les risques identifiés.)
+
 ---
 
 ## Gabarit — `/docs/sprints/S<N>/INTERACTIONS.yaml`
@@ -91,3 +97,4 @@ status: pending
 - IMP-03: automatiser la vérification des interactions (responsable: ChatGPT, sprint cible: S5)
 - IMP-04: étendre le script de seed aux activités poney/tir à l'arc (responsable: data, sprint cible: S6)
 - IMP-05: documenter la création d'utilisateurs de test (responsable: data, sprint cible: S6)
+- IMP-06: Réduire les délais d’attente en automatisant la validation du plan (responsable: ChatGPT, sprint cible: S10)
