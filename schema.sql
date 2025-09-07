@@ -1007,6 +1007,13 @@ CREATE TABLE IF NOT EXISTS "public"."webhook_events" (
 
 ALTER TABLE "public"."webhook_events" OWNER TO "postgres";
 
+CREATE TABLE IF NOT EXISTS "public"."stripe_sessions" (
+    "id" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+ALTER TABLE "public"."stripe_sessions" OWNER TO "postgres";
+
 
 ALTER TABLE ONLY "public"."activities"
     ADD CONSTRAINT "activities_name_key" UNIQUE ("name");
@@ -1143,6 +1150,9 @@ ALTER TABLE ONLY "public"."users"
 
 ALTER TABLE ONLY "public"."webhook_events"
     ADD CONSTRAINT "webhook_events_pkey" PRIMARY KEY ("id");
+
+ALTER TABLE ONLY "public"."stripe_sessions"
+    ADD CONSTRAINT "stripe_sessions_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1606,6 +1616,8 @@ CREATE POLICY "Users can update own data" ON "public"."users" FOR UPDATE TO "aut
 
 CREATE POLICY "Allow service role" ON "public"."webhook_events" FOR ALL TO "service_role" USING (true) WITH CHECK (true);
 
+CREATE POLICY "Allow service role" ON "public"."stripe_sessions" FOR ALL TO "service_role" USING (true) WITH CHECK (true);
+
 
 
 ALTER TABLE "public"."activities" ENABLE ROW LEVEL SECURITY;
@@ -1662,6 +1674,7 @@ ALTER TABLE "public"."time_slots" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
 
 ALTER TABLE "public"."webhook_events" ENABLE ROW LEVEL SECURITY;
+ALTER TABLE "public"."stripe_sessions" ENABLE ROW LEVEL SECURITY;
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
@@ -1917,6 +1930,9 @@ GRANT ALL ON TABLE "public"."users" TO "service_role";
 GRANT ALL ON TABLE "public"."webhook_events" TO "anon";
 GRANT ALL ON TABLE "public"."webhook_events" TO "authenticated";
 GRANT ALL ON TABLE "public"."webhook_events" TO "service_role";
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "service_role";
 
 
 
