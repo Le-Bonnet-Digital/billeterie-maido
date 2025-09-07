@@ -199,3 +199,16 @@
   context: |
     commit: feat expose reserved activity mismatch
   status: pending
+- who: ChatGPT
+  when: 2025-09-08T01:00:00Z
+  topic: Validation payload normalization
+  did: |
+    - Normalise le payload de validation avec toutes les infos billet
+    - Expose des indicateurs explicites (introuvable, non payé, mauvaise activité, déjà validé, validé)
+    - Mise à jour atomique de l'historique lors de la validation
+  ask: |
+    Vérifier que le même payload complet est renvoyé dans tous les cas
+  context: |
+    commit: feat normalize reservation validation payload
+    next: Supporter l'annulation de validation (20SP)
+  status: pending
