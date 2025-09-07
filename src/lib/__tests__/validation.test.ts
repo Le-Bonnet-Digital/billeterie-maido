@@ -197,6 +197,7 @@ describe('validateReservation', () => {
     expect(res).toEqual({
       ok: false,
       reason: 'Réservation invalide pour cette activité',
+      meta: { reservedActivity: 'tir_arc', requested: 'poney' },
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();
   });

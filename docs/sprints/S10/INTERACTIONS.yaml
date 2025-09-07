@@ -187,3 +187,15 @@
   context: |
     commit: feat return previous validation info
   status: pending
+- who: ChatGPT
+  when: 2025-09-08T00:00:00Z
+  topic: Activity mismatch explicit message
+  did: |
+    - Expose l'activité réservée vs demandée dans validateReservation
+    - Affiche un message détaillé dans le formulaire de contrôle
+    - Teste le retour meta {reservedActivity, requested}
+  ask: |
+    Confirmer que le staff voit l'activité attendue lors d'un mauvais scan
+  context: |
+    commit: feat expose reserved activity mismatch
+  status: pending
