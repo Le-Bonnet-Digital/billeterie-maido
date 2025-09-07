@@ -9,9 +9,11 @@ Ce document **prévaut sur toute autre instruction** du dépôt pendant le Sprin
 - **US3 (Client)** : Paiement Stripe (Checkout) + confirmation + email avec QR code (ID opaque de réservation). Idempotence webhook Stripe obligatoire.
 - **US4 (Parc/Agent)** : Validation billet (scan caméra **ou** saisie code) ; marquer “utilisé” ; empêcher double-usage (contrainte BDD/flag).
 
+NB: Ces US, même si déjà partiellement livrées auparavant, doivent être finalisées ou reprises durant ce sprint MVP. Toute indication antérieure de complétion doit être ignorée jusqu’à revalidation complète.
+
 ## Règles de préséance
 1. Si une doc, un script ou un hook contredit ce fichier, **ce fichier gagne**.
-2. Les contrôles pre-commit peuvent être passés **uniquement** pour le bootstrap doc (`--no-verify`), puis **réactivés** pour tout code applicatif.
+2. Les contrôles pre-commit peuvent être passés **uniquement** pour le bootstrap doc (`--no-verify`), puis les tests et le lint doivent être réactivés dès la première implémentation de code applicatif.
 
 ## Livrables Sprint 10
 - Code front (PWA) et fonctions nécessaires (Stripe Checkout init + Webhook Stripe idempotent + envoi email QR).
@@ -30,3 +32,4 @@ Ce document **prévaut sur toute autre instruction** du dépôt pendant le Sprin
 ## Garde-fous
 - Ne **pas modifier** ce fichier ni la bannière en tête d’AGENTS.md.
 - Si un hook bloque au bootstrap doc, utiliser `--no-verify` **uniquement** pour l’intro des overrides, puis réactiver la qualité.
+- Ne pas diluer le temps de sprint dans des descriptions inutiles : commenter le code et les artefacts de façon concise et aller à l’essentiel (pas de texte superflu dans les PR ou documents).
