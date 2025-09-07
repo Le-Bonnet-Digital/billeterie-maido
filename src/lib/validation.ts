@@ -46,6 +46,9 @@ export interface ValidationPayload {
     alreadyValidated: boolean;
     validated: boolean;
   };
+  ok: boolean;
+  reason?: string;
+  meta?: { reservedActivity: string | null; requested: ValidationActivity };
 }
 
 export async function validateReservation(
@@ -74,6 +77,7 @@ export async function validateReservation(
       alreadyValidated: false,
       validated: false,
     },
+    ok: false,
   };
 
   const trimmed = reservationCode.trim();
@@ -179,6 +183,14 @@ export async function validateReservation(
       });
       payload.status.validated = true;
     }
+  }
+  payload.ok = payload.status.validated;
+  if (!payload.ok && payload.status.wrongActivity) {
+    payload.reason = 'Réservation invalide pour cette activité';
+    payload.meta = {
+      reservedActivity: payload.reservation.activity_expected,
+      requested: activity,
+    };
   }
 
   return payload;

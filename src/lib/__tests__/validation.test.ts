@@ -40,6 +40,7 @@ describe('validateReservation', () => {
         alreadyValidated: false,
         validated: false,
       },
+      ok: false,
     });
   });
 
@@ -137,6 +138,7 @@ describe('validateReservation', () => {
         alreadyValidated: false,
         validated: true,
       },
+      ok: true,
     });
     expect(validationsTable.insert).toHaveBeenCalledWith({
       reservation_id: 'res-1',
@@ -233,6 +235,7 @@ describe('validateReservation', () => {
         alreadyValidated: true,
         validated: false,
       },
+      ok: false,
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();
   });
@@ -299,6 +302,9 @@ describe('validateReservation', () => {
         alreadyValidated: false,
         validated: false,
       },
+      ok: false,
+      reason: 'Réservation invalide pour cette activité',
+      meta: { reservedActivity: 'tir_arc', requested: 'poney' },
     });
     expect(validationsTable.insert).not.toHaveBeenCalled();
   });

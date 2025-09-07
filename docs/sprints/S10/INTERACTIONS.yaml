@@ -212,3 +212,14 @@
     commit: feat normalize reservation validation payload
     next: Supporter l'annulation de validation (20SP)
   status: pending
+- who: ChatGPT
+  when: 2025-09-08T15:44:00Z
+  topic: Activity mismatch explicit message (API)
+  did: |
+    - Retourne ok:false et les activités réservée/demandée via meta
+    - Met à jour les tests de validation
+  ask: |
+    Confirmer que la nouvelle réponse convient
+  context: |
+    commit: feat return activity mismatch meta
+  status: pending
