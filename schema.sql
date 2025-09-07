@@ -1216,6 +1216,9 @@ CREATE INDEX "idx_passes_is_park" ON "public"."passes" USING "btree" ("is_park")
 
 CREATE INDEX "idx_reservations_email" ON "public"."reservations" USING "btree" ("client_email");
 
+CREATE INDEX "idx_reservation_validations_validated_at_desc" ON "public"."reservation_validations" USING "btree" ("validated_at" DESC);
+CREATE INDEX "idx_reservation_validations_activity" ON "public"."reservation_validations" USING "btree" ("activity");
+CREATE INDEX "idx_reservation_validations_validated_by" ON "public"."reservation_validations" USING "btree" ("validated_by");
 
 
 CREATE INDEX "idx_shop_products_shop_id" ON "public"."shop_products" USING "btree" ("shop_id");
