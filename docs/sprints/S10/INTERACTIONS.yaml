@@ -223,3 +223,14 @@
   context: |
     commit: feat return activity mismatch meta
   status: pending
+- who: ChatGPT
+  when: 2025-09-08T16:00:00Z
+  topic: Auth role lookup error
+  did: |
+    - Empêche la création d'utilisateur sur erreur serveur lors de la récupération du rôle
+    - Journalise et affiche un toast lorsque la requête de rôle échoue
+  ask: |
+    Vérifier la connexion avec un compte provoquant une erreur serveur
+  context: |
+    commit: fix handle missing user role lookup errors
+  status: pending
