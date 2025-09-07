@@ -73,10 +73,8 @@ export async function validateReservation(
 
   // 2) Activity guard - ensure reservation matches requested activity
   const reservedActivity = data.event_activities?.activities?.name;
-  if (!reservedActivity || reservedActivity !== activity)
-    return { ok: false, reason: 'Réservation invalide pour cette activité' };
-
-  // 3) Prevent duplicate validation (idempotent check)
+  
+  // 3) Check for existing validation first (before activity guard)
   const { data: existing, error: validationError } = await supabase
     .from('reservation_validations')
     .select('validated_at,validated_by')
@@ -112,7 +110,11 @@ export async function validateReservation(
     };
   }
 
-  // 4) Insert validation
+  // 4) Activity guard - ensure reservation matches requested activity
+  if (!reservedActivity || reservedActivity !== activity)
+    return { ok: false, reason: 'Réservation invalide pour cette activité' };
+
+  // 5) Insert validation
   const { error: insertError } = await supabase
     .from('reservation_validations')
     .insert({ reservation_id: data.id, activity, validated_by: me.id });

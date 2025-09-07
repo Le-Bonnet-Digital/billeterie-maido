@@ -306,14 +306,17 @@ export default function ReservationValidationForm({
         if (res.alreadyValidated) {
           setStatus('error');
           const when = new Date(res.validation.validated_at);
-          const who =
-            res.validation.validated_by_email ?? res.validation.validated_by;
-          setMessage(
-            `Réservation ${value.trim()} déjà validée le ${when.toLocaleDateString()} à ${when.toLocaleTimeString()} par ${who}`,
-          );
+          const who = res.validation.validated_by_email ?? res.validation.validated_by;
+          setMessage(`Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who}`);
         } else {
           setStatus('success');
-          setMessage(`Réservation ${res.reservation.number} validée avec succès`);
+          const details = [
+            `Réservation: ${res.reservation.number}`,
+            `Client: ${res.reservation.client_email}`,
+            res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
+            res.reservation.time_slot ? `Créneau: ${new Date(res.reservation.time_slot.slot_time).toLocaleTimeString('fr-FR')}` : null
+          ].filter(Boolean).join(' • ');
+          setMessage(`✅ Validation réussie • ${details}`);
           if ('vibrate' in navigator) navigator.vibrate?.(60);
           setTimeout(() => setCode(''), 250);
         }
