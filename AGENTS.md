@@ -8,7 +8,7 @@ l’agent DOIT :
    puis réactiver la qualité (lint/tests) pour le code applicatif.
 
 Le périmètre MVP Sprint 10 (US1..US4) et la DoD **font foi** dans `S10_OVERRIDES.md`.
-Toute divergence = non conforme.
+Toute divergence = non conforme. Même si le backlog indique ces US comme livrées précédemment, elles sont à implémenter/réviser intégralement dans ce sprint MVP.
 
 ---
 
@@ -22,7 +22,7 @@ Ce dépôt suit un mode de développement agile timeboxé. À chaque commande �
 
 ## 2. Préparation de l’environnement
 
-Avant d’exécuter des tâches, l’agent doit disposer de toutes les dépendances et outils nécessaires, car l’environnement Codex n’a **pas accès à Internet**. Les dépendances doivent être installées dans le script de configuration (`Setup script` dans l’interface Codex) par le PO. Exemple :
+Avant d’exécuter des tâches, l’agent doit disposer de toutes les dépendances et outils nécessaires, car l’environnement Codex n’a **pas accès à Internet**. Les dépendances doivent être installées dans le script de configuration (`Setup script` dans l’interface Codex) par le PO. L’agent n’essaie pas d’installer de dépendances durant le sprint ; en cas de manque, il le signale dans `INTERACTIONS.yaml`. Exemple :
 
 ```bash
 # Exemple de script d’installation (à adapter)
@@ -64,6 +64,8 @@ Ajoutez ici les sections spécifiques à vos microservices ou à votre architect
 - **PR** : une seule Pull Request par sprint (`work → main`) intitulée `Sprint S : <objectif principal>`.
 - **Hook pre-commit** : le hook `.husky/pre-commit` doit réussir avant chaque commit. Il vérifie la présence des artefacts de sprint (`PLAN.md`, `BOARD.md`, `DEMO.md`, `REVIEW.md`, `RETRO.md`, `PREFLIGHT.md`, `INTERACTIONS.yaml`), le respect des conventions et la mise à jour de `schema.sql`. Un mode `ALLOW_EMPTY_SPRINT` permet de committer des fichiers de documentation sans lancer tous les tests.
 
+Pour committer les artefacts de documentation en cours de sprint sans lancer tous les tests, l’agent peut utiliser le mode `ALLOW_EMPTY_SPRINT` (ex : `git commit -m "docs: add PLAN" --no-verify`). Veiller à relancer les tests sur le commit final de code.
+
 ## 6. Sprint process
 
 Les détails du déroulement d’un sprint sont décrits dans `docs/process/SPRINT_PROCESS.md`. Ce fichier présente les étapes : pré‑vol, intégration du feedback, collecte et grooming du backlog, estimation, planification, exécution des différentes gates, checkpoint T+22, clôture et génération de la PR. Référez‑vous à ce document pendant le sprint.
@@ -87,4 +89,4 @@ Un script de validation (`npm run validate:backlog`) doit s’assurer que toutes
 
 ## 9. Hiérarchie des instructions
 
-Les instructions de ce fichier s’appliquent à l’ensemble du dépôt. Des fichiers `AGENTS.md` plus profonds (ex. pour chaque microservice) peuvent préciser des règles supplémentaires et prévalent sur celles‑ci en cas de conflit. Les instructions directes du PO (dans `PO_NOTES.md` ou via la commande) priment sur toute instruction écrite.
+Les instructions de ce fichier s’appliquent à l’ensemble du dépôt. Des fichiers `AGENTS.md` plus profonds (ex. pour chaque microservice) peuvent préciser des règles supplémentaires et prévalent sur celles‑ci en cas de conflit. Les instructions directes du PO (dans `PO_NOTES.md` ou via la commande) priment sur toute instruction écrite. En cas de silence du PO à une étape requérant une validation (plan, pause checkpoint…), l’agent peut supposer un accord tacite après un délai raisonnable et poursuivre, afin de ne pas bloquer le sprint.
