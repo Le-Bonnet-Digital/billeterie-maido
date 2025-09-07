@@ -234,3 +234,14 @@
   context: |
     commit: fix handle missing user role lookup errors
   status: pending
+
+- who: ChatGPT
+  when: 2025-09-07T22:06:07+00:00
+  topic: Sprint S10 — security invoker view
+  did: |
+    - Marked luge_validations_today view as SECURITY INVOKER
+  ask: |
+    Confirm migration applied and linter reports no security_definer_view
+  context: |
+    migration: 20250905070420_luge_validations_today.sql
+  status: pending
