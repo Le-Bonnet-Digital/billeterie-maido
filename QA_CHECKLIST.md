@@ -1,6 +1,8 @@
 # QA_CHECKLIST — Billeterie Maïdo
 
-> À cocher avant de passer une US en **Done** et à la clôture du sprint. Les preuves sont stockées dans `/docs/sprints/S<N>/*` et/ou les dossiers de tests.
+> À cocher avant de passer une US en **Done** et à la clôture du sprint (ChatGPT parcourra cette liste en fin de sprint pour s’assurer d’avoir couvert chaque point ou apporter des preuves dans les artefacts). Les preuves sont stockées dans `/docs/sprints/S<N>/*` et/ou les dossiers de tests.
+
+Les items marqués d’un astérisque (\*) sont non prioritaires pour le MVP s’ils ne sont pas configurés.
 
 ---
 
@@ -36,8 +38,8 @@
 - [ ] Responsive (desktop/tablette/mobile)
 - [ ] États complets : `loading / empty / error / success`
 - [ ] i18n si prévu (fr par défaut)
-- [ ] **Lighthouse a11y & perf ≥ 90** (capture rapport jointe)
-- [ ] VRT OK (si configuré)
+- [ ] **Lighthouse a11y & perf ≥ 90** (capture rapport jointe)\*
+- [ ] VRT OK (si configuré)\*
 - [ ] Contrats consommés correctement (types sûrs)
 
 **Preuves** : captures Lighthouse, snapshots VRT, story/screenshot
@@ -49,7 +51,7 @@
 - [ ] **Happy path** bout‑en‑bout
 - [ ] **≥ 2 cas d’erreur** critiques couverts
 - [ ] Tests rôle/RLS (accès parc/prestataires/admin)
-- [ ] **Charge ciblée** (si endpoint critique)
+- [ ] **Charge ciblée** (si endpoint critique)\*
 
 **Preuves** : rapports E2E, charge
 
@@ -70,7 +72,7 @@
 
 - [ ] Logs structurés (niveau `Information`/`Warning` pertinents)
 - [ ] Traces/CorrelationId propagé
-- [ ] Métriques clés (si disponibles) : latence, erreurs, tentatives
+- [ ] Métriques clés (si disponibles) : latence, erreurs, tentatives\*
 
 **Preuves** : extraits logs/metrics, doc
 
@@ -90,7 +92,7 @@
 ## 8) Release / Changelog
 
 - [x] `CHANGELOG.md` — entrée **\[Unreleased]** renseignée
-- [ ] Version/Tag prévu si nécessaire (notes de version courtes)
+- [ ] Version/Tag prévu si nécessaire (notes de version courtes)\*
 
 **Preuves** : diff CHANGELOG, release notes
 
