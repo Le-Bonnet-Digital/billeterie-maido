@@ -139,7 +139,7 @@ export async function validateReservation(
           .from('users')
           .select('email')
           .eq('id', v.validated_by as string)
-          .single();
+          .maybeSingle();
         return {
           validated_at: v.validated_at as string,
           validated_by: v.validated_by as string,
@@ -175,7 +175,7 @@ export async function validateReservation(
         .from('users')
         .select('email')
         .eq('id', inserted.validated_by)
-        .single();
+        .maybeSingle();
       payload.history.push({
         validated_at: inserted.validated_at as string,
         validated_by: inserted.validated_by as string,

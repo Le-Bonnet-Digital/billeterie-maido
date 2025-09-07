@@ -21,15 +21,15 @@ vi.mock('../logger', () => ({ logger: loggerMock }));
 // Mock supabase
 const {
   insertMock,
-  singleMock,
+  maybeSingleMock,
   fromMock,
   signInWithPasswordMock,
   signOutMock,
   getUserMock,
 } = vi.hoisted(() => {
   const insertMock = vi.fn();
-  const singleMock = vi.fn();
-  const eqMock = vi.fn().mockReturnValue({ single: singleMock });
+  const maybeSingleMock = vi.fn();
+  const eqMock = vi.fn().mockReturnValue({ maybeSingle: maybeSingleMock });
   const selectMock = vi.fn().mockReturnValue({ eq: eqMock });
   const fromMock = vi
     .fn()
@@ -39,7 +39,7 @@ const {
   const getUserMock = vi.fn();
   return {
     insertMock,
-    singleMock,
+    maybeSingleMock,
     fromMock,
     signInWithPasswordMock,
     signOutMock,
@@ -61,7 +61,7 @@ vi.mock('../supabase', () => ({
 beforeEach(() => {
   vi.clearAllMocks();
   insertMock.mockReset();
-  singleMock.mockReset();
+  maybeSingleMock.mockReset();
   signInWithPasswordMock.mockReset();
   signOutMock.mockReset();
   getUserMock.mockReset();
@@ -69,7 +69,7 @@ beforeEach(() => {
   loggerMock.error.mockReset();
 
   insertMock.mockResolvedValue({ error: null });
-  singleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
+  maybeSingleMock.mockResolvedValue({ data: { role: 'admin' }, error: null });
 });
 
 describe('createUser', () => {
@@ -98,10 +98,7 @@ describe('signInWithEmail', () => {
       data: { user: { id: '2', email: 'client@test.com' } },
       error: null,
     });
-    singleMock.mockResolvedValue({
-      data: null,
-      error: { message: 'No user', code: 'PGRST116' },
-    });
+    maybeSingleMock.mockResolvedValue({ data: null, error: null });
 
     const result = await signInWithEmail('client@test.com', 'pass');
 
@@ -123,7 +120,7 @@ describe('signInWithEmail', () => {
       data: { user: { id: '3', email: 'err@test.com' } },
       error: null,
     });
-    singleMock.mockResolvedValue({
+    maybeSingleMock.mockResolvedValue({
       data: null,
       error: { message: 'server', code: '500' },
     });
@@ -188,7 +185,10 @@ describe('getCurrentUser', () => {
     getUserMock.mockResolvedValue({
       data: { user: { id: '1', email: 'u@test.com' } },
     });
-    singleMock.mockResolvedValue({ data: null, error: { message: 'fail' } });
+    maybeSingleMock.mockResolvedValue({
+      data: null,
+      error: { message: 'fail' },
+    });
 
     const result = await getCurrentUser();
 
