@@ -1604,6 +1604,8 @@ CREATE POLICY "Users can read own data" ON "public"."users" FOR SELECT TO "authe
 
 CREATE POLICY "Users can update own data" ON "public"."users" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
 
+CREATE POLICY "Allow service role" ON "public"."webhook_events" FOR ALL TO "service_role" USING (true) WITH CHECK (true);
+
 
 
 ALTER TABLE "public"."activities" ENABLE ROW LEVEL SECURITY;
@@ -1658,6 +1660,8 @@ ALTER TABLE "public"."time_slots" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
+
+ALTER TABLE "public"."webhook_events" ENABLE ROW LEVEL SECURITY;
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
