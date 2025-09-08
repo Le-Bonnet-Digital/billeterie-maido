@@ -31,6 +31,7 @@ describe('request-reservation-email edge function', () => {
     vi.clearAllMocks();
     process.env.SUPABASE_URL = 'https://example.supabase.co';
     process.env.SUPABASE_ANON_KEY = 'anon-key';
+    process.env.SUPABASE_SERVICE_ROLE_KEY = 'service-key';
     interface DenoEnv {
       get(name: string): string | undefined;
     }
@@ -72,7 +73,10 @@ describe('request-reservation-email edge function', () => {
   });
 
   it('returns 200 with found true when reservation exists and email is sent', async () => {
-    limitMock.mockResolvedValue({ data: [{ id: '1', created_at: '' }], error: null });
+    limitMock.mockResolvedValue({
+      data: [{ id: '1', created_at: '' }],
+      error: null,
+    });
     invokeMock.mockResolvedValue({ error: null });
 
     const res = await handler(
@@ -85,6 +89,7 @@ describe('request-reservation-email edge function', () => {
     await expect(res.json()).resolves.toEqual({ found: true, sent: true });
     expect(invokeMock).toHaveBeenCalledWith('send-reservation-email', {
       body: { email: 'valid@example.com', reservationId: '1' },
+      headers: { Authorization: 'Bearer service-key' },
     });
   });
 });
