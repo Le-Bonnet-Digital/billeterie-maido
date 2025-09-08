@@ -4,14 +4,11 @@ let handler: (req: Request) => Promise<Response>;
 
 const insertSessionMock = vi.fn();
 const insertReservationMock = vi.fn();
-const insertReservationActivityMock = vi.fn();
 const invokeMock = vi.fn();
 const fromMock = vi.fn((table: string) =>
   table === 'stripe_sessions'
     ? { insert: insertSessionMock }
-    : table === 'reservation_activities'
-      ? { insert: insertReservationActivityMock }
-      : { insert: insertReservationMock },
+    : { insert: insertReservationMock },
 );
 const supabaseClient = { from: fromMock, functions: { invoke: invokeMock } };
 
@@ -52,7 +49,6 @@ describe.skip('stripe-webhook edge function', () => {
       single: vi.fn().mockResolvedValue({ data: { id: 'r1' }, error: null }),
     });
     insertReservationMock.mockReturnValue({ select: selectMock });
-    insertReservationActivityMock.mockResolvedValue({ error: null });
     invokeMock.mockResolvedValue({ data: { sent: true }, error: null });
   });
 

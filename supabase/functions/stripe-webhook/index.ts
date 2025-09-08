@@ -180,19 +180,6 @@ Deno.serve(async (req: Request): Promise<Response> => {
           throw insErr ?? new Error('Insert reservation failed');
         }
 
-        if (item?.eventActivity?.id) {
-          const { error: actErr } = await sbAdmin
-            .from('reservation_activities')
-            .insert({
-              reservation_id: res.id,
-              event_activity_id: item.eventActivity.id,
-              time_slot_id: item?.timeSlot?.id ?? null,
-            });
-          if (actErr) {
-            throw actErr;
-          }
-        }
-
         // Appel explicite de la fonction d’envoi d’email (Bearer service_role)
         const r = await fetch(
           `${SUPABASE_URL}/functions/v1/send-reservation-email`,

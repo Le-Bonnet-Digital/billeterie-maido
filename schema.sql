@@ -2117,22 +2117,4 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
--- Reservation activities table
-CREATE TABLE IF NOT EXISTS "public"."reservation_activities" (
-    "id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
-    "reservation_id" uuid NOT NULL REFERENCES "public"."reservations"("id") ON DELETE CASCADE,
-    "event_activity_id" uuid NOT NULL REFERENCES "public"."event_activities"("id") ON DELETE CASCADE,
-    "time_slot_id" uuid REFERENCES "public"."time_slots"("id") ON DELETE CASCADE
-);
-ALTER TABLE "public"."reservation_activities" OWNER TO "postgres";
-ALTER TABLE "public"."reservation_activities" ENABLE ROW LEVEL SECURITY;
-DROP POLICY IF EXISTS "Admins can manage reservation activities" ON "public"."reservation_activities";
-CREATE POLICY "Admins can manage reservation activities" ON "public"."reservation_activities"
-  FOR ALL TO "authenticated"
-  USING (EXISTS (SELECT 1 FROM public.users WHERE users.id = auth.uid() AND users.role = 'admin'))
-  WITH CHECK (EXISTS (SELECT 1 FROM public.users WHERE users.id = auth.uid() AND users.role = 'admin'));
-GRANT ALL ON TABLE "public"."reservation_activities" TO "anon";
-GRANT ALL ON TABLE "public"."reservation_activities" TO "authenticated";
-GRANT ALL ON TABLE "public"."reservation_activities" TO "service_role";
-
 RESET ALL;
