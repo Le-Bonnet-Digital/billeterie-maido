@@ -3,6 +3,7 @@ set check_function_bodies = off;
 CREATE OR REPLACE FUNCTION public.calculate_total_timeslot_capacity(event_activity_uuid uuid)
  RETURNS integer
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 DECLARE
   total_capacity integer := 0;
@@ -21,6 +22,7 @@ CREATE OR REPLACE FUNCTION public.can_reserve_pass(pass_uuid uuid, quantity inte
  RETURNS boolean
  LANGUAGE plpgsql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   effective_stock integer;
@@ -35,6 +37,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.cleanup_expired_cart_items()
  RETURNS void
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 BEGIN
   DELETE FROM cart_items
@@ -46,6 +49,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.generate_reservation_number()
  RETURNS text
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 BEGIN
   RETURN 'RES' || TO_CHAR(now(), 'YYYYMMDD') || '-' || LPAD(floor(random() * 10000)::text, 4, '0');
@@ -57,6 +61,7 @@ CREATE OR REPLACE FUNCTION public.get_activity_remaining_capacity(activity_resou
  RETURNS integer
  LANGUAGE plpgsql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   total_cap integer;
@@ -86,6 +91,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_event_activity_remaining_stock(event_activity_id_param uuid)
  RETURNS integer
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 DECLARE
     total_stock integer;
@@ -135,6 +141,7 @@ CREATE OR REPLACE FUNCTION public.get_event_passes_activities_stock(event_uuid u
  RETURNS json
  LANGUAGE sql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
   SELECT json_build_object(
     'passes', COALESCE((
@@ -175,6 +182,7 @@ CREATE OR REPLACE FUNCTION public.get_parc_activities_with_variants()
  RETURNS TABLE(id uuid, name text, description text, parc_description text, icon text, category text, requires_time_slot boolean, image_url text, variants jsonb)
  LANGUAGE sql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
   select
     a.id,
@@ -212,6 +220,7 @@ CREATE OR REPLACE FUNCTION public.get_pass_activity_remaining(pass_uuid uuid, ac
  RETURNS integer
  LANGUAGE plpgsql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   max_bookings integer;
@@ -250,6 +259,7 @@ CREATE OR REPLACE FUNCTION public.get_pass_effective_remaining_stock(pass_uuid u
  RETURNS integer
  LANGUAGE plpgsql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   pass_stock integer;
@@ -271,6 +281,7 @@ CREATE OR REPLACE FUNCTION public.get_pass_max_stock_from_activities(pass_uuid u
  RETURNS integer
  LANGUAGE plpgsql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
 DECLARE
   min_activity_stock integer := 999999;
@@ -304,6 +315,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_pass_remaining_stock(pass_uuid uuid)
  RETURNS integer
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 DECLARE
   initial_stock_val integer;
@@ -342,6 +354,7 @@ CREATE OR REPLACE FUNCTION public.get_passes_with_activities(event_uuid uuid)
  RETURNS json
  LANGUAGE sql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
   select coalesce(json_agg(
     json_build_object(
@@ -382,6 +395,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.get_slot_remaining_capacity(slot_uuid uuid)
  RETURNS integer
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 DECLARE
   total_capacity integer;
@@ -415,6 +429,7 @@ CREATE OR REPLACE FUNCTION public.role()
  RETURNS text
  LANGUAGE sql
  SECURITY DEFINER
+SET search_path = public
 AS $function$
   SELECT COALESCE(
     (SELECT users.role FROM users WHERE users.id = auth.uid()),
@@ -426,6 +441,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.set_reservation_number()
  RETURNS trigger
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 BEGIN
   NEW.reservation_number := 'RES-' || EXTRACT(YEAR FROM NOW()) || '-' || LPAD(EXTRACT(DOY FROM NOW())::text, 3, '0') || '-' || LPAD((RANDOM() * 9999)::int::text, 4, '0');
@@ -437,6 +453,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.sync_activity_stock_with_timeslots(event_activity_uuid uuid)
  RETURNS void
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 DECLARE
   total_capacity integer;
@@ -467,6 +484,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.trigger_sync_activity_stock()
  RETURNS trigger
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 BEGIN
   -- Synchroniser pour l'ancienne activité (en cas de UPDATE/DELETE)
@@ -487,6 +505,7 @@ $function$
 CREATE OR REPLACE FUNCTION public.trigger_sync_on_requires_timeslot_change()
  RETURNS trigger
  LANGUAGE plpgsql
+SET search_path = public
 AS $function$
 BEGIN
   -- Si on active requires_time_slot, synchroniser avec les créneaux existants

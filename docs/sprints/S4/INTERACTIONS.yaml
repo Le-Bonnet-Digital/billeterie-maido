@@ -1,6 +1,5 @@
 # INTERACTIONS — Sprint S4
 
-
 # Journal
 
 - who: ChatGPT
@@ -17,7 +16,7 @@
 - who: PO
   topic: Sprint S4 — validation prod
   reply: ko
-  details: "Pourquoi avoir sélectionné une seul US pour ce SPRINT alros que le SPRINT précédent à terminé 3 SP en moins de 10 minutes. Il faut que la réalisation des US soit horodaté, heure de début, et heure de fin, avec les minutes et secondes, sinon on ne peut pas améliorer la vélocité. De plus, pourquoi avoir pris une nouvelle US pour ce SPRINT alors que les SPRINT précédent sont en pending ou en KO ? REvois et modifie les instructions si nécessaire pour ne plus que ça arrive. La base de vérité pour commencer chaque SPRINT ce sont les fichiers interractions et mes feedbacks"
+  details: 'Pourquoi avoir sélectionné une seul US pour ce SPRINT alros que le SPRINT précédent à terminé 3 SP en moins de 10 minutes. Il faut que la réalisation des US soit horodaté, heure de début, et heure de fin, avec les minutes et secondes, sinon on ne peut pas améliorer la vélocité. De plus, pourquoi avoir pris une nouvelle US pour ce SPRINT alors que les SPRINT précédent sont en pending ou en KO ? REvois et modifie les instructions si nécessaire pour ne plus que ça arrive. La base de vérité pour commencer chaque SPRINT ce sont les fichiers interractions et mes feedbacks'
   action: fix
 
 - who: ChatGPT
@@ -34,7 +33,7 @@
 - who: PO
   topic: Sprint S4 — ajustements suite feedback
   reply: ok
-  details: "Ces ajustements semblesnt correspondent aux attentes"
+  details: 'Ces ajustements semblesnt correspondent aux attentes'
   action: none
 
 - who: ChatGPT
@@ -47,8 +46,9 @@
     Tester en prod :
     1) Créer quelques validations Luge
     2) Ouvrir `/provider/luge-counter` et vérifier le compteur
-  context: env: http://localhost:5173 ; PR: Sprint S4
-  status: pending
+    context: |
+      env: http://localhost:5173 ; PR: Sprint S4
+    status: pending
 
 - who: PO
   topic: Sprint S4 — validation prod US-21

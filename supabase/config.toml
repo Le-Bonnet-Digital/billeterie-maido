@@ -7,3 +7,8 @@ verify_jwt = false
 # La fonction d'email reste protégée (appelée avec service_role)
 [functions.send-reservation-email]
 verify_jwt = true
+
+[auth]
+# Auth configuration
+# TODO: enable leaked password protection and multi-factor auth once supported
+

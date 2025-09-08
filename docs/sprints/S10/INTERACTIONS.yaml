@@ -338,3 +338,14 @@
   context: |
     commands: npx supabase functions list; npx supabase functions deploy create-checkout-session; npx supabase functions deploy stripe-webhook
   status: blocked
+- who: ChatGPT
+  when: 2025-09-09T08:30:00Z
+  topic: Supabase auth config keys
+  did: |
+    - Removed unsupported leaked password protection and MFA settings from config
+    - Tenté `npx supabase db push` mais la connexion à la base a échoué (SUPABASE_DB_URL manquant)
+  ask: |
+    Fournir une valeur valide pour SUPABASE_DB_URL afin d'appliquer les migrations
+  context: |
+    command: npx -y supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
+  status: blocked
