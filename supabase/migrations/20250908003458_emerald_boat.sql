@@ -35,20 +35,29 @@ BEGIN
   END IF;
 END $$;
 
--- Add RLS policy for admins to revoke validations
-CREATE POLICY IF NOT EXISTS "Admins can revoke validations"
-ON public.reservation_validations
-FOR UPDATE
-TO authenticated
-USING (
-  EXISTS (
-    SELECT 1 FROM public.users u
-    WHERE u.id = auth.uid() AND u.role = 'admin'
-  )
-)
-WITH CHECK (
-  EXISTS (
-    SELECT 1 FROM public.users u
-    WHERE u.id = auth.uid() AND u.role = 'admin'
-  )
-);
+DO $$
+BEGIN
+  IF NOT EXISTS (
+    SELECT 1 FROM pg_policies
+    WHERE schemaname = 'public'
+      AND tablename = 'reservation_validations'
+      AND policyname = 'Admins can revoke validations'
+  ) THEN
+    CREATE POLICY "Admins can revoke validations"
+      ON public.reservation_validations
+      FOR UPDATE
+      TO authenticated
+      USING (
+        EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid() AND u.role = 'admin'
+        )
+      )
+      WITH CHECK (
+        EXISTS (
+          SELECT 1 FROM public.users u
+          WHERE u.id = auth.uid() AND u.role = 'admin'
+        )
+      );
+  END IF;
+END $$;

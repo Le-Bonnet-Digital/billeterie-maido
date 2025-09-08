@@ -268,3 +268,50 @@
   context: |
     commit: fix check admin role via JWT
   status: pending
+
+- who: ChatGPT
+  when: 2025-09-08T18:00:00Z
+  topic: Revalidation after revocation
+  did: |
+    - Ignored revoked validations during scan
+    - Added partial unique index for active validations
+    - Updated tests and schema
+  ask: |
+    Vérifier la revalidation après annulation
+  context: |
+    commit: feat allow revalidation after revocation
+  status: pending
+
+- who: ChatGPT
+  when: 2025-09-08T18:05:00Z
+  topic: Migration active validation uniqueness
+  did: |
+    - Ajouté le script de migration pour l'index partiel
+  ask: |
+    Appliquer la migration sur la base
+  context: |
+    commit: chore add migration for active validation uniqueness
+  status: pending
+- who: ChatGPT
+  when: 2025-09-08T20:00:00Z
+  topic: Supabase migration push
+  did: |
+    - Tente d'exécuter `supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes`
+    - La commande `supabase` est introuvable
+  ask: |
+    Installer `supabase` CLI et fournir `SUPABASE_DB_URL` pour appliquer les migrations
+  context: |
+    command: supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
+  status: blocked
+- who: ChatGPT
+  when: 2025-09-08T21:30:00Z
+  topic: Supabase migration syntax fix
+  did: |
+    - Remplacé `CREATE POLICY IF NOT EXISTS` par un bloc DO conditionnel
+    - Tenté `npx supabase db push` mais la connexion à la base échoue
+  ask: |
+    Fournir un accès base valide pour appliquer les migrations
+  context: |
+    commit: fix ensure revoke policy migration is compatible with Postgres
+    command: npx supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
+  status: blocked
