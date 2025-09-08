@@ -69,9 +69,34 @@ export const signInWithEmail = async (
     if (error) throw error;
 
     if (data.user) {
-      // Récupérer le rôle depuis app_metadata pour éviter la récursion RLS
-      const userRole = data.user.app_metadata?.user_role as User['role'];
-      const role = ALLOWED_ROLES.includes(userRole) ? userRole : 'client';
+      // Récupérer le rôle depuis la table users maintenant que la récursion est résolue
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('role')
+        .eq('id', data.user.id)
+        .maybeSingle();
+
+      if (userError) {
+        logger.error('Erreur récupération rôle utilisateur', {
+          error: userError,
+          query: { table: 'users', action: 'select', userId: data.user.id },
+        });
+        toast.error('Erreur lors de la récupération du rôle utilisateur');
+        return null;
+      }
+
+      let role: User['role'] = 'client';
+      if (userData?.role && ALLOWED_ROLES.includes(userData.role)) {
+        role = userData.role;
+      } else if (!userData) {
+        // Créer l'utilisateur s'il n'existe pas dans la table users
+        logger.warn('Utilisateur absent de la table users, création automatique', {
+          userId: data.user.id,
+          email: data.user.email,
+        });
+        await createUser(data.user.id, data.user.email!, 'client');
+        role = 'client';
+      }
 
       return {
         id: data.user.id,
@@ -121,9 +146,24 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
     if (!user) return null;
 
-    // Récupérer le rôle depuis app_metadata pour éviter la récursion RLS
-    const userRole = user.app_metadata?.user_role as User['role'];
-    const role = ALLOWED_ROLES.includes(userRole) ? userRole : 'client';
+    // Récupérer le rôle depuis la table users
+    const { data: userData, error: userError } = await supabase
+      .from('users')
+      .select('role')
+      .eq('id', user.id)
+      .maybeSingle();
+
+    if (userError) {
+      logger.error('Erreur récupération rôle utilisateur', {
+        error: userError,
+        query: { table: 'users', action: 'select', userId: user.id },
+      });
+      return null;
+    }
+
+    const role = userData?.role && ALLOWED_ROLES.includes(userData.role) 
+      ? userData.role 
+      : 'client';
 
     return {
       id: user.id,
