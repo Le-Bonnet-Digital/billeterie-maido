@@ -69,46 +69,14 @@ export const signInWithEmail = async (
     if (error) throw error;
 
     if (data.user) {
-      // Récupérer le rôle de l'utilisateur
-      const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('role')
-        .eq('id', data.user.id)
-        .maybeSingle();
-
-      if (userError) {
-        logger.error('Erreur rôle utilisateur', {
-          error: userError,
-          query: { table: 'users', action: 'select', userId: data.user.id },
-        });
-        toast.error(
-          getErrorMessage(userError) || 'Erreur lors de la connexion',
-        );
-        return null;
-      }
-
-      if (!userData) {
-        logger.warn('Utilisateur non trouvé dans la table users, création...', {
-          query: { table: 'users', action: 'select', userId: data.user.id },
-        });
-        try {
-          return await createUser(data.user.id, data.user.email!, 'client');
-        } catch (createError) {
-          logger.error('Erreur création utilisateur', {
-            error: createError,
-            query: { table: 'users', action: 'insert', userId: data.user.id },
-          });
-          toast.error(
-            getErrorMessage(createError) || 'Erreur lors de la connexion',
-          );
-          return null;
-        }
-      }
+      // Récupérer le rôle depuis app_metadata pour éviter la récursion RLS
+      const userRole = data.user.app_metadata?.user_role as User['role'];
+      const role = ALLOWED_ROLES.includes(userRole) ? userRole : 'client';
 
       return {
         id: data.user.id,
         email: data.user.email!,
-        role: userData.role,
+        role,
       };
     }
 
@@ -153,23 +121,19 @@ export const getCurrentUser = async (): Promise<User | null> => {
 
     if (!user) return null;
 
-    const { data: userData, error } = await supabase
-      .from('users')
-      .select('role')
-      .eq('id', user.id)
-      .maybeSingle();
-
-    if (error || !userData) return null;
+    // Récupérer le rôle depuis app_metadata pour éviter la récursion RLS
+    const userRole = user.app_metadata?.user_role as User['role'];
+    const role = ALLOWED_ROLES.includes(userRole) ? userRole : 'client';
 
     return {
       id: user.id,
       email: user.email!,
-      role: userData.role,
+      role,
     };
   } catch (err) {
     logger.error('Erreur récupération utilisateur', {
       error: err,
-      query: { table: 'users', action: 'select' },
+      query: { action: 'auth.getUser' },
     });
     return null;
   }
