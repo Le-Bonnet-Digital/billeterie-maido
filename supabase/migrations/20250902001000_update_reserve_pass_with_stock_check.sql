@@ -82,4 +82,4 @@ BEGIN
     VALUES (cart_item_uuid, act.event_activity_id, act.time_slot_id);
   END LOOP;
 END;
-$$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER SET search_path = public;
