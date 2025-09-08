@@ -404,3 +404,14 @@
   context: |
     migration: supabase/migrations/20250909133000_cleanup_null_reservations.sql
   status: blocked
+- who: ChatGPT
+  when: 2025-09-08T23:07:43Z
+  topic: Edge functions deployment
+  did: |
+    - Removed outdated deno.lock causing deployment failure
+    - Lint and tests executed (tests failing)
+  ask: |
+    Confirm functions deploy without lockfile version errors
+  context: |
+    commit: fix: remove incompatible deno lockfile
+  status: pending
