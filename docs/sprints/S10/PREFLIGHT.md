@@ -27,8 +27,8 @@
 
 ## 5) Schéma SQL (`schema.sql`)
 
-- **RefreshedAt**: 2025-09-05T00:00:00Z
-- Ou justification `unchanged`: 
+- **RefreshedAt**: 2025-09-08T17:00:00Z
+- Ou justification `unchanged`:
 
 ## 6) Sécurité
 

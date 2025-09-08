@@ -486,9 +486,7 @@ CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
     LANGUAGE "sql" STABLE SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'
-  );
+  SELECT coalesce(auth.jwt() ->> 'role', '') = 'admin';
 $$;
 
 

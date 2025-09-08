@@ -13,9 +13,7 @@ STABLE
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT EXISTS (
-    SELECT 1 FROM public.users WHERE id = auth.uid() AND role = 'admin'
-  );
+  SELECT coalesce(auth.jwt() ->> 'role', '') = 'admin';
 $$;
 -- Safe admin read policy using definer function (no recursion)
 CREATE POLICY "Admins can read all users"
