@@ -913,9 +913,6 @@ CREATE TABLE IF NOT EXISTS "public"."reservation_validations" (
     "activity" "text" NOT NULL,
     "validated_by" "uuid" NOT NULL,
     "validated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "revoked_at" timestamp with time zone,
-    "revoked_by" "uuid",
-    "revoke_reason" "text",
     CONSTRAINT "reservation_validations_activity_check" CHECK (("activity" = ANY (ARRAY['poney'::"text", 'tir_arc'::"text", 'luge_bracelet'::"text"])))
 );
 
@@ -1099,6 +1096,9 @@ ALTER TABLE ONLY "public"."passes"
 ALTER TABLE ONLY "public"."reservation_validations"
     ADD CONSTRAINT "reservation_validations_pkey" PRIMARY KEY ("id");
 
+ALTER TABLE ONLY "public"."reservation_validations"
+    ADD CONSTRAINT "reservation_validations_reservation_activity_key" UNIQUE ("reservation_id", "activity");
+
 
 
 ALTER TABLE ONLY "public"."reservations"
@@ -1238,8 +1238,6 @@ CREATE INDEX "idx_time_slots_slot_time" ON "public"."time_slots" USING "btree" (
 
 
 
-CREATE UNIQUE INDEX "reservation_validations_unique_active" ON "public"."reservation_validations" USING "btree" ("reservation_id", "activity") WHERE ("revoked_at" IS NULL);
-
 CREATE UNIQUE INDEX "ux_webhook_events_id" ON "public"."webhook_events" USING "btree" ("id");
 
 
@@ -1348,9 +1346,6 @@ ALTER TABLE ONLY "public"."reservation_validations"
 
 ALTER TABLE ONLY "public"."reservation_validations"
     ADD CONSTRAINT "reservation_validations_validated_by_fkey" FOREIGN KEY ("validated_by") REFERENCES "public"."users"("id");
-
-ALTER TABLE ONLY "public"."reservation_validations"
-    ADD CONSTRAINT "reservation_validations_revoked_by_fkey" FOREIGN KEY ("revoked_by") REFERENCES "public"."users"("id");
 
 
 
@@ -1586,12 +1581,6 @@ CREATE POLICY "Providers can read validations" ON "public"."reservation_validati
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = ANY (ARRAY['admin'::"text", 'pony_provider'::"text", 'archery_provider'::"text", 'luge_provider'::"text", 'atlm_collaborator'::"text"]))))));
 
 
-
-CREATE POLICY "Admins can revoke validations" ON "public"."reservation_validations" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM "public"."users" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
-   FROM "public"."users" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text")))));
 
 CREATE POLICY "Public can read shop products" ON "public"."shop_products" FOR SELECT USING (true);
 

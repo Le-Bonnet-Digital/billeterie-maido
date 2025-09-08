@@ -72,7 +72,6 @@ describe('validateReservation', () => {
 
     const validationsQuery = {
       eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
       then: vi.fn((resolve) => resolve({ data: [], error: null })),
     };
 
@@ -95,7 +94,7 @@ describe('validateReservation', () => {
     const usersBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      single: vi.fn().mockResolvedValue({
         data: { email: 'agent1@example.com' },
         error: null,
       }),
@@ -171,7 +170,6 @@ describe('validateReservation', () => {
 
     const validationsQuery = {
       eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
       then: vi.fn((resolve) =>
         resolve({
           data: [
@@ -196,7 +194,7 @@ describe('validateReservation', () => {
     const usersBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
+      single: vi.fn().mockResolvedValue({
         data: { email: 'agent2@example.com' },
         error: null,
       }),
@@ -242,86 +240,6 @@ describe('validateReservation', () => {
     expect(validationsTable.insert).not.toHaveBeenCalled();
   });
 
-  it('allows re-validation after a revoked validation', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
-      id: string;
-    });
-
-    const reservationsBuilder = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          id: 'res-1',
-          reservation_number: 'RES-2025-001-0001',
-          client_email: 'c@example.com',
-          payment_status: 'paid',
-          created_at: '2025-01-01T09:00:00.000Z',
-          pass: { id: 'pass-1', name: 'Pass Poney' },
-          event_activities: { activities: { name: 'poney' } },
-        },
-        error: null,
-      }),
-    };
-
-    const validationsQuery = {
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      then: vi.fn((resolve) => resolve({ data: [], error: null })),
-    };
-
-    const insertBuilder = {
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          validated_at: '2025-01-02T10:00:00.000Z',
-          validated_by: 'agent-1',
-        },
-        error: null,
-      }),
-    };
-
-    const validationsTable = {
-      select: vi.fn().mockReturnValue(validationsQuery),
-      insert: vi.fn().mockReturnValue(insertBuilder),
-    };
-
-    const usersBuilder = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { email: 'agent1@example.com' },
-        error: null,
-      }),
-    };
-
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'reservations') return reservationsBuilder as never;
-      if (table === 'reservation_validations') return validationsTable as never;
-      if (table === 'users') return usersBuilder as never;
-      throw new Error('unknown table ' + table);
-    });
-
-    const res = await validateReservation('RES-2025-001-0001', 'poney');
-    expect(validationsQuery.is).toHaveBeenCalledWith('revoked_at', null);
-    expect(res.status).toEqual({
-      invalid: false,
-      notFound: false,
-      unpaid: false,
-      wrongActivity: false,
-      alreadyValidated: false,
-      validated: true,
-    });
-    expect(res.ok).toBe(true);
-    expect(res.history).toEqual([
-      {
-        validated_at: '2025-01-02T10:00:00.000Z',
-        validated_by: 'agent-1',
-        validated_by_email: 'agent1@example.com',
-      },
-    ]);
-  });
-
   it('rejects reservation not matching activity', async () => {
     vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
       id: string;
@@ -345,7 +263,6 @@ describe('validateReservation', () => {
 
     const validationsQuery = {
       eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
       then: vi.fn((resolve) => resolve({ data: [], error: null })),
     };
 
