@@ -357,7 +357,7 @@ export type Database = {
         Returns: number;
       };
       can_reserve_pass: {
-        Args: { pass_uuid: string; quantity_requested: number };
+        Args: { pass_uuid: string; quantity: number };
         Returns: boolean;
       };
       reserve_pass_with_stock_check: {
