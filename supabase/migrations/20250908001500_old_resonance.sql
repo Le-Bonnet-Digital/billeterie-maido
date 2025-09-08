@@ -28,7 +28,8 @@ DROP POLICY IF EXISTS "Staff can read users" ON users;
 -- Drop the problematic is_admin function if it exists
 DROP FUNCTION IF EXISTS is_admin();
 
-CREATE OR REPLACE FUNCTION is_admin()
+-- Create a simple function to check if current user is admin without recursion
+CREATE OR REPLACE FUNCTION auth.is_admin()
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
@@ -74,11 +75,11 @@ CREATE POLICY "Admins can read all users"
   ON users
   FOR SELECT
   TO authenticated
-  USING (is_admin());
+  USING (auth.is_admin());
 
 CREATE POLICY "Admins can update users"
   ON users
   FOR UPDATE
   TO authenticated
-  USING (is_admin())
-  WITH CHECK (is_admin());
+  USING (auth.is_admin())
+  WITH CHECK (auth.is_admin());

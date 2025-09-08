@@ -5,7 +5,11 @@ import type { User } from '../../lib/auth';
 import {
   History,
   Search,
+  Filter,
   Download,
+  Calendar,
+  User as UserIcon,
+  Activity,
   Eye,
   Copy,
   X,
@@ -72,12 +76,9 @@ export default function ValidationHistory() {
   const [loading, setLoading] = useState(true);
   const [totalCount, setTotalCount] = useState(0);
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedValidation, setSelectedValidation] =
-    useState<ValidationRecord | null>(null);
-  const [availableAgents, setAvailableAgents] = useState<
-    Array<{ id: string; email: string }>
-  >([]);
-
+  const [selectedValidation, setSelectedValidation] = useState<ValidationRecord | null>(null);
+  const [availableAgents, setAvailableAgents] = useState<Array<{ id: string; email: string }>>([]);
+  
   const [filters, setFilters] = useState<Filters>(() => {
     const saved = localStorage.getItem('validation-history-filters');
     if (saved) {
@@ -99,12 +100,11 @@ export default function ValidationHistory() {
 
   // Debounced search
   const debouncedSearch = useMemo(
-    () =>
-      debounce((searchTerm: string) => {
-        setFilters((prev) => ({ ...prev, search: searchTerm }));
-        setCurrentPage(1);
-      }, 300),
-    [],
+    () => debounce((searchTerm: string) => {
+      setFilters(prev => ({ ...prev, search: searchTerm }));
+      setCurrentPage(1);
+    }, 300),
+    []
   );
 
   // Save filters to localStorage
@@ -127,13 +127,7 @@ export default function ValidationHistory() {
       const { data, error } = await supabase
         .from('users')
         .select('id, email')
-        .in('role', [
-          'admin',
-          'pony_provider',
-          'archery_provider',
-          'luge_provider',
-          'atlm_collaborator',
-        ])
+        .in('role', ['admin', 'pony_provider', 'archery_provider', 'luge_provider', 'atlm_collaborator'])
         .order('email');
 
       if (error) throw error;
@@ -143,19 +137,17 @@ export default function ValidationHistory() {
     }
   }, []);
 
-  const loadValidations = useCallback(
-    async (page = 1) => {
-      try {
-        setLoading(true);
+  const loadValidations = useCallback(async (page = 1) => {
+    try {
+      setLoading(true);
 
-        const offset = (page - 1) * PAGE_SIZE;
-        const startDate = startOfDay(new Date(filters.dateFrom));
-        const endDate = endOfDay(new Date(filters.dateTo));
+      const offset = (page - 1) * PAGE_SIZE;
+      const startDate = startOfDay(new Date(filters.dateFrom));
+      const endDate = endOfDay(new Date(filters.dateTo));
 
-        let query = supabase
-          .from('reservation_validations')
-          .select(
-            `
+      let query = supabase
+        .from('reservation_validations')
+        .select(`
           id,
           reservation_id,
           activity,
@@ -174,104 +166,92 @@ export default function ValidationHistory() {
           ),
           users!reservation_validations_validated_by_fkey (email),
           revoker:users!reservation_validations_revoked_by_fkey (email)
-        `,
-            { count: 'exact' },
-          )
-          .gte('validated_at', startDate.toISOString())
-          .lte('validated_at', endDate.toISOString())
-          .order('validated_at', { ascending: false })
-          .range(offset, offset + PAGE_SIZE - 1);
+        `, { count: 'exact' })
+        .gte('validated_at', startDate.toISOString())
+        .lte('validated_at', endDate.toISOString())
+        .order('validated_at', { ascending: false })
+        .range(offset, offset + PAGE_SIZE - 1);
 
-        // Apply filters
-        if (filters.activities.length > 0) {
-          query = query.in('activity', filters.activities);
-        }
-
-        if (filters.agents.length > 0) {
-          query = query.in('validated_by', filters.agents);
-        }
-
-        if (filters.status === 'validated') {
-          query = query.is('revoked_at', null);
-        } else if (filters.status === 'revoked') {
-          query = query.not('revoked_at', 'is', null);
-        }
-
-        if (filters.search.trim()) {
-          const searchTerm = filters.search.trim();
-          if (searchTerm.startsWith('RES-')) {
-            query = query.eq('reservations.reservation_number', searchTerm);
-          } else if (searchTerm.includes('@')) {
-            query = query.ilike('reservations.client_email', `%${searchTerm}%`);
-          } else {
-            // Search in both reservation number and email
-            query = query.or(
-              `reservations.reservation_number.ilike.%${searchTerm}%,reservations.client_email.ilike.%${searchTerm}%`,
-            );
-          }
-        }
-
-        const { data, error, count } = await query;
-
-        if (error) throw error;
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const shaped: ValidationRecord[] = (data || []).map((v: any) => ({
-          id: v.id,
-          reservation_id: v.reservation_id,
-          activity: v.activity,
-          validated_at: v.validated_at,
-          validated_by: v.validated_by,
-          revoked_at: v.revoked_at,
-          revoked_by: v.revoked_by,
-          revoke_reason: v.revoke_reason,
-          reservation: {
-            reservation_number: v.reservations.reservation_number,
-            client_email: v.reservations.client_email,
-            payment_status: v.reservations.payment_status,
-            created_at: v.reservations.created_at,
-            pass: v.reservations.passes
-              ? {
-                  id: v.reservations.passes.id,
-                  name: v.reservations.passes.name,
-                }
-              : null,
-            time_slot: v.reservations.time_slots
-              ? {
-                  id: v.reservations.time_slots.id,
-                  slot_time: v.reservations.time_slots.slot_time,
-                }
-              : null,
-          },
-          validator: {
-            email: v.users?.email || 'Inconnu',
-          },
-          revoker: v.revoker
-            ? {
-                email: v.revoker.email,
-              }
-            : null,
-        }));
-
-        setValidations(shaped);
-        setTotalCount(count || 0);
-
-        // Log access for audit
-        logger.info('Consultation historique validations', {
-          user_id: user?.id,
-          filters_hash: btoa(JSON.stringify(filters)).slice(0, 16),
-          count_returned: shaped.length,
-          page,
-        });
-      } catch (err) {
-        logger.error('Erreur chargement historique', { error: err });
-        toast.error("Erreur lors du chargement de l'historique");
-      } finally {
-        setLoading(false);
+      // Apply filters
+      if (filters.activities.length > 0) {
+        query = query.in('activity', filters.activities);
       }
-    },
-    [filters, user?.id],
-  );
+
+      if (filters.agents.length > 0) {
+        query = query.in('validated_by', filters.agents);
+      }
+
+      if (filters.status === 'validated') {
+        query = query.is('revoked_at', null);
+      } else if (filters.status === 'revoked') {
+        query = query.not('revoked_at', 'is', null);
+      }
+
+      if (filters.search.trim()) {
+        const searchTerm = filters.search.trim();
+        if (searchTerm.startsWith('RES-')) {
+          query = query.eq('reservations.reservation_number', searchTerm);
+        } else if (searchTerm.includes('@')) {
+          query = query.ilike('reservations.client_email', `%${searchTerm}%`);
+        } else {
+          // Search in both reservation number and email
+          query = query.or(`reservations.reservation_number.ilike.%${searchTerm}%,reservations.client_email.ilike.%${searchTerm}%`);
+        }
+      }
+
+      const { data, error, count } = await query;
+
+      if (error) throw error;
+
+      const shaped: ValidationRecord[] = (data || []).map((v: any) => ({
+        id: v.id,
+        reservation_id: v.reservation_id,
+        activity: v.activity,
+        validated_at: v.validated_at,
+        validated_by: v.validated_by,
+        revoked_at: v.revoked_at,
+        revoked_by: v.revoked_by,
+        revoke_reason: v.revoke_reason,
+        reservation: {
+          reservation_number: v.reservations.reservation_number,
+          client_email: v.reservations.client_email,
+          payment_status: v.reservations.payment_status,
+          created_at: v.reservations.created_at,
+          pass: v.reservations.passes ? {
+            id: v.reservations.passes.id,
+            name: v.reservations.passes.name,
+          } : null,
+          time_slot: v.reservations.time_slots ? {
+            id: v.reservations.time_slots.id,
+            slot_time: v.reservations.time_slots.slot_time,
+          } : null,
+        },
+        validator: {
+          email: v.users?.email || 'Inconnu',
+        },
+        revoker: v.revoker ? {
+          email: v.revoker.email,
+        } : null,
+      }));
+
+      setValidations(shaped);
+      setTotalCount(count || 0);
+
+      // Log access for audit
+      logger.info('Consultation historique validations', {
+        user_id: user?.id,
+        filters_hash: btoa(JSON.stringify(filters)).slice(0, 16),
+        count_returned: shaped.length,
+        page,
+      });
+
+    } catch (err) {
+      logger.error('Erreur chargement historique', { error: err });
+      toast.error('Erreur lors du chargement de l\'historique');
+    } finally {
+      setLoading(false);
+    }
+  }, [filters, user?.id]);
 
   useEffect(() => {
     loadUser();
@@ -284,10 +264,7 @@ export default function ValidationHistory() {
     }
   }, [user, loadAgents, loadValidations, currentPage]);
 
-  const handleRevokeValidation = async (
-    validation: ValidationRecord,
-    reason: string,
-  ) => {
+  const handleRevokeValidation = async (validation: ValidationRecord, reason: string) => {
     if (!user || user.role !== 'admin') {
       toast.error('Seuls les administrateurs peuvent annuler des validations');
       return;
@@ -310,34 +287,23 @@ export default function ValidationHistory() {
       setSelectedValidation(null);
     } catch (err) {
       logger.error('Erreur annulation validation', { error: err });
-      toast.error("Erreur lors de l'annulation");
+      toast.error('Erreur lors de l\'annulation');
     }
   };
 
   const exportCSV = () => {
     const csvContent = [
-      [
-        'Date/Heure',
-        'N° Réservation',
-        'Pass',
-        'Activité',
-        'Agent',
-        'Statut',
-        'Client',
-        'Paiement',
-      ].join(','),
-      ...validations.map((v) =>
-        [
-          format(new Date(v.validated_at), 'dd/MM/yyyy HH:mm'),
-          v.reservation.reservation_number,
-          v.reservation.pass?.name || 'N/A',
-          ACTIVITY_LABELS[v.activity],
-          v.validator.email,
-          v.revoked_at ? 'Annulée' : 'Validée',
-          v.reservation.client_email,
-          v.reservation.payment_status,
-        ].join(','),
-      ),
+      ['Date/Heure', 'N° Réservation', 'Pass', 'Activité', 'Agent', 'Statut', 'Client', 'Paiement'].join(','),
+      ...validations.map(v => [
+        format(new Date(v.validated_at), 'dd/MM/yyyy HH:mm'),
+        v.reservation.reservation_number,
+        v.reservation.pass?.name || 'N/A',
+        ACTIVITY_LABELS[v.activity],
+        v.validator.email,
+        v.revoked_at ? 'Annulée' : 'Validée',
+        v.reservation.client_email,
+        v.reservation.payment_status,
+      ].join(','))
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv' });
@@ -358,16 +324,7 @@ export default function ValidationHistory() {
 
   const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-  if (
-    !user ||
-    ![
-      'admin',
-      'pony_provider',
-      'archery_provider',
-      'luge_provider',
-      'atlm_collaborator',
-    ].includes(user.role)
-  ) {
+  if (!user || !['admin', 'pony_provider', 'archery_provider', 'luge_provider', 'atlm_collaborator'].includes(user.role)) {
     return (
       <div className="max-w-2xl mx-auto px-4 py-12 text-center">
         <History className="w-10 h-10 text-gray-400 mx-auto mb-3" />
@@ -386,12 +343,8 @@ export default function ValidationHistory() {
         <div className="flex items-center gap-3">
           <History className="h-6 w-6 text-blue-600" />
           <div>
-            <h1 className="text-2xl font-bold text-gray-900">
-              Historique des Validations
-            </h1>
-            <p className="text-gray-600">
-              Suivi chronologique des contrôles d'accès
-            </p>
+            <h1 className="text-2xl font-bold text-gray-900">Historique des Validations</h1>
+            <p className="text-gray-600">Suivi chronologique des contrôles d'accès</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -442,7 +395,7 @@ export default function ValidationHistory() {
               type="date"
               value={filters.dateFrom}
               onChange={(e) => {
-                setFilters((prev) => ({ ...prev, dateFrom: e.target.value }));
+                setFilters(prev => ({ ...prev, dateFrom: e.target.value }));
                 setCurrentPage(1);
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -457,7 +410,7 @@ export default function ValidationHistory() {
               type="date"
               value={filters.dateTo}
               onChange={(e) => {
-                setFilters((prev) => ({ ...prev, dateTo: e.target.value }));
+                setFilters(prev => ({ ...prev, dateTo: e.target.value }));
                 setCurrentPage(1);
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -480,11 +433,8 @@ export default function ValidationHistory() {
                     onChange={(e) => {
                       const newActivities = e.target.checked
                         ? [...filters.activities, key]
-                        : filters.activities.filter((a) => a !== key);
-                      setFilters((prev) => ({
-                        ...prev,
-                        activities: newActivities,
-                      }));
+                        : filters.activities.filter(a => a !== key);
+                      setFilters(prev => ({ ...prev, activities: newActivities }));
                       setCurrentPage(1);
                     }}
                     className="h-4 w-4 text-blue-600 border-gray-300 rounded"
@@ -501,7 +451,7 @@ export default function ValidationHistory() {
               Agents
             </label>
             <div className="max-h-24 overflow-y-auto space-y-2">
-              {availableAgents.map((agent) => (
+              {availableAgents.map(agent => (
                 <label key={agent.id} className="flex items-center gap-2">
                   <input
                     type="checkbox"
@@ -509,8 +459,8 @@ export default function ValidationHistory() {
                     onChange={(e) => {
                       const newAgents = e.target.checked
                         ? [...filters.agents, agent.id]
-                        : filters.agents.filter((a) => a !== agent.id);
-                      setFilters((prev) => ({ ...prev, agents: newAgents }));
+                        : filters.agents.filter(a => a !== agent.id);
+                      setFilters(prev => ({ ...prev, agents: newAgents }));
                       setCurrentPage(1);
                     }}
                     className="h-4 w-4 text-blue-600 border-gray-300 rounded"
@@ -529,10 +479,7 @@ export default function ValidationHistory() {
             <select
               value={filters.status}
               onChange={(e) => {
-                setFilters((prev) => ({
-                  ...prev,
-                  status: e.target.value as Filters['status'],
-                }));
+                setFilters(prev => ({ ...prev, status: e.target.value as Filters['status'] }));
                 setCurrentPage(1);
               }}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -545,23 +492,14 @@ export default function ValidationHistory() {
         </div>
 
         {/* Active filters display */}
-        {(filters.activities.length > 0 ||
-          filters.agents.length > 0 ||
-          filters.search ||
-          filters.status !== 'all') && (
+        {(filters.activities.length > 0 || filters.agents.length > 0 || filters.search || filters.status !== 'all') && (
           <div className="mt-4 flex flex-wrap gap-2">
-            {filters.activities.map((activity) => (
-              <span
-                key={activity}
-                className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full"
-              >
+            {filters.activities.map(activity => (
+              <span key={activity} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full">
                 {ACTIVITY_LABELS[activity as keyof typeof ACTIVITY_LABELS]}
                 <button
                   onClick={() => {
-                    setFilters((prev) => ({
-                      ...prev,
-                      activities: prev.activities.filter((a) => a !== activity),
-                    }));
+                    setFilters(prev => ({ ...prev, activities: prev.activities.filter(a => a !== activity) }));
                     setCurrentPage(1);
                   }}
                   className="hover:bg-blue-200 rounded-full p-0.5"
@@ -575,7 +513,7 @@ export default function ValidationHistory() {
                 Recherche: {filters.search}
                 <button
                   onClick={() => {
-                    setFilters((prev) => ({ ...prev, search: '' }));
+                    setFilters(prev => ({ ...prev, search: '' }));
                     setCurrentPage(1);
                   }}
                   className="hover:bg-gray-200 rounded-full p-0.5"
@@ -589,7 +527,7 @@ export default function ValidationHistory() {
                 {filters.status === 'validated' ? 'Validées' : 'Annulées'}
                 <button
                   onClick={() => {
-                    setFilters((prev) => ({ ...prev, status: 'all' }));
+                    setFilters(prev => ({ ...prev, status: 'all' }));
                     setCurrentPage(1);
                   }}
                   className="hover:bg-purple-200 rounded-full p-0.5"
@@ -610,9 +548,7 @@ export default function ValidationHistory() {
           </h2>
           {totalPages > 1 && (
             <div className="flex items-center gap-2 text-sm text-gray-600">
-              <span>
-                Page {currentPage} sur {totalPages}
-              </span>
+              <span>Page {currentPage} sur {totalPages}</span>
             </div>
           )}
         </div>
@@ -629,12 +565,9 @@ export default function ValidationHistory() {
               Aucune validation trouvée
             </h3>
             <p className="text-gray-600">
-              {filters.search ||
-              filters.activities.length > 0 ||
-              filters.agents.length > 0 ||
-              filters.status !== 'all'
+              {filters.search || filters.activities.length > 0 || filters.agents.length > 0 || filters.status !== 'all'
                 ? 'Aucune validation ne correspond à vos critères.'
-                : "Aucune validation n'a encore été effectuée."}
+                : 'Aucune validation n\'a encore été effectuée.'}
             </p>
           </div>
         ) : (
@@ -668,16 +601,9 @@ export default function ValidationHistory() {
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {validations.map((validation) => (
-                    <tr
-                      key={validation.id}
-                      className="hover:bg-gray-50 cursor-pointer"
-                    >
+                    <tr key={validation.id} className="hover:bg-gray-50 cursor-pointer">
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        {format(
-                          new Date(validation.validated_at),
-                          'dd/MM/yyyy HH:mm',
-                          { locale: fr },
-                        )}
+                        {format(new Date(validation.validated_at), 'dd/MM/yyyy HH:mm', { locale: fr })}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm font-medium text-gray-900">
@@ -728,15 +654,11 @@ export default function ValidationHistory() {
             {totalPages > 1 && (
               <div className="px-6 py-4 border-t border-gray-200 flex items-center justify-between">
                 <div className="text-sm text-gray-700">
-                  Affichage de {(currentPage - 1) * PAGE_SIZE + 1} à{' '}
-                  {Math.min(currentPage * PAGE_SIZE, totalCount)} sur{' '}
-                  {totalCount} validations
+                  Affichage de {((currentPage - 1) * PAGE_SIZE) + 1} à {Math.min(currentPage * PAGE_SIZE, totalCount)} sur {totalCount} validations
                 </div>
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.max(1, prev - 1))
-                    }
+                    onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
                     disabled={currentPage === 1}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -746,9 +668,7 @@ export default function ValidationHistory() {
                     {currentPage} / {totalPages}
                   </span>
                   <button
-                    onClick={() =>
-                      setCurrentPage((prev) => Math.min(totalPages, prev + 1))
-                    }
+                    onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
                     disabled={currentPage === totalPages}
                     className="px-3 py-1 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
                   >
@@ -781,18 +701,13 @@ interface ValidationDetailModalProps {
   onCopyReservation: (number: string) => void;
 }
 
-function ValidationDetailModal({
-  validation,
-  onClose,
-  onRevoke,
-  onCopyReservation,
-}: ValidationDetailModalProps) {
+function ValidationDetailModal({ validation, onClose, onRevoke, onCopyReservation }: ValidationDetailModalProps) {
   const [revokeReason, setRevokeReason] = useState('');
   const [showRevokeForm, setShowRevokeForm] = useState(false);
 
   const handleRevoke = () => {
     if (!revokeReason.trim()) {
-      toast.error("Veuillez saisir un motif d'annulation");
+      toast.error('Veuillez saisir un motif d\'annulation');
       return;
     }
     onRevoke?.(validation, revokeReason);
@@ -818,24 +733,14 @@ function ValidationDetailModal({
         <div className="p-6 overflow-y-auto max-h-[calc(90vh-140px)] space-y-6">
           {/* Reservation Info */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">
-              Réservation
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Réservation</h3>
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Numéro:
-                </span>
+                <span className="text-sm font-medium text-gray-700">Numéro:</span>
                 <div className="flex items-center gap-2">
-                  <span className="font-mono text-sm">
-                    {validation.reservation.reservation_number}
-                  </span>
+                  <span className="font-mono text-sm">{validation.reservation.reservation_number}</span>
                   <button
-                    onClick={() =>
-                      onCopyReservation(
-                        validation.reservation.reservation_number,
-                      )
-                    }
+                    onClick={() => onCopyReservation(validation.reservation.reservation_number)}
                     className="p-1 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded transition-colors"
                     title="Copier"
                   >
@@ -844,37 +749,23 @@ function ValidationDetailModal({
                 </div>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Client:
-                </span>
-                <span className="text-sm">
-                  {validation.reservation.client_email}
-                </span>
+                <span className="text-sm font-medium text-gray-700">Client:</span>
+                <span className="text-sm">{validation.reservation.client_email}</span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Paiement:
-                </span>
-                <span
-                  className={`text-sm px-2 py-1 rounded-full ${
-                    validation.reservation.payment_status === 'paid'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                  }`}
-                >
+                <span className="text-sm font-medium text-gray-700">Paiement:</span>
+                <span className={`text-sm px-2 py-1 rounded-full ${
+                  validation.reservation.payment_status === 'paid' 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800'
+                }`}>
                   {validation.reservation.payment_status}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Créée le:
-                </span>
+                <span className="text-sm font-medium text-gray-700">Créée le:</span>
                 <span className="text-sm">
-                  {format(
-                    new Date(validation.reservation.created_at),
-                    'dd/MM/yyyy à HH:mm',
-                    { locale: fr },
-                  )}
+                  {format(new Date(validation.reservation.created_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                 </span>
               </div>
             </div>
@@ -886,12 +777,8 @@ function ValidationDetailModal({
               <h3 className="text-lg font-medium text-gray-900 mb-3">Pass</h3>
               <div className="bg-gray-50 rounded-lg p-4">
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    Nom:
-                  </span>
-                  <span className="text-sm">
-                    {validation.reservation.pass.name}
-                  </span>
+                  <span className="text-sm font-medium text-gray-700">Nom:</span>
+                  <span className="text-sm">{validation.reservation.pass.name}</span>
                 </div>
               </div>
             </div>
@@ -902,24 +789,14 @@ function ValidationDetailModal({
             <h3 className="text-lg font-medium text-gray-900 mb-3">Activité</h3>
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Activité:
-                </span>
-                <span className="text-sm">
-                  {ACTIVITY_LABELS[validation.activity]}
-                </span>
+                <span className="text-sm font-medium text-gray-700">Activité:</span>
+                <span className="text-sm">{ACTIVITY_LABELS[validation.activity]}</span>
               </div>
               {validation.reservation.time_slot && (
                 <div className="flex justify-between">
-                  <span className="text-sm font-medium text-gray-700">
-                    Créneau:
-                  </span>
+                  <span className="text-sm font-medium text-gray-700">Créneau:</span>
                   <span className="text-sm">
-                    {format(
-                      new Date(validation.reservation.time_slot.slot_time),
-                      'dd/MM/yyyy à HH:mm',
-                      { locale: fr },
-                    )}
+                    {format(new Date(validation.reservation.time_slot.slot_time), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                   </span>
                 </div>
               )}
@@ -928,20 +805,12 @@ function ValidationDetailModal({
 
           {/* Validation Info */}
           <div>
-            <h3 className="text-lg font-medium text-gray-900 mb-3">
-              Validation
-            </h3>
+            <h3 className="text-lg font-medium text-gray-900 mb-3">Validation</h3>
             <div className="bg-gray-50 rounded-lg p-4 space-y-2">
               <div className="flex justify-between">
-                <span className="text-sm font-medium text-gray-700">
-                  Validée le:
-                </span>
+                <span className="text-sm font-medium text-gray-700">Validée le:</span>
                 <span className="text-sm">
-                  {format(
-                    new Date(validation.validated_at),
-                    'dd/MM/yyyy à HH:mm',
-                    { locale: fr },
-                  )}
+                  {format(new Date(validation.validated_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                 </span>
               </div>
               <div className="flex justify-between">
@@ -951,32 +820,20 @@ function ValidationDetailModal({
               {validation.revoked_at && (
                 <>
                   <div className="flex justify-between">
-                    <span className="text-sm font-medium text-gray-700">
-                      Annulée le:
-                    </span>
+                    <span className="text-sm font-medium text-gray-700">Annulée le:</span>
                     <span className="text-sm">
-                      {format(
-                        new Date(validation.revoked_at),
-                        'dd/MM/yyyy à HH:mm',
-                        { locale: fr },
-                      )}
+                      {format(new Date(validation.revoked_at), 'dd/MM/yyyy à HH:mm', { locale: fr })}
                     </span>
                   </div>
                   {validation.revoker && (
                     <div className="flex justify-between">
-                      <span className="text-sm font-medium text-gray-700">
-                        Annulée par:
-                      </span>
-                      <span className="text-sm">
-                        {validation.revoker.email}
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">Annulée par:</span>
+                      <span className="text-sm">{validation.revoker.email}</span>
                     </div>
                   )}
                   {validation.revoke_reason && (
                     <div>
-                      <span className="text-sm font-medium text-gray-700">
-                        Motif:
-                      </span>
+                      <span className="text-sm font-medium text-gray-700">Motif:</span>
                       <p className="text-sm mt-1 p-2 bg-red-50 border border-red-200 rounded">
                         {validation.revoke_reason}
                       </p>
