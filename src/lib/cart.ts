@@ -75,13 +75,17 @@ export async function validateStock(
   }
 
   for (const activity of activities) {
-    const activityStock = await repo.getEventActivityRemainingStock(activity.eventActivityId);
+    const activityStock = await repo.getEventActivityRemainingStock(
+      activity.eventActivityId,
+    );
     if (activityStock !== null && activityStock < quantity) {
       return 'Stock insuffisant pour cette activité';
     }
 
     if (activity.timeSlotId) {
-      const slotCapacity = await repo.getSlotRemainingCapacity(activity.timeSlotId);
+      const slotCapacity = await repo.getSlotRemainingCapacity(
+        activity.timeSlotId,
+      );
       if (slotCapacity !== null && slotCapacity < quantity) {
         return 'Plus de places disponibles pour ce créneau';
       }
@@ -113,10 +117,22 @@ export async function insertNewItem(
   passId: string | null,
   activities: { eventActivityId: string; timeSlotId?: string }[] | undefined,
   quantity: number,
-  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
+  attendee?: {
+    firstName?: string;
+    lastName?: string;
+    birthYear?: number;
+    conditionsAck?: boolean;
+  },
   product?: { type?: 'event_pass' | 'activity_variant'; id?: string },
 ): Promise<boolean> {
-  return repo.insertCartItem(sessionId, passId, activities, quantity, attendee, product);
+  return repo.insertCartItem(
+    sessionId,
+    passId,
+    activities,
+    quantity,
+    attendee,
+    product,
+  );
 }
 
 /**
@@ -125,7 +141,11 @@ export async function insertNewItem(
  * @param type Type de notification
  * @param message Message à afficher
  */
-export function notifyUser(notify: NotifyFn, type: 'success' | 'error', message: string): void {
+export function notifyUser(
+  notify: NotifyFn,
+  type: 'success' | 'error',
+  message: string,
+): void {
   notify(type, message);
 }
 
@@ -141,14 +161,23 @@ export async function addToCart(
   quantity = 1,
   repo: CartRepository = new SupabaseCartRepository(),
   notify: NotifyFn = toastNotify,
-  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
+  attendee?: {
+    firstName?: string;
+    lastName?: string;
+    birthYear?: number;
+    conditionsAck?: boolean;
+  },
 ): Promise<boolean> {
   if (!Number.isInteger(quantity) || quantity <= 0) {
     notifyUser(notify, 'error', 'La quantité doit être un entier positif');
     return false;
   }
   if (!repo.isConfigured()) {
-    notifyUser(notify, 'error', 'Configuration requise. Veuillez connecter Supabase.');
+    notifyUser(
+      notify,
+      'error',
+      'Configuration requise. Veuillez connecter Supabase.',
+    );
     return false;
   }
 
@@ -165,7 +194,10 @@ export async function addToCart(
 
     // Si des informations d'attestation/participant sont fournies ou si des activités sont associées,
     // on évite d'agréger afin de conserver les infos par billet.
-    const existingItem = attendee || activities.length > 0 ? null : await repo.findCartItem(sessionId, passId);
+    const existingItem =
+      attendee || activities.length > 0
+        ? null
+        : await repo.findCartItem(sessionId, passId);
 
     let success = false;
     if (existingItem) {
@@ -174,7 +206,15 @@ export async function addToCart(
         notifyUser(notify, 'error', 'Erreur lors de la mise à jour du panier');
       }
     } else {
-      success = await insertNewItem(repo, sessionId, passId, activities, quantity, attendee, { type: 'event_pass', id: passId });
+      success = await insertNewItem(
+        repo,
+        sessionId,
+        passId,
+        activities,
+        quantity,
+        attendee,
+        { type: 'event_pass', id: passId },
+      );
       if (!success) {
         notifyUser(notify, 'error', "Erreur lors de l'ajout au panier");
       }
@@ -208,21 +248,22 @@ export async function getCartItems(): Promise<CartItem[]> {
 
   try {
     const sessionId = getSessionId();
-    
+
     // Nettoyer les articles expirés
     try {
       await supabase.rpc('cleanup_expired_cart_items');
     } catch (cleanupError) {
       logger.warn('Could not cleanup expired cart items', {
         error: cleanupError,
-        query: { function: 'cleanup_expired_cart_items' }
+        query: { function: 'cleanup_expired_cart_items' },
       });
     }
-    
+
     const baseQuery = () =>
       supabase
         .from('cart_items')
-        .select(`
+        .select(
+          `
         id,
         quantity,
         attendee_first_name,
@@ -233,12 +274,16 @@ export async function getCartItems(): Promise<CartItem[]> {
         product_id,
         pass_id,
         time_slot_id
-      `)
+      `,
+        )
         .eq('session_id', sessionId)
         .gt('reserved_until', new Date().toISOString());
 
     // 1st attempt: with attendee fields
-    type CartRow = CartItemFromDB & { product_type?: 'event_pass' | 'activity_variant' | null; product_id?: string | null };
+    type CartRow = CartItemFromDB & {
+      product_type?: 'event_pass' | 'activity_variant' | null;
+      product_id?: string | null;
+    };
     type QueryResult<T> = { data: T[] | null; error: unknown | null };
     let res = (await baseQuery()) as QueryResult<CartRow>;
 
@@ -247,14 +292,16 @@ export async function getCartItems(): Promise<CartItem[]> {
       const simpleQuery = () =>
         supabase
           .from('cart_items')
-          .select(`
+          .select(
+            `
           id,
           quantity,
           product_type,
           product_id,
           pass_id,
           time_slot_id
-        `)
+        `,
+          )
           .eq('session_id', sessionId)
           .gt('reserved_until', new Date().toISOString());
       try {
@@ -268,17 +315,20 @@ export async function getCartItems(): Promise<CartItem[]> {
     if (error) {
       logger.error('Erreur récupération panier', {
         error,
-        query: { table: 'cart_items', action: 'select', sessionId }
+        query: { table: 'cart_items', action: 'select', sessionId },
       });
       // Si c'est une erreur de connectivité, retourner un tableau vide plutôt que de faire planter l'app
       const errorMessage = getErrorMessage(error);
-      if (errorMessage.includes('Failed to fetch') || errorMessage.includes('fetch')) {
+      if (
+        errorMessage.includes('Failed to fetch') ||
+        errorMessage.includes('fetch')
+      ) {
         logger.warn('Network error, returning empty cart', { error });
         return [];
       }
       return [];
     }
-    
+
     interface CartItemFromDB {
       id: string;
       quantity: number;
@@ -293,11 +343,13 @@ export async function getCartItems(): Promise<CartItem[]> {
     const typedData: CartRow[] = (data || []) as CartRow[];
 
     // Preload related entities without using PostgREST embeddings (avoid FK dependency)
-    const passIds = Array.from(new Set(
-      typedData
-        .filter((i) => i.product_type !== 'activity_variant' && !!i.pass_id)
-        .map((i) => i.pass_id as string)
-    ));
+    const passIds = Array.from(
+      new Set(
+        typedData
+          .filter((i) => i.product_type !== 'activity_variant' && !!i.pass_id)
+          .map((i) => i.pass_id as string),
+      ),
+    );
     const passesById: Record<string, Pass> = {};
     if (passIds.length > 0) {
       try {
@@ -306,18 +358,57 @@ export async function getCartItems(): Promise<CartItem[]> {
           .select('id, name, price, description')
           .in('id', passIds);
         (passes || []).forEach((p) => {
-          passesById[p.id] = { id: p.id, name: p.name, price: p.price, description: p.description };
+          passesById[p.id] = {
+            id: p.id,
+            name: p.name,
+            price: p.price,
+            description: p.description,
+          };
         });
       } catch {
         void 0;
       }
     }
 
-    const slotIds = Array.from(new Set(
-      typedData
-        .filter((i) => !!i.time_slot_id)
-        .map((i) => i.time_slot_id as string)
-    ));
+    // Charger les activités et créneaux associés aux items du panier
+    const cartItemIds = typedData.map((i) => i.id);
+    interface CartItemActivityRow {
+      cart_item_id: string;
+      event_activity_id: string;
+      time_slot_id: string | null;
+      event_activities: {
+        id: string;
+        activities: { id: string; name: string; icon: string };
+      };
+    }
+    let activityRows: CartItemActivityRow[] = [];
+    const activitiesByItem: Record<string, CartItemActivityRow> = {};
+    if (cartItemIds.length > 0) {
+      try {
+        const { data: actRows } = await supabase
+          .from('cart_item_activities')
+          .select(
+            `cart_item_id, event_activity_id, time_slot_id, event_activities!inner(id, activities(id, name, icon))`,
+          )
+          .in('cart_item_id', cartItemIds);
+        activityRows = (actRows || []) as unknown as CartItemActivityRow[];
+        activityRows.forEach((row) => {
+          if (!activitiesByItem[row.cart_item_id]) {
+            activitiesByItem[row.cart_item_id] = row;
+          }
+        });
+      } catch {
+        void 0;
+      }
+    }
+
+    const slotIds = Array.from(
+      new Set(
+        activityRows
+          .filter((r) => !!r.time_slot_id)
+          .map((r) => r.time_slot_id as string),
+      ),
+    );
     const slotsById: Record<string, TimeSlot> = {};
     if (slotIds.length > 0) {
       try {
@@ -335,9 +426,12 @@ export async function getCartItems(): Promise<CartItem[]> {
 
     // For activity variants, load minimal info to display in cart
     const missingVariantIds = typedData
-      .filter(i => i.product_type === 'activity_variant' && !!i.product_id)
-      .map(i => i.product_id as string);
-    const variantsById: Record<string, { id: string; name: string; price: number; description: string }> = {};
+      .filter((i) => i.product_type === 'activity_variant' && !!i.product_id)
+      .map((i) => i.product_id as string);
+    const variantsById: Record<
+      string,
+      { id: string; name: string; price: number; description: string }
+    > = {};
     if (missingVariantIds.length > 0) {
       try {
         const { data: variants } = await supabase
@@ -345,44 +439,78 @@ export async function getCartItems(): Promise<CartItem[]> {
           .select('id, name, price, activity_id')
           .in('id', missingVariantIds);
         // Fetch activity descriptions for better display (optional)
-        const actIds = Array.from(new Set((variants || []).map((v: { activity_id: string }) => v.activity_id)));
+        const actIds = Array.from(
+          new Set(
+            (variants || []).map((v: { activity_id: string }) => v.activity_id),
+          ),
+        );
         const actsById: Record<string, { description?: string }> = {};
         if (actIds.length > 0) {
           const { data: acts } = await supabase
             .from('activities')
             .select('id, parc_description')
             .in('id', actIds);
-          (acts || []).forEach((a: { id: string; parc_description: string | null }) => { actsById[a.id] = { description: a.parc_description || '' }; });
+          (acts || []).forEach(
+            (a: { id: string; parc_description: string | null }) => {
+              actsById[a.id] = { description: a.parc_description || '' };
+            },
+          );
         }
-        (variants || []).forEach((v: { id: string; name: string; price: number; activity_id: string }) => {
-          variantsById[v.id] = { id: v.id, name: v.name, price: v.price, description: actsById[v.activity_id]?.description || '' };
-        });
+        (variants || []).forEach(
+          (v: {
+            id: string;
+            name: string;
+            price: number;
+            activity_id: string;
+          }) => {
+            variantsById[v.id] = {
+              id: v.id,
+              name: v.name,
+              price: v.price,
+              description: actsById[v.activity_id]?.description || '',
+            };
+          },
+        );
       } catch {
         void 0;
       }
     }
 
-    return typedData.map(item => {
+    return typedData.map((item) => {
       let pass: Pass | undefined;
       if (item.product_type === 'activity_variant') {
         const v = variantsById[item.product_id as string];
-        if (v) pass = { id: v.id, name: v.name, price: v.price, description: v.description || '' } as Pass;
+        if (v)
+          pass = {
+            id: v.id,
+            name: v.name,
+            price: v.price,
+            description: v.description || '',
+          } as Pass;
       } else if (item.pass_id) {
         const p = passesById[item.pass_id];
         if (p) pass = p;
       }
+      const activityInfo = activitiesByItem[item.id];
       return {
         id: item.id,
         pass: pass as Pass, // expected by consumers
-        eventActivity: undefined,
-        timeSlot: item.time_slot_id ? slotsById[item.time_slot_id] : undefined,
+        eventActivity: activityInfo
+          ? {
+              id: activityInfo.event_activity_id,
+              activities: activityInfo.event_activities.activities,
+            }
+          : undefined,
+        timeSlot: activityInfo?.time_slot_id
+          ? slotsById[activityInfo.time_slot_id]
+          : undefined,
         quantity: item.quantity,
         attendee: {
           firstName: item.attendee_first_name ?? undefined,
           lastName: item.attendee_last_name ?? undefined,
           birthYear: item.attendee_birth_year ?? undefined,
           conditionsAck: item.access_conditions_ack ?? undefined,
-        }
+        },
       } as CartItem;
     });
   } catch (err) {
@@ -407,7 +535,7 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
     if (error) {
       logger.error('Erreur suppression panier', {
         error,
-        query: { table: 'cart_items', action: 'delete', id: cartItemId }
+        query: { table: 'cart_items', action: 'delete', id: cartItemId },
       });
       notifyUser(toastNotify, 'error', 'Erreur lors de la suppression');
       return false;
@@ -416,7 +544,10 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
     notifyUser(toastNotify, 'success', 'Article supprimé du panier');
     return true;
   } catch (err) {
-    logger.error('Erreur removeFromCart', { error: err, query: { id: cartItemId } });
+    logger.error('Erreur removeFromCart', {
+      error: err,
+      query: { id: cartItemId },
+    });
     notifyUser(toastNotify, 'error', 'Une erreur est survenue');
     return false;
   }
@@ -430,20 +561,20 @@ export async function removeFromCart(cartItemId: string): Promise<boolean> {
 export async function clearCart(): Promise<boolean> {
   try {
     const sessionId = getSessionId();
-    
+
     const { error } = await supabase
       .from('cart_items')
       .delete()
       .eq('session_id', sessionId);
-      
+
     if (error) {
       logger.error('Erreur vidage panier', {
         error,
-        query: { table: 'cart_items', action: 'clear', sessionId }
+        query: { table: 'cart_items', action: 'clear', sessionId },
       });
       return false;
     }
-    
+
     return true;
   } catch (err) {
     logger.error('Erreur clearCart', { error: err });
@@ -458,7 +589,10 @@ export async function clearCart(): Promise<boolean> {
  * @returns Total en euros
  */
 export function calculateCartTotal(items: CartItem[]): number {
-  return items.reduce((total, item) => total + item.pass.price * item.quantity, 0);
+  return items.reduce(
+    (total, item) => total + item.pass.price * item.quantity,
+    0,
+  );
 }
 
 // Add an activity variant to cart (Parc activity-first model)
@@ -467,14 +601,23 @@ export async function addActivityVariantToCart(
   quantity = 1,
   repo: CartRepository = new SupabaseCartRepository(),
   notify: NotifyFn = toastNotify,
-  attendee?: { firstName?: string; lastName?: string; birthYear?: number; conditionsAck?: boolean },
+  attendee?: {
+    firstName?: string;
+    lastName?: string;
+    birthYear?: number;
+    conditionsAck?: boolean;
+  },
 ): Promise<boolean> {
   if (!Number.isInteger(quantity) || quantity <= 0) {
     notifyUser(notify, 'error', 'La quantité doit être un entier positif');
     return false;
   }
   if (!repo.isConfigured()) {
-    notifyUser(notify, 'error', 'Configuration requise. Veuillez connecter Supabase.');
+    notifyUser(
+      notify,
+      'error',
+      'Configuration requise. Veuillez connecter Supabase.',
+    );
     return false;
   }
 
@@ -495,13 +638,16 @@ export async function addActivityVariantToCart(
       undefined,
       quantity,
       attendee,
-      { type: 'activity_variant', id: variantId }
+      { type: 'activity_variant', id: variantId },
     );
 
     if (success) notifyUser(notify, 'success', 'Variante ajoutée au panier');
     return success;
   } catch (err) {
-    logger.error('Erreur addActivityVariantToCart', { error: err, query: { action: 'addActivityVariantToCart', variantId } });
+    logger.error('Erreur addActivityVariantToCart', {
+      error: err,
+      query: { action: 'addActivityVariantToCart', variantId },
+    });
     notifyUser(notify, 'error', 'Une erreur est survenue');
     return false;
   }
