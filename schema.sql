@@ -1,6 +1,5 @@
 
 
-
 SET statement_timeout = 0;
 SET lock_timeout = 0;
 SET idle_in_transaction_session_timeout = 0;
@@ -13,30 +12,59 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 
-CREATE SCHEMA IF NOT EXISTS "public";
+CREATE EXTENSION IF NOT EXISTS "pg_cron" WITH SCHEMA "pg_catalog";
 
 
-ALTER SCHEMA "public" OWNER TO "pg_database_owner";
+
+
 
 
 COMMENT ON SCHEMA "public" IS 'standard public schema';
 
 
 
+CREATE EXTENSION IF NOT EXISTS "pg_graphql" WITH SCHEMA "graphql";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pg_stat_statements" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "pgcrypto" WITH SCHEMA "extensions";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "supabase_vault" WITH SCHEMA "vault";
+
+
+
+
+
+
+CREATE EXTENSION IF NOT EXISTS "uuid-ossp" WITH SCHEMA "extensions";
+
+
+
+
+
+
 CREATE OR REPLACE FUNCTION "public"."calculate_total_timeslot_capacity"("event_activity_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  total_capacity integer := 0;
-BEGIN
-  SELECT COALESCE(SUM(capacity), 0)
-  INTO total_capacity
+  SELECT COALESCE(SUM(capacity), 0)::integer
   FROM time_slots
   WHERE event_activity_id = event_activity_uuid;
-  
-  RETURN total_capacity;
-END;
 $$;
 
 
@@ -44,16 +72,10 @@ ALTER FUNCTION "public"."calculate_total_timeslot_capacity"("event_activity_uuid
 
 
 CREATE OR REPLACE FUNCTION "public"."can_reserve_pass"("pass_uuid" "uuid", "quantity" integer DEFAULT 1) RETURNS boolean
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  effective_stock integer;
-BEGIN
-  SELECT get_pass_effective_remaining_stock(pass_uuid) INTO effective_stock;
-  
-  RETURN effective_stock >= quantity;
-END;
+  SELECT get_pass_remaining_stock(pass_uuid) >= quantity;
 $$;
 
 
@@ -61,13 +83,11 @@ ALTER FUNCTION "public"."can_reserve_pass"("pass_uuid" "uuid", "quantity" intege
 
 
 CREATE OR REPLACE FUNCTION "public"."cleanup_expired_cart_items"() RETURNS "void"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-BEGIN
-  DELETE FROM cart_items
-  WHERE reserved_until <= now();
-END;
+  DELETE FROM cart_items 
+  WHERE reserved_until < NOW();
 $$;
 
 
@@ -75,12 +95,13 @@ ALTER FUNCTION "public"."cleanup_expired_cart_items"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."generate_reservation_number"() RETURNS "text"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-BEGIN
-  RETURN 'RES' || TO_CHAR(now(), 'YYYYMMDD') || '-' || LPAD(floor(random() * 10000)::text, 4, '0');
-END;
+  SELECT 'RES-' || 
+         EXTRACT(YEAR FROM NOW())::text || '-' ||
+         LPAD(EXTRACT(DOY FROM NOW())::text, 3, '0') || '-' ||
+         LPAD(FLOOR(RANDOM() * 10000)::text, 4, '0');
 $$;
 
 
@@ -88,31 +109,16 @@ ALTER FUNCTION "public"."generate_reservation_number"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."get_activity_remaining_capacity"("activity_resource_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  total_cap integer;
-  used_cap integer;
-BEGIN
-  -- Get total capacity
-  SELECT total_capacity INTO total_cap
-  FROM activity_resources
-  WHERE id = activity_resource_uuid;
-  
-  IF total_cap IS NULL THEN
-    RETURN 0;
-  END IF;
-  
-  -- Count used capacity from all reservations for this activity resource
-  SELECT COALESCE(SUM(1), 0) INTO used_cap
-  FROM reservations r
-  JOIN time_slots ts ON r.time_slot_id = ts.id
-  WHERE ts.activity_resource_id = activity_resource_uuid
-    AND r.payment_status = 'paid';
-  
-  RETURN GREATEST(0, total_cap - used_cap);
-END;
+  SELECT COALESCE(
+    (SELECT stock_limit FROM event_activities WHERE id = activity_resource_uuid) -
+    (SELECT COUNT(*)::integer FROM reservations r
+     JOIN time_slots ts ON ts.id = r.time_slot_id
+     WHERE ts.event_activity_id = activity_resource_uuid AND r.payment_status = 'paid'),
+    0
+  );
 $$;
 
 
@@ -120,26 +126,14 @@ ALTER FUNCTION "public"."get_activity_remaining_capacity"("activity_resource_uui
 
 
 CREATE OR REPLACE FUNCTION "public"."get_activity_variant_remaining_stock"("variant_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql" STABLE
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  stock_from_variant integer;
-  reserved_count integer;
-BEGIN
-  SELECT variant_stock INTO stock_from_variant FROM activity_variants WHERE id = variant_uuid;
-  -- reserved in cart
-  SELECT COALESCE(SUM(quantity), 0) INTO reserved_count
-  FROM cart_items
-  WHERE product_type = 'activity_variant'
-    AND product_id = variant_uuid
-    AND reserved_until > now();
-
-  IF stock_from_variant IS NULL THEN
-    RETURN 999999 - reserved_count;
-  ELSE
-    RETURN GREATEST(stock_from_variant - reserved_count, 0);
-  END IF;
-END;
+  SELECT COALESCE(
+    (SELECT variant_stock FROM activity_variants WHERE id = variant_uuid) - 
+    (SELECT COUNT(*)::integer FROM cart_items WHERE product_type = 'activity_variant' AND product_id = variant_uuid),
+    0
+  );
 $$;
 
 
@@ -147,50 +141,14 @@ ALTER FUNCTION "public"."get_activity_variant_remaining_stock"("variant_uuid" "u
 
 
 CREATE OR REPLACE FUNCTION "public"."get_event_activity_remaining_stock"("event_activity_id_param" "uuid") RETURNS integer
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-    total_stock integer;
-    reserved_count integer;
-    cart_reserved_count integer;
-    remaining_stock integer;
-BEGIN
-    -- Get the total stock limit for this event activity
-    SELECT COALESCE(ea.stock_limit, 999999)
-    INTO total_stock
-    FROM event_activities ea
-    WHERE ea.id = event_activity_id_param;
-    
-    -- If no stock limit is set, return a high number (unlimited)
-    IF total_stock IS NULL THEN
-        RETURN 999999;
-    END IF;
-    
-    -- Count confirmed reservations for this event activity
-    SELECT COALESCE(COUNT(*), 0)
-    INTO reserved_count
-    FROM reservations r
-    WHERE r.event_activity_id = event_activity_id_param
-    AND r.payment_status = 'paid';
-    
-    -- Count items currently in carts (temporary reservations)
-    SELECT COALESCE(SUM(ci.quantity), 0)
-    INTO cart_reserved_count
-    FROM cart_items ci
-    WHERE ci.event_activity_id = event_activity_id_param
-    AND ci.reserved_until > NOW();
-    
-    -- Calculate remaining stock
-    remaining_stock := total_stock - reserved_count - cart_reserved_count;
-    
-    -- Ensure we don't return negative values
-    IF remaining_stock < 0 THEN
-        remaining_stock := 0;
-    END IF;
-    
-    RETURN remaining_stock;
-END;
+  SELECT COALESCE(
+    (SELECT stock_limit FROM event_activities WHERE id = event_activity_id_param) - 
+    (SELECT COUNT(*)::integer FROM reservations WHERE event_activity_id = event_activity_id_param AND payment_status = 'paid'),
+    0
+  );
 $$;
 
 
@@ -199,7 +157,7 @@ ALTER FUNCTION "public"."get_event_activity_remaining_stock"("event_activity_id_
 
 CREATE OR REPLACE FUNCTION "public"."get_event_passes_activities_stock"("event_uuid" "uuid") RETURNS json
     LANGUAGE "sql" SECURITY DEFINER
-    SET search_path = public
+    SET "search_path" TO 'public'
     AS $$
   SELECT json_build_object(
     'passes', COALESCE((
@@ -220,13 +178,13 @@ CREATE OR REPLACE FUNCTION "public"."get_event_passes_activities_stock"("event_u
         'activity_id', ea.activity_id,
         'stock_limit', ea.stock_limit,
         'requires_time_slot', ea.requires_time_slot,
+        'remaining_stock', get_event_activity_remaining_stock(ea.id),
         'activity', json_build_object(
           'id', a.id,
           'name', a.name,
           'description', a.description,
           'icon', a.icon
-        ),
-        'remaining_stock', get_event_activity_remaining_stock(ea.id)
+        )
       ))
       FROM event_activities ea
       JOIN activities a ON a.id = ea.activity_id
@@ -241,7 +199,7 @@ ALTER FUNCTION "public"."get_event_passes_activities_stock"("event_uuid" "uuid")
 
 CREATE OR REPLACE FUNCTION "public"."get_parc_activities_with_variants"() RETURNS TABLE("id" "uuid", "name" "text", "description" "text", "parc_description" "text", "icon" "text", "category" "text", "requires_time_slot" boolean, "image_url" "text", "variants" "jsonb")
     LANGUAGE "sql" SECURITY DEFINER
-    SET search_path = public
+    SET "search_path" TO 'public'
     AS $$
   select
     a.id,
@@ -282,9 +240,21 @@ COMMENT ON FUNCTION "public"."get_parc_activities_with_variants"() IS 'Returns p
 
 
 
+CREATE OR REPLACE FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid") RETURNS integer
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT COALESCE(MIN(get_event_activity_remaining_stock(pa.event_activity_id)), 0)::integer
+  FROM pass_activities pa
+  WHERE pa.pass_id = pass_uuid;
+$$;
+
+
+ALTER FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid") OWNER TO "postgres";
+
+
 CREATE OR REPLACE FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid", "activity_name" "text") RETURNS integer
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
     AS $$
 DECLARE
   max_bookings integer;
@@ -323,22 +293,13 @@ ALTER FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid", "activ
 
 
 CREATE OR REPLACE FUNCTION "public"."get_pass_effective_remaining_stock"("pass_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  pass_stock integer;
-  activity_max_stock integer;
-BEGIN
-  -- Récupérer le stock du pass lui-même
-  SELECT get_pass_remaining_stock(pass_uuid) INTO pass_stock;
-  
-  -- Récupérer le stock maximum basé sur les activités
-  SELECT get_pass_max_stock_from_activities(pass_uuid) INTO activity_max_stock;
-  
-  -- Retourner le minimum des deux
-  RETURN LEAST(COALESCE(pass_stock, 999999), COALESCE(activity_max_stock, 999999));
-END;
+  SELECT LEAST(
+    get_pass_remaining_stock(pass_uuid),
+    COALESCE(get_pass_max_stock_from_activities(pass_uuid), 999999)
+  )::integer;
 $$;
 
 
@@ -346,35 +307,14 @@ ALTER FUNCTION "public"."get_pass_effective_remaining_stock"("pass_uuid" "uuid")
 
 
 CREATE OR REPLACE FUNCTION "public"."get_pass_max_stock_from_activities"("pass_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  min_activity_stock integer := 999999;
-  activity_stock integer;
-  activity_record RECORD;
-BEGIN
-  -- Parcourir toutes les activités liées au pass
-  FOR activity_record IN
-    SELECT ea.id, ea.stock_limit
-    FROM pass_activities pa
-    JOIN event_activities ea ON ea.id = pa.event_activity_id
-    WHERE pa.pass_id = pass_uuid
-  LOOP
-    -- Si l'activité a une limite de stock
-    IF activity_record.stock_limit IS NOT NULL THEN
-      -- Calculer le stock restant pour cette activité
-      SELECT get_event_activity_remaining_stock(activity_record.id) INTO activity_stock;
-      
-      -- Prendre le minimum
-      IF activity_stock < min_activity_stock THEN
-        min_activity_stock := activity_stock;
-      END IF;
-    END IF;
-  END LOOP;
-  
-  RETURN min_activity_stock;
-END;
+  SELECT COALESCE(MIN(ea.stock_limit), 999999)::integer
+  FROM pass_activities pa
+  JOIN event_activities ea ON ea.id = pa.event_activity_id
+  WHERE pa.pass_id = pass_uuid
+    AND ea.stock_limit IS NOT NULL;
 $$;
 
 
@@ -382,82 +322,23 @@ ALTER FUNCTION "public"."get_pass_max_stock_from_activities"("pass_uuid" "uuid")
 
 
 CREATE OR REPLACE FUNCTION "public"."get_pass_remaining_stock"("pass_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  initial_stock_val integer;
-  reserved_count integer;
-  sold_count integer;
-BEGIN
-  -- Récupérer le stock initial
-  SELECT initial_stock INTO initial_stock_val
-  FROM passes
-  WHERE id = pass_uuid;
-  
-  -- Si stock illimité, retourner une grande valeur
-  IF initial_stock_val IS NULL THEN
-    RETURN 999999;
-  END IF;
-  
-  -- Compter les réservations dans le panier (non expirées)
-  SELECT COALESCE(SUM(quantity), 0) INTO reserved_count
-  FROM cart_items
-  WHERE pass_id = pass_uuid
-    AND reserved_until > now();
-  
-  -- Compter les réservations payées
-  SELECT COUNT(*) INTO sold_count
-  FROM reservations
-  WHERE pass_id = pass_uuid
-    AND payment_status = 'paid';
-  
-  -- Retourner le stock disponible
-  RETURN GREATEST(0, initial_stock_val - reserved_count - sold_count);
-END;
+  SELECT COALESCE(
+    (SELECT initial_stock FROM passes WHERE id = pass_uuid) - 
+    (SELECT COUNT(*)::integer FROM reservations WHERE pass_id = pass_uuid AND payment_status = 'paid'),
+    0
+  );
 $$;
 
 
 ALTER FUNCTION "public"."get_pass_remaining_stock"("pass_uuid" "uuid") OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") RETURNS integer
-    LANGUAGE "plpgsql"
-    SET search_path = public
-    AS $$
-DECLARE
-  total_capacity integer;
-  reserved_count integer;
-  sold_count integer;
-BEGIN
-  -- Récupérer la capacité totale
-  SELECT capacity INTO total_capacity
-  FROM time_slots
-  WHERE id = slot_uuid;
-  
-  -- Compter les réservations dans le panier (non expirées)
-  SELECT COALESCE(SUM(quantity), 0) INTO reserved_count
-  FROM cart_items
-  WHERE time_slot_id = slot_uuid
-    AND reserved_until > now();
-  
-  -- Compter les réservations payées
-  SELECT COUNT(*) INTO sold_count
-  FROM reservations
-  WHERE time_slot_id = slot_uuid
-    AND payment_status = 'paid';
-  
-  -- Retourner la capacité disponible
-  RETURN GREATEST(0, total_capacity - reserved_count - sold_count);
-END;
-$$;
-
-
-ALTER FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") OWNER TO "postgres";
-
-CREATE OR REPLACE FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") RETURNS "json"
-    LANGUAGE sql SECURITY DEFINER
-    SET search_path = public
+CREATE OR REPLACE FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") RETURNS json
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
   select coalesce(json_agg(
     json_build_object(
@@ -494,62 +375,48 @@ CREATE OR REPLACE FUNCTION "public"."get_passes_with_activities"("event_uuid" "u
   where p.event_id = event_uuid;
 $$;
 
+
 ALTER FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") OWNER TO "postgres";
 
-CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
-    LANGUAGE "sql" STABLE SECURITY DEFINER
+
+CREATE OR REPLACE FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") RETURNS integer
+    LANGUAGE "sql" SECURITY DEFINER
     SET "search_path" TO 'public'
     AS $$
-  SELECT coalesce(auth.jwt() ->> 'role', '') = 'admin';
+  SELECT COALESCE(
+    (SELECT capacity FROM time_slots WHERE id = slot_uuid) - 
+    (SELECT COUNT(*)::integer FROM reservations WHERE time_slot_id = slot_uuid AND payment_status = 'paid'),
+    0
+  );
+$$;
+
+
+ALTER FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") OWNER TO "postgres";
+
+
+CREATE OR REPLACE FUNCTION "public"."is_admin"() RETURNS boolean
+    LANGUAGE "sql" SECURITY DEFINER
+    SET "search_path" TO 'public'
+    AS $$
+  SELECT EXISTS (
+    SELECT 1 
+    FROM users 
+    WHERE id = auth.uid() AND role = 'admin'
+  );
 $$;
 
 
 ALTER FUNCTION "public"."is_admin"() OWNER TO "postgres";
 
 
-CREATE OR REPLACE FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pass_id" "uuid", "activities" "jsonb" DEFAULT '[]'::"jsonb", "quantity" integer DEFAULT 1, "attendee_first_name" "text" DEFAULT NULL::"text", "attendee_last_name" "text" DEFAULT NULL::"text", "attendee_birth_year" integer DEFAULT NULL::integer, "access_conditions_ack" boolean DEFAULT false, "product_type" "text" DEFAULT 'event_pass'::"text", "product_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
+CREATE OR REPLACE FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pass_id" "uuid" DEFAULT NULL::"uuid", "activities" "jsonb" DEFAULT '[]'::"jsonb", "quantity" integer DEFAULT 1, "attendee_first_name" "text" DEFAULT NULL::"text", "attendee_last_name" "text" DEFAULT NULL::"text", "attendee_birth_year" integer DEFAULT NULL::integer, "access_conditions_ack" boolean DEFAULT false, "product_type" "text" DEFAULT 'event_pass'::"text", "product_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  remaining integer;
-  cart_item_uuid uuid;
-  act RECORD;
 BEGIN
-  -- Lock and check pass stock
-  IF pass_id IS NOT NULL THEN
-    PERFORM 1 FROM passes WHERE id = pass_id FOR UPDATE;
-    SELECT get_pass_remaining_stock(pass_id) INTO remaining;
-    IF remaining < quantity THEN
-      RAISE EXCEPTION 'insufficient_stock';
-    END IF;
-  END IF;
-
-  -- Verify stock for each activity/time slot
-  FOR act IN
-    SELECT (value->>'event_activity_id')::uuid AS event_activity_id,
-           (value->>'time_slot_id')::uuid AS time_slot_id
-    FROM jsonb_array_elements(activities)
-  LOOP
-    PERFORM 1 FROM event_activities WHERE id = act.event_activity_id FOR UPDATE;
-    SELECT get_event_activity_remaining_stock(act.event_activity_id) INTO remaining;
-    IF remaining < quantity THEN
-      RAISE EXCEPTION 'insufficient_activity_stock';
-    END IF;
-    IF act.time_slot_id IS NOT NULL THEN
-      PERFORM 1 FROM time_slots WHERE id = act.time_slot_id FOR UPDATE;
-      SELECT get_slot_remaining_capacity(act.time_slot_id) INTO remaining;
-      IF remaining < quantity THEN
-        RAISE EXCEPTION 'insufficient_slot_capacity';
-      END IF;
-    END IF;
-  END LOOP;
-
-  -- Insert cart item
-  INSERT INTO cart_items(
+  INSERT INTO cart_items (
     session_id,
     pass_id,
-    time_slot_id,
     quantity,
     attendee_first_name,
     attendee_last_name,
@@ -560,7 +427,6 @@ BEGIN
   ) VALUES (
     session_id,
     pass_id,
-    NULL,
     quantity,
     attendee_first_name,
     attendee_last_name,
@@ -568,18 +434,7 @@ BEGIN
     access_conditions_ack,
     product_type,
     product_id
-  )
-  RETURNING id INTO cart_item_uuid;
-
-  -- Insert activities
-  FOR act IN
-    SELECT (value->>'event_activity_id')::uuid AS event_activity_id,
-           (value->>'time_slot_id')::uuid AS time_slot_id
-    FROM jsonb_array_elements(activities)
-  LOOP
-    INSERT INTO cart_item_activities(cart_item_id, event_activity_id, time_slot_id)
-    VALUES (cart_item_uuid, act.event_activity_id, act.time_slot_id);
-  END LOOP;
+  );
 END;
 $$;
 
@@ -589,7 +444,6 @@ ALTER FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pa
 
 CREATE OR REPLACE FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pass_id" "uuid", "time_slot_id" "uuid" DEFAULT NULL::"uuid", "quantity" integer DEFAULT 1, "attendee_first_name" "text" DEFAULT NULL::"text", "attendee_last_name" "text" DEFAULT NULL::"text", "attendee_birth_year" integer DEFAULT NULL::integer, "access_conditions_ack" boolean DEFAULT false, "product_type" "text" DEFAULT 'event_pass'::"text", "product_id" "uuid" DEFAULT NULL::"uuid") RETURNS "void"
     LANGUAGE "plpgsql" SECURITY DEFINER
-    SET search_path = public
     AS $$
 DECLARE
   remaining integer;
@@ -637,11 +491,11 @@ ALTER FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pa
 
 CREATE OR REPLACE FUNCTION "public"."role"() RETURNS "text"
     LANGUAGE "sql" SECURITY DEFINER
-    SET search_path = public
+    SET "search_path" TO 'public'
     AS $$
   SELECT COALESCE(
-    (SELECT users.role FROM users WHERE users.id = auth.uid()),
-    'client'::text
+    (SELECT role FROM users WHERE id = auth.uid()),
+    'client'
   );
 $$;
 
@@ -650,11 +504,13 @@ ALTER FUNCTION "public"."role"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."set_reservation_number"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
-  NEW.reservation_number := 'RES-' || EXTRACT(YEAR FROM NOW()) || '-' || LPAD(EXTRACT(DOY FROM NOW())::text, 3, '0') || '-' || LPAD((RANDOM() * 9999)::int::text, 4, '0');
+  IF NEW.reservation_number IS NULL THEN
+    NEW.reservation_number := generate_reservation_number();
+  END IF;
   RETURN NEW;
 END;
 $$;
@@ -664,31 +520,13 @@ ALTER FUNCTION "public"."set_reservation_number"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."sync_activity_stock_with_timeslots"("event_activity_uuid" "uuid") RETURNS "void"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
-DECLARE
-  total_capacity integer;
-  requires_slots boolean;
 BEGIN
-  -- Vérifier si l'activité nécessite des créneaux
-  SELECT requires_time_slot INTO requires_slots
-  FROM event_activities
+  UPDATE event_activities
+  SET stock_limit = calculate_total_timeslot_capacity(event_activity_uuid)
   WHERE id = event_activity_uuid;
-  
-  -- Si l'activité nécessite des créneaux, synchroniser le stock
-  IF requires_slots THEN
-    -- Calculer la capacité totale des créneaux
-    total_capacity := calculate_total_timeslot_capacity(event_activity_uuid);
-    
-    -- Mettre à jour le stock limite de l'activité
-    UPDATE event_activities
-    SET stock_limit = CASE 
-      WHEN total_capacity > 0 THEN total_capacity
-      ELSE NULL
-    END
-    WHERE id = event_activity_uuid;
-  END IF;
 END;
 $$;
 
@@ -697,21 +535,17 @@ ALTER FUNCTION "public"."sync_activity_stock_with_timeslots"("event_activity_uui
 
 
 CREATE OR REPLACE FUNCTION "public"."trigger_sync_activity_stock"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
-  -- Synchroniser pour l'ancienne activité (en cas de UPDATE/DELETE)
-  IF TG_OP = 'UPDATE' OR TG_OP = 'DELETE' THEN
+  IF TG_OP = 'DELETE' THEN
     PERFORM sync_activity_stock_with_timeslots(OLD.event_activity_id);
-  END IF;
-  
-  -- Synchroniser pour la nouvelle activité (en cas d'INSERT/UPDATE)
-  IF TG_OP = 'INSERT' OR TG_OP = 'UPDATE' THEN
+    RETURN OLD;
+  ELSE
     PERFORM sync_activity_stock_with_timeslots(NEW.event_activity_id);
+    RETURN NEW;
   END IF;
-  
-  RETURN COALESCE(NEW, OLD);
 END;
 $$;
 
@@ -720,20 +554,15 @@ ALTER FUNCTION "public"."trigger_sync_activity_stock"() OWNER TO "postgres";
 
 
 CREATE OR REPLACE FUNCTION "public"."trigger_sync_on_requires_timeslot_change"() RETURNS "trigger"
-    LANGUAGE "plpgsql"
-    SET search_path = public
+    LANGUAGE "plpgsql" SECURITY DEFINER
+    SET "search_path" TO 'public'
     AS $$
 BEGIN
-  -- Si on active requires_time_slot, synchroniser avec les créneaux existants
-  IF NEW.requires_time_slot = true AND (OLD.requires_time_slot = false OR OLD.requires_time_slot IS NULL) THEN
-    PERFORM sync_activity_stock_with_timeslots(NEW.id);
+  IF OLD.requires_time_slot != NEW.requires_time_slot THEN
+    IF NEW.requires_time_slot THEN
+      PERFORM sync_activity_stock_with_timeslots(NEW.id);
+    END IF;
   END IF;
-  
-  -- Si on désactive requires_time_slot, remettre le stock limite à NULL (stock illimité)
-  IF NEW.requires_time_slot = false AND OLD.requires_time_slot = true THEN
-    NEW.stock_limit := NULL;
-  END IF;
-  
   RETURN NEW;
 END;
 $$;
@@ -793,7 +622,7 @@ ALTER TABLE "public"."activity_variants" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."cart_item_activities" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "cart_item_id" "uuid" NOT NULL,
     "event_activity_id" "uuid" NOT NULL,
     "time_slot_id" "uuid"
@@ -804,7 +633,7 @@ ALTER TABLE "public"."cart_item_activities" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."cart_items" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "session_id" "text" NOT NULL,
     "pass_id" "uuid",
     "time_slot_id" "uuid",
@@ -868,7 +697,7 @@ ALTER TABLE "public"."event_faqs" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."events" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "name" "text" NOT NULL,
     "event_date" "date" NOT NULL,
     "sales_opening_date" timestamp with time zone NOT NULL,
@@ -885,6 +714,31 @@ CREATE TABLE IF NOT EXISTS "public"."events" (
 
 
 ALTER TABLE "public"."events" OWNER TO "postgres";
+
+
+CREATE TABLE IF NOT EXISTS "public"."reservation_validations" (
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
+    "reservation_id" "uuid" NOT NULL,
+    "activity" "text" NOT NULL,
+    "validated_by" "uuid" NOT NULL,
+    "validated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
+    "revoked_at" timestamp with time zone,
+    "revoked_by" "uuid",
+    "revoke_reason" "text",
+    CONSTRAINT "reservation_validations_activity_check" CHECK (("activity" = ANY (ARRAY['poney'::"text", 'tir_arc'::"text", 'luge_bracelet'::"text"])))
+);
+
+
+ALTER TABLE "public"."reservation_validations" OWNER TO "postgres";
+
+
+CREATE OR REPLACE VIEW "public"."luge_validations_today" WITH ("security_invoker"='true') AS
+ SELECT "count"(*) AS "count"
+   FROM "public"."reservation_validations"
+  WHERE (("activity" = 'luge_bracelet'::"text") AND (("validated_at")::"date" = CURRENT_DATE));
+
+
+ALTER VIEW "public"."luge_validations_today" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."park_time_slots" (
@@ -911,7 +765,7 @@ ALTER TABLE "public"."pass_activities" OWNER TO "postgres";
 
 
 CREATE TABLE IF NOT EXISTS "public"."passes" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "event_id" "uuid",
     "name" "text" NOT NULL,
     "price" numeric(10,2) NOT NULL,
@@ -928,24 +782,8 @@ CREATE TABLE IF NOT EXISTS "public"."passes" (
 ALTER TABLE "public"."passes" OWNER TO "postgres";
 
 
-CREATE TABLE IF NOT EXISTS "public"."reservation_validations" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
-    "reservation_id" "uuid" NOT NULL,
-    "activity" "text" NOT NULL,
-    "validated_by" "uuid" NOT NULL,
-    "validated_at" timestamp with time zone DEFAULT "now"() NOT NULL,
-    "revoked_at" timestamp with time zone,
-    "revoked_by" "uuid",
-    "revoke_reason" "text",
-    CONSTRAINT "reservation_validations_activity_check" CHECK (("activity" = ANY (ARRAY['poney'::"text", 'tir_arc'::"text", 'luge_bracelet'::"text"])))
-);
-
-
-ALTER TABLE "public"."reservation_validations" OWNER TO "postgres";
-
-
 CREATE TABLE IF NOT EXISTS "public"."reservations" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "reservation_number" "text" NOT NULL,
     "client_email" "text" NOT NULL,
     "pass_id" "uuid",
@@ -988,8 +826,17 @@ CREATE TABLE IF NOT EXISTS "public"."shops" (
 ALTER TABLE "public"."shops" OWNER TO "postgres";
 
 
+CREATE TABLE IF NOT EXISTS "public"."stripe_sessions" (
+    "id" "text" NOT NULL,
+    "created_at" timestamp with time zone DEFAULT "now"()
+);
+
+
+ALTER TABLE "public"."stripe_sessions" OWNER TO "postgres";
+
+
 CREATE TABLE IF NOT EXISTS "public"."time_slots" (
-    "id" "uuid" DEFAULT "extensions"."uuid_generate_v4"() NOT NULL,
+    "id" "uuid" DEFAULT "gen_random_uuid"() NOT NULL,
     "slot_time" timestamp with time zone NOT NULL,
     "capacity" integer DEFAULT 15 NOT NULL,
     "created_at" timestamp with time zone DEFAULT "now"(),
@@ -1028,13 +875,6 @@ CREATE TABLE IF NOT EXISTS "public"."webhook_events" (
 
 
 ALTER TABLE "public"."webhook_events" OWNER TO "postgres";
-
-CREATE TABLE IF NOT EXISTS "public"."stripe_sessions" (
-    "id" "text" NOT NULL,
-    "created_at" timestamp with time zone DEFAULT "now"()
-);
-
-ALTER TABLE "public"."stripe_sessions" OWNER TO "postgres";
 
 
 ALTER TABLE ONLY "public"."activities"
@@ -1152,6 +992,11 @@ ALTER TABLE ONLY "public"."shops"
 
 
 
+ALTER TABLE ONLY "public"."stripe_sessions"
+    ADD CONSTRAINT "stripe_sessions_pkey" PRIMARY KEY ("id");
+
+
+
 ALTER TABLE ONLY "public"."time_slots"
     ADD CONSTRAINT "time_slots_pkey" PRIMARY KEY ("id");
 
@@ -1169,9 +1014,6 @@ ALTER TABLE ONLY "public"."users"
 
 ALTER TABLE ONLY "public"."webhook_events"
     ADD CONSTRAINT "webhook_events_pkey" PRIMARY KEY ("id");
-
-ALTER TABLE ONLY "public"."stripe_sessions"
-    ADD CONSTRAINT "stripe_sessions_pkey" PRIMARY KEY ("id");
 
 
 
@@ -1243,6 +1085,22 @@ CREATE INDEX "idx_passes_is_park" ON "public"."passes" USING "btree" ("is_park")
 
 
 
+CREATE INDEX "idx_reservation_validations_activity" ON "public"."reservation_validations" USING "btree" ("activity");
+
+
+
+CREATE INDEX "idx_reservation_validations_activity_date" ON "public"."reservation_validations" USING "btree" ("activity", "validated_at" DESC);
+
+
+
+CREATE INDEX "idx_reservation_validations_validated_at_desc" ON "public"."reservation_validations" USING "btree" ("validated_at" DESC);
+
+
+
+CREATE INDEX "idx_reservation_validations_validated_by" ON "public"."reservation_validations" USING "btree" ("validated_by");
+
+
+
 CREATE INDEX "idx_reservations_email" ON "public"."reservations" USING "btree" ("client_email");
 
 
@@ -1260,6 +1118,8 @@ CREATE INDEX "idx_time_slots_slot_time" ON "public"."time_slots" USING "btree" (
 
 
 CREATE UNIQUE INDEX "reservation_validations_unique_active" ON "public"."reservation_validations" USING "btree" ("reservation_id", "activity") WHERE ("revoked_at" IS NULL);
+
+
 
 CREATE UNIQUE INDEX "ux_webhook_events_id" ON "public"."webhook_events" USING "btree" ("id");
 
@@ -1368,10 +1228,12 @@ ALTER TABLE ONLY "public"."reservation_validations"
 
 
 ALTER TABLE ONLY "public"."reservation_validations"
-    ADD CONSTRAINT "reservation_validations_validated_by_fkey" FOREIGN KEY ("validated_by") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "reservation_validations_revoked_by_fkey" FOREIGN KEY ("revoked_by") REFERENCES "public"."users"("id");
+
+
 
 ALTER TABLE ONLY "public"."reservation_validations"
-    ADD CONSTRAINT "reservation_validations_revoked_by_fkey" FOREIGN KEY ("revoked_by") REFERENCES "public"."users"("id");
+    ADD CONSTRAINT "reservation_validations_validated_by_fkey" FOREIGN KEY ("validated_by") REFERENCES "public"."users"("id");
 
 
 
@@ -1508,11 +1370,15 @@ CREATE POLICY "Admins can read all users" ON "public"."users" FOR SELECT TO "aut
 
 
 
-CREATE POLICY "Admins can update users" ON "public"."users" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
+CREATE POLICY "Admins can revoke validations" ON "public"."reservation_validations" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
    FROM "public"."users" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
    FROM "public"."users" "u"
   WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text")))));
+
+
+
+CREATE POLICY "Admins can update users" ON "public"."users" FOR UPDATE TO "authenticated" USING ("public"."is_admin"()) WITH CHECK ("public"."is_admin"());
 
 
 
@@ -1529,6 +1395,14 @@ CREATE POLICY "Admins manage variants" ON "public"."activity_variants" TO "authe
 
 
 CREATE POLICY "Allow all operations on passes for development" ON "public"."passes" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow service role" ON "public"."stripe_sessions" TO "service_role" USING (true) WITH CHECK (true);
+
+
+
+CREATE POLICY "Allow service role" ON "public"."webhook_events" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
@@ -1608,12 +1482,6 @@ CREATE POLICY "Providers can read validations" ON "public"."reservation_validati
 
 
 
-CREATE POLICY "Admins can revoke validations" ON "public"."reservation_validations" FOR UPDATE TO "authenticated" USING ((EXISTS ( SELECT 1
-   FROM "public"."users" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text"))))) WITH CHECK ((EXISTS ( SELECT 1
-   FROM "public"."users" "u"
-  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = 'admin'::"text")))));
-
 CREATE POLICY "Public can read shop products" ON "public"."shop_products" FOR SELECT USING (true);
 
 
@@ -1634,19 +1502,21 @@ CREATE POLICY "Service role can manage all events" ON "public"."events" TO "serv
 
 
 
-CREATE POLICY "Service role can manage all users" ON "public"."users" TO "service_role" USING (true) WITH CHECK (true);
+CREATE POLICY "Service role full access" ON "public"."users" TO "service_role" USING (true) WITH CHECK (true);
 
 
 
-CREATE POLICY "Users can read own data" ON "public"."users" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "id"));
+CREATE POLICY "Staff can read reservations" ON "public"."reservations" FOR SELECT TO "authenticated" USING ((EXISTS ( SELECT 1
+   FROM "public"."users" "u"
+  WHERE (("u"."id" = "auth"."uid"()) AND ("u"."role" = ANY (ARRAY['admin'::"text", 'pony_provider'::"text", 'archery_provider'::"text", 'luge_provider'::"text", 'atlm_collaborator'::"text"]))))));
 
 
 
-CREATE POLICY "Users can update own data" ON "public"."users" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
+CREATE POLICY "Users can read own profile" ON "public"."users" FOR SELECT TO "authenticated" USING (("auth"."uid"() = "id"));
 
-CREATE POLICY "Allow service role" ON "public"."webhook_events" FOR ALL TO "service_role" USING (true) WITH CHECK (true);
 
-CREATE POLICY "Allow service role" ON "public"."stripe_sessions" FOR ALL TO "service_role" USING (true) WITH CHECK (true);
+
+CREATE POLICY "Users can update own profile" ON "public"."users" FOR UPDATE TO "authenticated" USING (("auth"."uid"() = "id")) WITH CHECK (("auth"."uid"() = "id"));
 
 
 
@@ -1698,19 +1568,201 @@ ALTER TABLE "public"."shop_products" ENABLE ROW LEVEL SECURITY;
 ALTER TABLE "public"."shops" ENABLE ROW LEVEL SECURITY;
 
 
+ALTER TABLE "public"."stripe_sessions" ENABLE ROW LEVEL SECURITY;
+
+
 ALTER TABLE "public"."time_slots" ENABLE ROW LEVEL SECURITY;
 
 
 ALTER TABLE "public"."users" ENABLE ROW LEVEL SECURITY;
 
+
 ALTER TABLE "public"."webhook_events" ENABLE ROW LEVEL SECURITY;
-ALTER TABLE "public"."stripe_sessions" ENABLE ROW LEVEL SECURITY;
+
+
+
+
+ALTER PUBLICATION "supabase_realtime" OWNER TO "postgres";
+
+
+
 
 
 GRANT USAGE ON SCHEMA "public" TO "postgres";
 GRANT USAGE ON SCHEMA "public" TO "anon";
 GRANT USAGE ON SCHEMA "public" TO "authenticated";
 GRANT USAGE ON SCHEMA "public" TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1768,6 +1820,12 @@ GRANT ALL ON FUNCTION "public"."get_parc_activities_with_variants"() TO "service
 
 
 
+GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid", "activity_name" "text") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid", "activity_name" "text") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_pass_activity_remaining"("pass_uuid" "uuid", "activity_name" "text") TO "service_role";
@@ -1792,6 +1850,12 @@ GRANT ALL ON FUNCTION "public"."get_pass_remaining_stock"("pass_uuid" "uuid") TO
 
 
 
+GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "anon";
+GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "authenticated";
+GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "service_role";
+
+
+
 GRANT ALL ON FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") TO "anon";
 GRANT ALL ON FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") TO "authenticated";
 GRANT ALL ON FUNCTION "public"."get_slot_remaining_capacity"("slot_uuid" "uuid") TO "service_role";
@@ -1802,9 +1866,6 @@ GRANT ALL ON FUNCTION "public"."is_admin"() TO "anon";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."is_admin"() TO "service_role";
 
-GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "anon";
-GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "authenticated";
-GRANT ALL ON FUNCTION "public"."get_passes_with_activities"("event_uuid" "uuid") TO "service_role";
 
 
 GRANT ALL ON FUNCTION "public"."reserve_pass_with_stock_check"("session_id" "text", "pass_id" "uuid", "activities" "jsonb", "quantity" integer, "attendee_first_name" "text", "attendee_last_name" "text", "attendee_birth_year" integer, "access_conditions_ack" boolean, "product_type" "text", "product_id" "uuid") TO "anon";
@@ -1846,6 +1907,27 @@ GRANT ALL ON FUNCTION "public"."trigger_sync_activity_stock"() TO "service_role"
 GRANT ALL ON FUNCTION "public"."trigger_sync_on_requires_timeslot_change"() TO "anon";
 GRANT ALL ON FUNCTION "public"."trigger_sync_on_requires_timeslot_change"() TO "authenticated";
 GRANT ALL ON FUNCTION "public"."trigger_sync_on_requires_timeslot_change"() TO "service_role";
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -1903,6 +1985,18 @@ GRANT ALL ON TABLE "public"."events" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."reservation_validations" TO "anon";
+GRANT ALL ON TABLE "public"."reservation_validations" TO "authenticated";
+GRANT ALL ON TABLE "public"."reservation_validations" TO "service_role";
+
+
+
+GRANT ALL ON TABLE "public"."luge_validations_today" TO "anon";
+GRANT ALL ON TABLE "public"."luge_validations_today" TO "authenticated";
+GRANT ALL ON TABLE "public"."luge_validations_today" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."park_time_slots" TO "anon";
 GRANT ALL ON TABLE "public"."park_time_slots" TO "authenticated";
 GRANT ALL ON TABLE "public"."park_time_slots" TO "service_role";
@@ -1918,12 +2012,6 @@ GRANT ALL ON TABLE "public"."pass_activities" TO "service_role";
 GRANT ALL ON TABLE "public"."passes" TO "anon";
 GRANT ALL ON TABLE "public"."passes" TO "authenticated";
 GRANT ALL ON TABLE "public"."passes" TO "service_role";
-
-
-
-GRANT ALL ON TABLE "public"."reservation_validations" TO "anon";
-GRANT ALL ON TABLE "public"."reservation_validations" TO "authenticated";
-GRANT ALL ON TABLE "public"."reservation_validations" TO "service_role";
 
 
 
@@ -1945,6 +2033,12 @@ GRANT ALL ON TABLE "public"."shops" TO "service_role";
 
 
 
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "anon";
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "authenticated";
+GRANT ALL ON TABLE "public"."stripe_sessions" TO "service_role";
+
+
+
 GRANT ALL ON TABLE "public"."time_slots" TO "anon";
 GRANT ALL ON TABLE "public"."time_slots" TO "authenticated";
 GRANT ALL ON TABLE "public"."time_slots" TO "service_role";
@@ -1960,9 +2054,12 @@ GRANT ALL ON TABLE "public"."users" TO "service_role";
 GRANT ALL ON TABLE "public"."webhook_events" TO "anon";
 GRANT ALL ON TABLE "public"."webhook_events" TO "authenticated";
 GRANT ALL ON TABLE "public"."webhook_events" TO "service_role";
-GRANT ALL ON TABLE "public"."stripe_sessions" TO "anon";
-GRANT ALL ON TABLE "public"."stripe_sessions" TO "authenticated";
-GRANT ALL ON TABLE "public"."stripe_sessions" TO "service_role";
+
+
+
+
+
+
 
 
 
@@ -1996,18 +2093,28 @@ ALTER DEFAULT PRIVILEGES FOR ROLE "postgres" IN SCHEMA "public" GRANT ALL ON TAB
 
 
 
---
--- View: public.luge_validations_today
---
-DROP VIEW IF EXISTS public.luge_validations_today;
-CREATE VIEW public.luge_validations_today WITH (security_invoker = true) AS
- SELECT count(*) AS count
-   FROM public.reservation_validations
-  WHERE activity = 'luge_bracelet'::text
-    AND validated_at::date = CURRENT_DATE;
-GRANT ALL ON TABLE public.luge_validations_today TO postgres;
-GRANT ALL ON TABLE public.luge_validations_today TO anon;
-GRANT ALL ON TABLE public.luge_validations_today TO authenticated;
-GRANT ALL ON TABLE public.luge_validations_today TO service_role;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 RESET ALL;
