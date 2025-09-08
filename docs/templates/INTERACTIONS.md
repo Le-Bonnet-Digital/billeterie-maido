@@ -28,14 +28,13 @@
 
 ## Règles d’usage
 
-* **Obligatoire** : au moins une entrée `ChatGPT` + une entrée `PO` par sprint.
-* **Horodatage** : ISO8601 `YYYY-MM-DDThh:mm:ss±TZ`.
-* **Topic** : `Sprint S<N> — validation prod`.
-* **Statut** : `pending → waiting_PO → done`.
-* Les hooks Husky bloquent si :
-
-  * `INTERACTIONS.yaml` absent ou non stagé,
-  * ou aucune entrée `topic: Sprint S<N>` trouvée.
+- **Obligatoire** : au moins une entrée `ChatGPT` + une entrée `PO` par sprint.
+- **Horodatage** : ISO8601 `YYYY-MM-DDThh:mm:ss±TZ`.
+- **Topic** : `Sprint S<N> — validation prod`.
+- **Statut** : `pending → waiting_PO → done`.
+- Les hooks Husky bloquent si :
+  - `INTERACTIONS.yaml` absent ou non stagé,
+  - ou aucune entrée `topic: Sprint S<N>` trouvée.
 
 ---
 

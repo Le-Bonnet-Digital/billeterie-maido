@@ -11,7 +11,8 @@
     Tester en prod :
     1) Vérifier l'affichage des pass avec "Créneau requis"
     2) Vérifier que le paiement reste désactivé tant que les CGV ne sont pas cochées
-  context: env: http://localhost:5173 ; PR: Sprint S1
+  context: |
+    env: http://localhost:5173 ; PR: Sprint S1
   status: pending
   note: sprint history updated
 
@@ -20,9 +21,12 @@
   reply: KO
   details: |
     - Je n'ai pas pu afficher les passes pour vérifier l'affichage des créneaux
-    - error POST https://rvotxqsgaolddvpqbkhy.supabase.co/rest/v1/rpc/get_passes_with_activities 404 (Not Found)
-    - Erreur chargement événement:
-      - {code: 'PGRST202', details: 'Searched for the function public.get_passes_with_activities, but no matches were found in the schema cache.', hint: 'Perhaps you meant to call the function public.get_pass_max_stock_from_activities', message: 'Could not find the function public.get_passes_with_activities(event_uuid) in the schema cache'}
+      - error POST https://rvotxqsgaolddvpqbkhy.supabase.co/rest/v1/rpc/get_passes_with_activities 404 (Not Found)
+      - Erreur chargement événement:
+        - code: 'PGRST202'
+          details: 'Searched for the function public.get_passes_with_activities, but no matches were found in the schema cache.'
+          hint: 'Perhaps you meant to call the function public.get_pass_max_stock_from_activities'
+          message: 'Could not find the function public.get_passes_with_activities(event_uuid) in the schema cache'
   action: fix
 
 - who: ChatGPT

@@ -8,8 +8,9 @@
     Tester en prod :
     1) Exécuter `supabase db push --include-all --yes`
     2) Vérifier affichage des passes sans erreur
-  context: env: http://localhost:5173 ; PR: Sprint S3
-  status: done
+    context: |
+      env: http://localhost:5173 ; PR: Sprint S3
+    status: done
 
 - who: PO
   topic: Sprint S3 — validation prod
@@ -31,5 +32,5 @@
 - who: PO
   topic: Sprint S3 — documentation
   reply: OK
-  details: "Les liens vers DoD.md sont corrects"
+  details: 'Les liens vers DoD.md sont corrects'
   action: none
