@@ -256,3 +256,15 @@
   context: |
     migration: 20250907120000_luge_validations_today_security_invoker.sql
   status: pending
+
+- who: ChatGPT
+  when: 2025-09-08T17:00:00Z
+  topic: Sprint S10 — users policy recursion
+  did: |
+    - Checked admin role from JWT to avoid recursive users policy
+    - Updated schema.sql accordingly
+  ask: |
+    Confirm that user role queries no longer error
+  context: |
+    commit: fix check admin role via JWT
+  status: pending
