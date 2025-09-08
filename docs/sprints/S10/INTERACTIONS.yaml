@@ -349,3 +349,11 @@
   context: |
     command: npx -y supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
   status: blocked
+- who: ChatGPT
+  when: 2025-09-08T15:03:37Z
+  topic: pass time slots linkage
+  did: |
+    - Ajout du `pass_id` lors de la création des créneaux
+    - Correction de `getCartItems` pour inclure `event_activity_id`
+    - Ajout d'une migration de correction des données existantes
+  status: done
