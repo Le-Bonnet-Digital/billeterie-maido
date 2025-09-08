@@ -2,7 +2,6 @@ create or replace function public.get_passes_with_activities(event_uuid uuid)
 returns json
 language sql
 security definer
-set search_path = public
 as $$
   select coalesce(json_agg(
     json_build_object(

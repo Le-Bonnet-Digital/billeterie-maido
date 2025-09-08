@@ -21,7 +21,6 @@ returns table (
 )
 language sql
 security definer
-set search_path = public
 as $$
   select
     a.id,
