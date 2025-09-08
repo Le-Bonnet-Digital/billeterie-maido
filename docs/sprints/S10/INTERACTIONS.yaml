@@ -392,3 +392,15 @@
   context: |
     command: npx supabase db push
   status: blocked
+- who: ChatGPT
+  when: 2025-09-10T00:00:00Z
+  topic: Cleanup null reservations and cascade
+  did: |
+    - Créé une migration supprimant les enregistrements avec `event_activity_id` ou `time_slot_id` à `NULL`
+    - Ajouté la suppression en cascade des `reservation_validations`
+    - Tentative de `supabase db push` et `supabase db dump` (échec: base/Docker introuvable)
+  ask: |
+    Fournir un accès Supabase valide pour appliquer la migration et mettre à jour `schema.sql`
+  context: |
+    migration: supabase/migrations/20250909133000_cleanup_null_reservations.sql
+  status: blocked
