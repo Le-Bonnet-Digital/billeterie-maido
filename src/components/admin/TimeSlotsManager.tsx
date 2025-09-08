@@ -320,8 +320,20 @@ function CreateTimeSlotsForm({
     try {
       setCreating(true);
 
+      // Récupérer le pass associé à cette activité pour le lier aux créneaux
+      const { data: passActivity, error: passError } = await supabase
+        .from('pass_activities')
+        .select('pass_id')
+        .eq('event_activity_id', eventActivity.id)
+        .single();
+
+      if (passError || !passActivity?.pass_id) {
+        throw passError || new Error('Pass associé introuvable');
+      }
+
       const slotsToCreate = previewSlots.map((slot) => ({
         event_activity_id: eventActivity.id,
+        pass_id: passActivity.pass_id,
         slot_time: slot.start.toISOString(),
         capacity: formData.capacity,
       }));
