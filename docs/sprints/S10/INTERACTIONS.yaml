@@ -381,3 +381,14 @@
       - supabase/migrations/20250908090656_divine_breeze.sql
       - src/lib/supabase.ts
   status: pending
+- who: ChatGPT
+  when: 2025-09-09T17:00:00Z
+  topic: Sprint S10 — backfill time_slot_id
+  did: |
+    - Ajout d'une migration pour déduire time_slot_id via event_activity_id
+    - Tentative de `supabase db push` (échec: projet non lié)
+  ask: |
+    Fournir un project ref pour appliquer la migration
+  context: |
+    command: npx supabase db push
+  status: blocked

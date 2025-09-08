@@ -28,7 +28,7 @@
 ## 5) Schéma SQL (`schema.sql`)
 
 - **RefreshedAt**: 2025-09-08T17:00:00Z
-- Ou justification `unchanged`:
+- Ou justification `unchanged`: supabase db push non effectué (projet non lié)
 
 ## 6) Sécurité
 
