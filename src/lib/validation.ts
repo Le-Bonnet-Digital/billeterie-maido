@@ -98,7 +98,7 @@ export async function validateReservation(
   const { data, error } = await supabase
     .from('reservations')
     .select(
-      'id,reservation_number,client_email,payment_status,created_at,pass:passes(id,name),event_activities(activities(name)),time_slots(id,slot_time)',
+      'id,reservation_number,client_email,payment_status,created_at,event_activity_id,pass:passes(id,name),event_activities(activities(name)),time_slots(id,slot_time)',
     )
     .eq('reservation_number', trimmed)
     .single<ReservationLookup>();
@@ -115,7 +115,7 @@ export async function validateReservation(
     payment_status: data.payment_status,
     created_at: data.created_at,
     pass: data.pass ? { id: data.pass.id, name: data.pass.name } : null,
-    activity_expected: data.event_activities?.activities?.name ?? null,
+    activity_expected: data.event_activity_id ? await getActivityNameFromEventActivity(data.event_activity_id) : null,
     time_slot: data.time_slots
       ? { id: data.time_slots.id, slot_time: data.time_slots.slot_time }
       : null,
@@ -195,4 +195,18 @@ export async function validateReservation(
   }
 
   return payload;
+}
+
+async function getActivityNameFromEventActivity(eventActivityId: string): Promise<string | null> {
+  try {
+    const { data } = await supabase
+      .from('event_activities')
+      .select('activities(name)')
+      .eq('id', eventActivityId)
+      .single();
+    
+    return data?.activities?.name || null;
+  } catch {
+    return null;
+  }
 }
