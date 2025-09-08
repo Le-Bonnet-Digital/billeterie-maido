@@ -287,28 +287,28 @@ AS $$
   );
 $$;
 
-CREATE OR REPLACE FUNCTION public.get_activity_remaining_capacity(activity_uuid uuid)
+CREATE OR REPLACE FUNCTION public.get_activity_remaining_capacity(activity_resource_uuid uuid)
 RETURNS integer
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
   SELECT COALESCE(
-    (SELECT stock_limit FROM event_activities WHERE id = activity_uuid) - 
-    (SELECT COUNT(*)::integer FROM reservations r 
-     JOIN time_slots ts ON ts.id = r.time_slot_id 
-     WHERE ts.event_activity_id = activity_uuid AND r.payment_status = 'paid'),
+    (SELECT stock_limit FROM event_activities WHERE id = activity_resource_uuid) -
+    (SELECT COUNT(*)::integer FROM reservations r
+     JOIN time_slots ts ON ts.id = r.time_slot_id
+     WHERE ts.event_activity_id = activity_resource_uuid AND r.payment_status = 'paid'),
     0
   );
 $$;
 
-CREATE OR REPLACE FUNCTION public.can_reserve_pass(pass_uuid uuid, quantity_requested integer)
+CREATE OR REPLACE FUNCTION public.can_reserve_pass(pass_uuid uuid, quantity integer DEFAULT 1)
 RETURNS boolean
 LANGUAGE sql
 SECURITY DEFINER
 SET search_path = public
 AS $$
-  SELECT get_pass_remaining_stock(pass_uuid) >= quantity_requested;
+  SELECT get_pass_remaining_stock(pass_uuid) >= quantity;
 $$;
 
 CREATE OR REPLACE FUNCTION public.get_event_activity_remaining_stock(event_activity_id_param uuid)

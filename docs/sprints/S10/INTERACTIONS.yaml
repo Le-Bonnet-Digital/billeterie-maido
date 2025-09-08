@@ -349,3 +349,35 @@
   context: |
     command: npx -y supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
   status: blocked
+- who: ChatGPT
+  when: 2025-09-08T15:03:37Z
+  topic: pass time slots linkage
+  did: |
+    - Ajout du `pass_id` lors de la création des créneaux
+    - Correction de `getCartItems` pour inclure `event_activity_id`
+    - Ajout d'une migration de correction des données existantes
+  status: done
+- who: ChatGPT
+  when: 2025-09-09T15:30:00Z
+  topic: search path migration parameter fix
+  did: |
+    - Conserver `activity_resource_uuid` dans `get_activity_remaining_capacity`
+    - Éviter l'erreur `cannot change name of input parameter`
+  ask: |
+    Exécuter `supabase db push` pour valider la migration
+  context: |
+    migration: 20250908090656_divine_breeze.sql
+  status: pending
+- who: ChatGPT
+  when: 2025-09-09T16:30:00Z
+  topic: search path migration quantity parameter fix
+  did: |
+    - Rétabli le paramètre `quantity` dans `can_reserve_pass`
+    - Mise à jour des types Supabase correspondants
+  ask: |
+    Appliquer `supabase db push` pour vérifier l'absence d'erreur de renommage
+  context: |
+    files:
+      - supabase/migrations/20250908090656_divine_breeze.sql
+      - src/lib/supabase.ts
+  status: pending
