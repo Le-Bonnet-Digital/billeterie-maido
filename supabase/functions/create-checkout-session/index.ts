@@ -1,17 +1,9 @@
 import Stripe from 'https://esm.sh/stripe@13?target=deno';
 import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
 
-function getEnv(name: string): string {
-  const value = Deno.env.get(name);
-  if (!value) {
-    throw new Error(`Missing env var ${name}`);
-  }
-  return value;
+function getEnv(name: string): string | undefined {
+  return Deno.env.get(name);
 }
-
-const stripe = new Stripe(getEnv('STRIPE_SECRET'), {
-  apiVersion: '2023-10-16',
-});
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -49,6 +41,18 @@ serve(async (req: Request) => {
   }
 
   try {
+    const stripeSecret = getEnv('STRIPE_SECRET');
+    if (!stripeSecret) {
+      return new Response(JSON.stringify({ error: 'Missing STRIPE_SECRET' }), {
+        status: 500,
+        headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      });
+    }
+
+    const stripe = new Stripe(stripeSecret, {
+      apiVersion: '2023-10-16',
+    });
+
     const { cartItems, customer } = (await req.json()) as {
       cartItems?: CartItem[];
       customer?: Customer;

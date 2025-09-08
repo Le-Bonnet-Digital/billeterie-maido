@@ -315,3 +315,14 @@
     commit: fix ensure revoke policy migration is compatible with Postgres
     command: npx supabase db push --db-url "$SUPABASE_DB_URL" --include-all --yes
   status: blocked
+- who: ChatGPT
+  when: 2025-09-08T01:39:07+00:00
+  topic: Stripe env CORS preflight
+  did: |
+    - Différé l'instanciation Stripe après vérification de la requête
+    - Retourne une erreur explicite si STRIPE_SECRET est absent
+  ask: |
+    Confirmer que la prérequête CORS répond bien sans STRIPE_SECRET
+  context: |
+    commit: fix handle env for create-checkout-session CORS
+  status: pending
