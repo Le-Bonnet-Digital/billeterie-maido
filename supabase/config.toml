@@ -7,9 +7,3 @@ verify_jwt = false
 # La fonction d'email reste protégée (appelée avec service_role)
 [functions.send-reservation-email]
 verify_jwt = true
-
-[auth]
-# Enable leaked password protection and MFA options for improved security
-leaked_password_protection = true
-mfa_enabled_types = ["totp", "webauthn"]
-
