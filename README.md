@@ -51,6 +51,19 @@ supabase db dump --schema public -f schema.sql
 sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
 ```
 
+### Validation — Scanner QR
+
+Le composant `ReservationValidationForm` est désormais piloté par le parent via une prop **obligatoire** `activitySlug` (ex. `poney`, `luge_d_ete`, `tir_a_l_arc`).  
+Exemple :
+
+````tsx
+<ReservationValidationForm
+  title="Remise Bracelet Luge"
+  activitySlug="luge_d_ete"
+  help="Scannez le QR code du billet ou saisissez le numéro…"
+/>
+
+
 ---
 
 ## 3) Hooks locaux (Husky)
@@ -64,7 +77,7 @@ sqlpackage /Action:Export /SourceConnectionString:"<...>" /TargetFile:schema.sql
 npx husky install
 # Activer le hook fourni
 # (placez le script dans .husky/pre-commit et donnez-lui les droits d'exécution)
-```
+````
 
 ### Ce que vérifie `.husky/pre-commit`
 

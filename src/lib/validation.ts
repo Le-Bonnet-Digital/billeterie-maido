@@ -1,42 +1,41 @@
+// src/lib/validation.ts
 import { supabase } from './supabase';
+import { toSlug } from './slug';
 import { getCurrentUser } from './auth';
 
-// Reservation numbers follow the pattern
-// RES-<year>-<day-of-year>-<4 random digits>
-// Example: RES-2025-249-7908
-const CODE_PATTERN = /^RES-\d{4}-\d{3}-\d{4}$/;
+export type ValidationActivity = string;
 
-export type ValidationActivity = 'poney' | 'tir_arc' | 'luge_bracelet';
-
-interface ReservationLookup {
+type ReservationLookup = {
   id: string;
   reservation_number: string;
   client_email: string;
-  payment_status: 'paid' | 'pending' | 'refunded';
+  payment_status: 'paid' | 'pending' | 'failed' | string;
   created_at: string;
-  pass?: { id: string; name: string } | null;
-  event_activities?: { activities?: { name: string } | null } | null;
-  time_slots?: { id: string; slot_time: string } | null;
-}
+  pass: { id: string; name: string } | null;
+  event_activities: { activities: { name: string } } | null;
+  time_slots: { id: string; slot_time: string } | null;
+};
 
-export interface ValidationRecord {
-  validated_at: string;
-  validated_by: string;
-  validated_by_email?: string;
-}
+type ValidationRecord = {
+  id: string;
+  reservation_id: string;
+  agent_id: string;
+  created_at: string;
+  status: 'validated' | 'revoked' | string;
+};
 
-export interface ValidationPayload {
+export type ValidationResult = {
   reservation: {
-    id: string | null;
-    number: string | null;
-    client_email: string | null;
-    payment_status: 'paid' | 'pending' | 'refunded' | null;
-    created_at: string | null;
+    id: string;
+    number: string;
+    client_email: string;
+    payment_status: string;
+    created_at: string;
     pass: { id: string; name: string } | null;
-    activity_expected: string | null;
+    activity_expected: string | null; // slug attendu (name BDD -> slug)
     time_slot: { id: string; slot_time: string } | null;
-  };
-  requested_activity: ValidationActivity;
+  } | null;
+  requested_activity: string; // slug reçu du front
   history: ValidationRecord[];
   status: {
     invalid: boolean;
@@ -48,165 +47,197 @@ export interface ValidationPayload {
   };
   ok: boolean;
   reason?: string;
-  meta?: { reservedActivity: string | null; requested: ValidationActivity };
+  meta?: { reservedActivity?: string; requested?: string };
+};
+
+function normalizeReservation(
+  row: ReservationLookup | null,
+): ValidationResult['reservation'] {
+  if (!row) return null;
+  const reservedName = row.event_activities?.activities?.name ?? null;
+  const reservedSlug = reservedName ? toSlug(reservedName) : null;
+  return {
+    id: row.id,
+    number: row.reservation_number,
+    client_email: row.client_email,
+    payment_status: row.payment_status,
+    created_at: row.created_at,
+    pass: row.pass ? { id: row.pass.id, name: row.pass.name } : null,
+    activity_expected: reservedSlug,
+    time_slot: row.time_slots
+      ? { id: row.time_slots.id, slot_time: row.time_slots.slot_time }
+      : null,
+  };
 }
 
 export async function validateReservation(
-  reservationCode: string,
-  activity: ValidationActivity,
-  doValidate = true,
-): Promise<ValidationPayload> {
-  const payload: ValidationPayload = {
-    reservation: {
-      id: null,
-      number: null,
-      client_email: null,
-      payment_status: null,
-      created_at: null,
-      pass: null,
-      activity_expected: null,
-      time_slot: null,
-    },
-    requested_activity: activity,
-    history: [],
+  code: string,
+  activitySlug: string,
+): Promise<ValidationResult> {
+  const requestedSlug = toSlug(activitySlug);
+
+  // 1) Réservation par numéro
+  const { data: row, error: rErr } = await supabase
+    .from('reservations')
+    .select(
+      [
+        'id',
+        'reservation_number',
+        'client_email',
+        'payment_status',
+        'created_at',
+        'pass(id,name)',
+        'event_activities(activities(name))',
+        'time_slots(id,slot_time)',
+      ].join(','),
+    )
+    .eq('reservation_number', code)
+    .single<ReservationLookup>();
+
+  if (rErr || !row) {
+    return {
+      reservation: null,
+      requested_activity: requestedSlug,
+      history: [],
+      status: {
+        invalid: false,
+        notFound: true,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: false,
+      },
+      ok: false,
+      reason: 'Réservation introuvable',
+      meta: { requested: requestedSlug },
+    };
+  }
+
+  // 2) Historique des validations
+  const { data: hist, error: hErr } = await supabase
+    .from('reservation_validations')
+    .select('id,reservation_id,agent_id,created_at,status')
+    .eq('reservation_id', row.id)
+    .order('created_at', { ascending: false })
+    .limit(20);
+
+  const history = hErr || !hist ? [] : (hist as ValidationRecord[]);
+
+  // 3) Statuts métier
+  const reservedName = row.event_activities?.activities?.name ?? null;
+  const reservedSlug = reservedName ? toSlug(reservedName) : null;
+
+  const unpaid = row.payment_status !== 'paid';
+  const wrongActivity = !!reservedSlug && reservedSlug !== requestedSlug;
+
+  const base = {
+    reservation: normalizeReservation(row),
+    requested_activity: requestedSlug,
+    history,
+    reason: undefined as string | undefined,
+    meta: reservedSlug
+      ? { reservedActivity: reservedSlug, requested: requestedSlug }
+      : { requested: requestedSlug },
+  };
+
+  if (unpaid) {
+    return {
+      ...base,
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: true,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: false,
+      },
+      ok: false,
+      reason: 'Réservation non payée',
+    };
+  }
+
+  if (wrongActivity) {
+    return {
+      ...base,
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: true,
+        alreadyValidated: false,
+        validated: false,
+      },
+      ok: false,
+      reason: 'Réservation invalide pour cette activité',
+    };
+  }
+
+  // déjà validée ?
+  const last = history[0];
+  if (last?.status === 'validated') {
+    return {
+      ...base,
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: true,
+        validated: true,
+      },
+      ok: true,
+      reason: 'Réservation déjà validée',
+    };
+  }
+
+  // 4) Insertion d'une validation (re-validation possible après revoked)
+  const user = await getCurrentUser();
+  if (!user?.id) {
+    return {
+      ...base,
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: false,
+      },
+      ok: false,
+      reason: 'Utilisateur non authentifié',
+    };
+  }
+
+  const { error: insErr } = await supabase
+    .from('reservation_validations')
+    .insert({ reservation_id: row.id, agent_id: user.id, status: 'validated' });
+
+  if (insErr) {
+    return {
+      ...base,
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: false,
+      },
+      ok: false,
+      reason: 'Échec de la validation',
+    };
+  }
+
+  return {
+    ...base,
     status: {
       invalid: false,
       notFound: false,
       unpaid: false,
       wrongActivity: false,
       alreadyValidated: false,
-      validated: false,
+      validated: true,
     },
-    ok: false,
+    ok: true,
   };
-
-  const trimmed = reservationCode.trim();
-  if (!trimmed || !CODE_PATTERN.test(trimmed)) {
-    payload.status.invalid = true;
-    payload.status.notFound = true;
-    return payload;
-  }
-
-  const me = await getCurrentUser();
-  if (!me) {
-    payload.status.invalid = true;
-    payload.status.notFound = true;
-    return payload;
-  }
-
-  // 1) Lookup reservation by reservation_number
-  const { data, error } = await supabase
-    .from('reservations')
-    .select(
-      'id,reservation_number,client_email,payment_status,created_at,event_activity_id,pass:passes(id,name),event_activities(activities(name)),time_slots(id,slot_time)',
-    )
-    .eq('reservation_number', trimmed)
-    .single<ReservationLookup>();
-
-  if (error || !data) {
-    payload.status.notFound = true;
-    return payload;
-  }
-
-  payload.reservation = {
-    id: data.id,
-    number: data.reservation_number,
-    client_email: data.client_email,
-    payment_status: data.payment_status,
-    created_at: data.created_at,
-    pass: data.pass ? { id: data.pass.id, name: data.pass.name } : null,
-    activity_expected: data.event_activity_id ? await getActivityNameFromEventActivity(data.event_activity_id) : null,
-    time_slot: data.time_slots
-      ? { id: data.time_slots.id, slot_time: data.time_slots.slot_time }
-      : null,
-  };
-
-  if (data.payment_status !== 'paid') {
-    payload.status.unpaid = true;
-  }
-
-  // 2) Fetch existing validations
-  const { data: existing } = await supabase
-    .from('reservation_validations')
-    .select('validated_at,validated_by')
-    .eq('reservation_id', data.id)
-    .eq('activity', activity)
-    .is('revoked_at', null);
-
-  if (existing && existing.length > 0) {
-    payload.history = await Promise.all(
-      existing.map(async (v) => {
-        const { data: agent } = await supabase
-          .from('users')
-          .select('email')
-          .eq('id', v.validated_by as string)
-          .maybeSingle();
-        return {
-          validated_at: v.validated_at as string,
-          validated_by: v.validated_by as string,
-          ...(agent?.email ? { validated_by_email: agent.email } : {}),
-        } as ValidationRecord;
-      }),
-    );
-    if (payload.history.length > 0) payload.status.alreadyValidated = true;
-  }
-
-  // 3) Activity guard - ensure reservation matches requested activity
-  if (
-    !payload.reservation.activity_expected ||
-    payload.reservation.activity_expected !== activity
-  ) {
-    payload.status.wrongActivity = true;
-  }
-
-  const eligible =
-    !payload.status.notFound &&
-    !payload.status.unpaid &&
-    !payload.status.wrongActivity &&
-    !payload.status.alreadyValidated;
-
-  if (doValidate && eligible) {
-    const { data: inserted, error: insertError } = await supabase
-      .from('reservation_validations')
-      .insert({ reservation_id: data.id, activity, validated_by: me.id })
-      .select('validated_at,validated_by')
-      .single();
-    if (!insertError && inserted) {
-      const { data: agent } = await supabase
-        .from('users')
-        .select('email')
-        .eq('id', inserted.validated_by)
-        .maybeSingle();
-      payload.history.push({
-        validated_at: inserted.validated_at as string,
-        validated_by: inserted.validated_by as string,
-        ...(agent?.email ? { validated_by_email: agent.email } : {}),
-      });
-      payload.status.validated = true;
-    }
-  }
-  payload.ok = payload.status.validated;
-  if (!payload.ok && payload.status.wrongActivity) {
-    payload.reason = 'Réservation invalide pour cette activité';
-    payload.meta = {
-      reservedActivity: payload.reservation.activity_expected,
-      requested: activity,
-    };
-  }
-
-  return payload;
-}
-
-async function getActivityNameFromEventActivity(eventActivityId: string): Promise<string | null> {
-  try {
-    const { data } = await supabase
-      .from('event_activities')
-      .select('activities(name)')
-      .eq('id', eventActivityId)
-      .single();
-    
-    return data?.activities?.name || null;
-  } catch {
-    return null;
-  }
 }

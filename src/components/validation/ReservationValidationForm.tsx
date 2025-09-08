@@ -1,5 +1,12 @@
 /* eslint-disable @typescript-eslint/no-explicit-any, no-empty */
-import { useRef, useState, useEffect, useMemo, type FormEvent } from 'react';
+import {
+  useRef,
+  useState,
+  useEffect,
+  useMemo,
+  type FormEvent,
+  useCallback,
+} from 'react';
 import {
   QrCode,
   Camera,
@@ -8,126 +15,142 @@ import {
   RefreshCw,
   CheckCircle,
 } from 'lucide-react';
-import { BrowserMultiFormatReader, Result } from '@zxing/browser';
+import { BrowserMultiFormatReader } from '@zxing/browser';
 import {
   NotFoundException,
   BarcodeFormat,
   DecodeHintType,
 } from '@zxing/library';
 import { toast } from 'react-hot-toast';
-import {
-  validateReservation,
-  type ValidationActivity,
-} from '../../lib/validation';
 
-/**
- * Fix principal: s'assurer que <video> est MONTÉ avant d'appeler decodeFromConstraints.
- * - Le <video> est rendu en permanence (visuellement caché quand non-scanning) pour garantir videoRef.current.
- * - startLiveScan: setScanning(true) -> attendre un frame -> lancer ZXing.
- * - Fallbacks de contraintes pour éviter TypeError (constraints invalides).
- */
+import { validateReservation } from '../../lib/validation';
+
+// ---------- helpers caméra ----------
+type MaybeStoppable = Partial<{ stopDecoding: () => void; reset: () => void }>;
+
+function stopReader(reader: unknown, video: HTMLVideoElement | null) {
+  const stream = (video?.srcObject as MediaStream | null) ?? null;
+  stream?.getTracks().forEach((t) => t.stop());
+  if (video) {
+    video.srcObject = null;
+    video.pause();
+  }
+  const r = reader as MaybeStoppable;
+  r.stopDecoding?.();
+  r.reset?.();
+}
 
 const DECODE_COOLDOWN_MS = 1500;
-const CONSENSUS_HITS = 2;
 
-const isMobile = () =>
-  typeof window !== 'undefined' &&
-  (/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-    navigator.userAgent,
-  ) ||
-    window.innerWidth <= 768);
-
-function explainGetUserMediaError(err: any): string {
-  const name = (err?.name || '').toString();
-  switch (name) {
-    case 'NotAllowedError':
-    case 'PermissionDeniedError':
-      return 'Permission caméra refusée. Autorisez l’accès dans le navigateur (réglages du site).';
-    case 'NotFoundError':
-    case 'DevicesNotFoundError':
-      return 'Aucune caméra détectée sur l’appareil.';
-    case 'NotReadableError':
-    case 'TrackStartError':
-      return 'La caméra est occupée par une autre application. Fermez les autres apps/onglets et réessayez.';
-    case 'OverconstrainedError':
-    case 'ConstraintNotSatisfiedError':
-      return 'La caméra ne supporte pas ces contraintes. On va réessayer automatiquement avec des contraintes plus souples.';
-    case 'SecurityError':
-      return 'Contexte non sécurisé. Utilisez HTTPS (et iframes avec allow="camera").';
-    case 'TypeError':
-      return 'Paramètres getUserMedia invalides.';
-    default:
-      return err?.message || 'Accès caméra impossible.';
-  }
-}
-
-interface Props {
-  activity: ValidationActivity;
-  title: string;
+// ---------- props ----------
+type Props = {
+  title?: string;
   help?: string;
-  autoValidate?: boolean;
-}
+  /** slug d’activité choisi par le menu parent (ex: "luge_d_ete", "tir_a_l_arc", "poney") */
+  activitySlug: string;
+};
 
 export default function ReservationValidationForm({
-  activity,
-  title,
-  help,
-  autoValidate = true,
+  title = 'Validation de réservation',
+  help = 'Scannez le QR code du billet ou saisissez manuellement le numéro de réservation pour valider l’accès.',
+  activitySlug,
 }: Props) {
+  // UI
   const [code, setCode] = useState('');
-  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
-  const [message, setMessage] = useState('');
   const [loading, setLoading] = useState(false);
-  const [scanning, setScanning] = useState(false);
-  const [isMobileDevice, setIsMobileDevice] = useState(false);
+  const [status, setStatus] = useState<'idle' | 'success' | 'error'>('idle');
+  const [message, setMessage] = useState<string>('');
 
-  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
-  const [selectedDeviceId, setSelectedDeviceId] = useState<
-    string | undefined
-  >();
+  // activité courante (pilotée par le parent)
+  const [lastActivity, setLastActivity] = useState<string>(activitySlug);
+  useEffect(() => setLastActivity(activitySlug), [activitySlug]);
 
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const currentTrackRef = useRef<MediaStreamTrack | null>(null);
+  // caméra
+  const videoRef = useRef<HTMLVideoElement | null>(null);
   const readerRef = useRef<BrowserMultiFormatReader | null>(null);
-
-  const validatingRef = useRef(false);
-  const cooldownRef = useRef<number | null>(null);
-  const consensusTextRef = useRef('');
-  const consensusHitsRef = useRef(0);
-
+  const [scanning, setScanning] = useState(false);
+  const [devices, setDevices] = useState<MediaDeviceInfo[]>([]);
+  const [selectedDeviceId, setSelectedDeviceId] = useState<string>(''); // ✅ toujours string
   const [torchSupported, setTorchSupported] = useState(false);
   const [torchOn, setTorchOn] = useState(false);
+  const cooldownRef = useRef<number>(0);
+  const validatingRef = useRef<boolean>(false);
 
-  useEffect(() => setIsMobileDevice(isMobile()), []);
+  const isMobileDevice =
+    typeof navigator !== 'undefined' &&
+    /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
-  useEffect(() => {
-    return () => stopScan();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  useEffect(() => {
-    if (!navigator.mediaDevices?.enumerateDevices) return;
-    (async () => {
-      try {
-        const list = await navigator.mediaDevices.enumerateDevices();
-        setDevices(list.filter((d) => d.kind === 'videoinput'));
-      } catch {}
-    })();
-  }, []);
-
+  // ZXing reader
   const reader = useMemo(() => {
     if (!readerRef.current) {
       const hints = new Map<DecodeHintType, unknown>();
       hints.set(DecodeHintType.POSSIBLE_FORMATS, [BarcodeFormat.QR_CODE]);
       hints.set(DecodeHintType.TRY_HARDER, true);
-      readerRef.current = new BrowserMultiFormatReader(hints, 300);
+      readerRef.current = new BrowserMultiFormatReader(hints, {
+        delayBetweenScanAttempts: 300,
+      });
     }
     return readerRef.current;
   }, []);
 
-  const stopScan = () => {
+  // Cleanup caméra au démontage
+  useEffect(() => {
+    const v = videoRef.current;
+    return () => {
+      try {
+        stopReader(reader, v);
+      } catch {}
+    };
+  }, [reader]);
+
+  // Demande permission + choisit une caméra (retourne TOUJOURS une string)
+  const requestPermissionAndPickDevice = async (): Promise<string> => {
+    let tmp: MediaStream | null = null;
     try {
-      reader?.reset();
+      tmp = await navigator.mediaDevices.getUserMedia({
+        video: true,
+        audio: false,
+      });
+      const all = await navigator.mediaDevices.enumerateDevices();
+      const cams = all.filter((d) => d.kind === 'videoinput');
+      setDevices(cams);
+      if (cams.length === 0) return ''; // <= string vide
+
+      const back =
+        cams.find((d) => /back|arrière|rear/i.test(d.label)) ?? cams[0];
+      setSelectedDeviceId(back.deviceId);
+      return back.deviceId; // <= string
+    } catch {
+      return ''; // <= string vide
+    } finally {
+      try {
+        tmp?.getTracks().forEach((t) => t.stop());
+      } catch {}
+    }
+  };
+
+  const toggleTorch = async () => {
+    const v = videoRef.current;
+    const stream = (v?.srcObject as MediaStream | null) ?? null;
+    const track = stream?.getVideoTracks?.()[0];
+    if (!track) {
+      setTorchSupported(false);
+      return;
+    }
+    const caps = (track.getCapabilities?.() ?? {}) as any;
+    if (!caps.torch) {
+      setTorchSupported(false);
+      return;
+    }
+    const next = !torchOn;
+    await track.applyConstraints?.({ advanced: [{ torch: next }] } as any);
+    setTorchSupported(true);
+    setTorchOn(next);
+  };
+
+  const stopScan = useCallback(() => {
+    try {
+      stopReader(reader, videoRef.current);
     } catch {}
     const v = videoRef.current;
     if (v) {
@@ -135,241 +158,152 @@ export default function ReservationValidationForm({
       stream?.getTracks().forEach((t) => t.stop());
       v.srcObject = null;
     }
-    currentTrackRef.current = null;
-    setTorchSupported(false);
     setTorchOn(false);
+    setTorchSupported(false);
     setScanning(false);
-  };
+  }, [reader]);
 
-  const applyTorch = async (track: MediaStreamTrack, on: boolean) => {
-    const caps = (track.getCapabilities?.() ?? {}) as any;
-    if (caps.torch) {
-      await track.applyConstraints?.({ advanced: [{ torch: on }] } as any);
-      setTorchSupported(true);
-      setTorchOn(on);
-    } else {
-      setTorchSupported(false);
-    }
-  };
+  const handleDecoded = useCallback(
+    async (text: string) => {
+      const now = Date.now();
+      if (now < cooldownRef.current) return;
+      if (validatingRef.current) return;
+      validatingRef.current = true;
 
-  const requestPermissionAndPickDevice = async (): Promise<
-    string | undefined
-  > => {
-    let tmp: MediaStream | null = null;
-    try {
-      tmp = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: 'environment' },
-        audio: false,
-      });
-      const list = await navigator.mediaDevices.enumerateDevices();
-      const cams = list.filter((d) => d.kind === 'videoinput');
-      const back = cams.find((d) =>
-        /back|rear|environment|arrière/i.test(d.label),
-      );
-      return (back ?? cams[0])?.deviceId;
-    } finally {
-      tmp?.getTracks().forEach((t) => t.stop());
-    }
-  };
+      try {
+        const res = await validateReservation(text, lastActivity);
 
-  const startLiveScan = async () => {
-    if (scanning) return;
-    if (!navigator.mediaDevices?.getUserMedia) {
-      toast.error('Caméra non supportée par ce navigateur.');
-      return;
-    }
-    if (!window.isSecureContext) {
-      toast.error('HTTPS requis pour accéder à la caméra.');
-      return;
-    }
-
-    try {
-      setStatus('idle');
-      setMessage('');
-
-      // 1) garantir que <video> est monté avant ZXing
-      setScanning(true);
-      await new Promise((r) => requestAnimationFrame(() => r(undefined)));
-
-      // 2) choisir l’appareil
-      const deviceId =
-        selectedDeviceId || (await requestPermissionAndPickDevice());
-      // si rien: on va tenter des fallbacks sans deviceId
-
-      const tries: MediaStreamConstraints[] = [];
-      if (deviceId && deviceId.trim() !== '') {
-        tries.push({
-          audio: false,
-          video: { deviceId: { exact: deviceId } as any },
-        });
-      }
-      tries.push({
-        audio: false,
-        video: { facingMode: { exact: 'environment' } as any },
-      });
-      tries.push({
-        audio: false,
-        video: { facingMode: { ideal: 'environment' } },
-      });
-      tries.push({ audio: false, video: { facingMode: 'user' as any } });
-      tries.push({ audio: false, video: true });
-
-      const onResult = (res?: Result, err?: unknown) => {
-        if (err && !(err instanceof NotFoundException))
-          console.error('Decode error', err);
-        if (!res) return;
-        if (validatingRef.current) return;
-        if (cooldownRef.current && Date.now() < cooldownRef.current) return;
-        const text = res.getText().trim();
-        if (text === consensusTextRef.current) consensusHitsRef.current += 1;
-        else {
-          consensusTextRef.current = text;
-          consensusHitsRef.current = 1;
+        if (res.ok && res.status.validated) {
+          setStatus('success');
+          setMessage('Réservation validée ✅');
+          toast.success('Réservation validée ✅');
+        } else if (res.status.alreadyValidated) {
+          setStatus('success');
+          setMessage('Réservation déjà validée');
+          toast('Déjà validée', { icon: 'ℹ️' });
+        } else {
+          const reason =
+            res.reason ??
+            (res.status.unpaid
+              ? 'Non payée'
+              : res.status.wrongActivity
+                ? 'Mauvaise activité'
+                : res.status.notFound
+                  ? 'Introuvable'
+                  : 'Invalide');
+          setStatus('error');
+          setMessage(`Refusée: ${reason}`);
+          toast.error(`Refusée: ${reason}`);
         }
-        if (consensusHitsRef.current < CONSENSUS_HITS) return;
-        validatingRef.current = true;
-        consensusHitsRef.current = 0;
-        handleDecoded(text).finally(() => {
-          cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
-          validatingRef.current = false;
-        });
+      } catch (e) {
+        const msg =
+          e instanceof Error ? e.message : 'Erreur lors de la validation';
+        setStatus('error');
+        setMessage(msg);
+        toast.error(msg);
+      } finally {
+        validatingRef.current = false;
+        cooldownRef.current = Date.now() + DECODE_COOLDOWN_MS;
+      }
+    },
+    [lastActivity],
+  );
+
+  const startLiveScan = useCallback(async () => {
+    if (scanning) return;
+
+    const v = videoRef.current;
+    if (!v) {
+      toast.error('Vidéo non prête');
+      return;
+    }
+
+    // Garantir une string
+    let id: string = selectedDeviceId;
+    if (!id) {
+      id = await requestPermissionAndPickDevice();
+    }
+    if (!id) {
+      toast.error('Aucune caméra disponible');
+      return;
+    }
+    const deviceId: string = id; // ✅ string garanti
+    setSelectedDeviceId(deviceId);
+
+    setScanning(true);
+    cooldownRef.current = 0;
+
+    try {
+      const onResult: Parameters<
+        BrowserMultiFormatReader['decodeFromConstraints']
+      >[2] = (res, err) => {
+        if (res) {
+          const text = res.getText();
+          if (Date.now() < cooldownRef.current) return;
+          void handleDecoded(text);
+        } else if (err && !(err instanceof NotFoundException)) {
+          console.warn(err);
+        }
       };
 
+      const constraintsList: MediaStreamConstraints[] = [
+        { video: { facingMode: { ideal: 'environment' }, deviceId } },
+        { video: { deviceId } },
+      ];
+
       let started = false;
-      let lastErr: any = null;
-      for (const c of tries) {
+      let lastErr: unknown = null;
+      for (const constraints of constraintsList) {
         try {
-          await reader.decodeFromConstraints(c, videoRef.current!, onResult);
+          await reader.decodeFromConstraints(constraints, v, onResult);
           started = true;
           break;
         } catch (e) {
           lastErr = e;
           try {
-            reader.reset();
+            stopReader(reader, v);
           } catch {}
         }
       }
       if (!started)
         throw lastErr ?? new Error('Aucune contrainte valide pour la caméra');
 
-      // 3) playback inline + torch
-      const v = videoRef.current!;
       v.setAttribute('playsinline', 'true');
       v.setAttribute('muted', 'true');
       try {
         await v.play();
       } catch {}
 
-      const stream = v.srcObject as MediaStream;
+      // Init torche
+      const stream = (v.srcObject as MediaStream | null) ?? null;
       const track = stream?.getVideoTracks?.()[0];
-      if (track) {
-        currentTrackRef.current = track;
-        try {
-          await applyTorch(track, false);
-        } catch {
-          setTorchSupported(false);
-        }
-      }
-
-      toast.success('Scanner prêt. Cadrez le QR.');
-    } catch (err) {
-      console.error('Erreur caméra:', err);
-      const msg = explainGetUserMediaError(err);
-      toast.error(msg);
-      // échec: couper proprement
-      stopScan();
+      const caps = (track?.getCapabilities?.() ?? {}) as any;
+      setTorchSupported(Boolean(caps.torch));
+      setTorchOn(false);
+    } catch (e) {
+      toast.error(
+        e instanceof Error ? e.message : 'Impossible de démarrer le scan',
+      );
+      setScanning(false);
     }
-  };
+  }, [handleDecoded, reader, scanning, selectedDeviceId]);
 
-  const toggleTorch = async () => {
-    const track = currentTrackRef.current;
-    if (!track) return;
-    try {
-      await applyTorch(track, !torchOn);
-    } catch {
-      toast.error("La torche n'est pas supportée.");
-    }
-  };
-
-  const handleDecoded = async (text: string) => {
-    setCode(text);
-    if (autoValidate) await doValidate(text);
-  };
-
-  const doValidate = async (value: string) => {
+  // Soumission manuelle
+  const onSubmit = async (e: FormEvent) => {
+    e.preventDefault();
+    const value = code.trim();
+    if (!value) return;
     setLoading(true);
     setStatus('idle');
     setMessage('');
     try {
-      const res = await validateReservation(value.trim(), activity);
-      if (res.status.validated) {
-        setStatus('success');
-        const details = [
-          `Réservation: ${res.reservation.number}`,
-          `Client: ${res.reservation.client_email}`,
-          res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
-          res.reservation.time_slot
-            ? `Créneau: ${new Date(res.reservation.time_slot.slot_time).toLocaleTimeString('fr-FR')}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' • ');
-        setMessage(`✅ Validation réussie • ${details}`);
-        if ('vibrate' in navigator) navigator.vibrate?.(60);
-        setTimeout(() => setCode(''), 250);
-      } else if (res.status.alreadyValidated && res.history[0]) {
-        setStatus('error');
-        const first = res.history[0];
-        const when = new Date(first.validated_at);
-        const who = first.validated_by_email ?? first.validated_by;
-        const details = [
-          `Réservation: ${res.reservation.number}`,
-          `Client: ${res.reservation.client_email}`,
-          res.reservation.pass ? `Pass: ${res.reservation.pass.name}` : null,
-          res.reservation.time_slot
-            ? `Créneau: ${new Date(
-                res.reservation.time_slot.slot_time,
-              ).toLocaleTimeString('fr-FR')}`
-            : null,
-        ]
-          .filter(Boolean)
-          .join(' • ');
-        setMessage(
-          `Billet déjà validé le ${when.toLocaleDateString('fr-FR')} à ${when.toLocaleTimeString('fr-FR')} par ${who} • ${details}`,
-        );
-      } else if (res.status.wrongActivity) {
-        setStatus('error');
-        setMessage(
-          `Réservation invalide pour cette activité (billet pour ${res.reservation.activity_expected}, activité ${res.requested_activity})`,
-        );
-      } else if (res.status.unpaid) {
-        setStatus('error');
-        setMessage('Paiement non validé');
-      } else if (res.status.notFound) {
-        setStatus('error');
-        setMessage('Réservation introuvable');
-      } else if (res.status.invalid) {
-        setStatus('error');
-        setMessage('Code de réservation invalide');
-      } else {
-        setStatus('error');
-        setMessage('Billet invalide');
-      }
-    } catch (e) {
-      console.error(e);
-      setStatus('error');
-      setMessage('Erreur réseau, réessayez.');
+      await handleDecoded(value);
     } finally {
       setLoading(false);
     }
   };
 
-  const onSubmit = async (e: FormEvent) => {
-    e.preventDefault();
-    if (!code.trim()) return;
-    await doValidate(code);
-  };
-
+  // ---------- UI Tailwind (sans pills) ----------
   return (
     <div className="bg-white rounded-2xl shadow-sm p-4 sm:p-6 max-w-xl mx-auto">
       <div className="flex items-center justify-between mb-4">
@@ -377,12 +311,14 @@ export default function ReservationValidationForm({
           <QrCode className="h-5 w-5 text-blue-600" />
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
         </div>
+
+        {/* Sélecteur caméra (desktop + si >1 devices) */}
         {!isMobileDevice && devices.length > 1 && (
           <div className="flex items-center gap-2">
             <select
               className="text-sm border rounded-md px-2 py-1"
               value={selectedDeviceId}
-              onChange={(e) => setSelectedDeviceId(e.target.value)}
+              onChange={(e) => setSelectedDeviceId(e.target.value || '')}
             >
               {devices.map((d) => (
                 <option key={d.deviceId} value={d.deviceId}>
@@ -427,33 +363,55 @@ export default function ReservationValidationForm({
           />
 
           <div
-            className={`mt-3 grid gap-2 ${scanning ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'}`}
+            className={`mt-3 grid gap-2 ${
+              scanning ? 'grid-cols-1 sm:grid-cols-2' : 'grid-cols-1'
+            }`}
           >
-            <button
-              type="button"
-              onClick={startLiveScan}
-              disabled={scanning}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md font-medium transition-colors"
-            >
-              <Camera className="h-5 w-5" />
-              {scanning ? 'Caméra active' : 'Activer le scanner'}
-            </button>
-
-            {scanning && (
+            {!scanning ? (
               <button
                 type="button"
-                onClick={stopScan}
-                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
+                onClick={startLiveScan}
+                disabled={scanning}
+                className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-400 text-white rounded-md font-medium transition-colors"
               >
-                <XCircle className="h-5 w-5" />
-                Arrêter la caméra
+                <Camera className="h-5 w-5" />
+                {scanning ? 'Caméra active' : 'Activer le scanner'}
               </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={stopScan}
+                  className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gray-100 hover:bg-gray-200 text-gray-800 rounded-md font-medium transition-colors"
+                >
+                  <XCircle className="h-5 w-5" />
+                  Arrêter la caméra
+                </button>
+                {/* Torch (si supportée) */}
+                {torchSupported && (
+                  <button
+                    type="button"
+                    onClick={toggleTorch}
+                    className={`w-full flex items-center justify-center gap-2 px-4 py-3 rounded-md font-medium transition-colors ${
+                      torchOn
+                        ? 'bg-yellow-600 hover:bg-yellow-700 text-white'
+                        : 'bg-gray-700 hover:bg-gray-600 text-white'
+                    }`}
+                    title="Torche"
+                  >
+                    <Flashlight className="h-5 w-5" />
+                    {torchOn ? 'Éteindre la torche' : 'Allumer la torche'}
+                  </button>
+                )}
+              </>
             )}
           </div>
 
-          {/* <video> est TOUJOURS monté pour garantir videoRef.current */}
+          {/* <video> TOUJOURS monté pour garantir videoRef.current */}
           <div
-            className={`mt-4 bg-black rounded-xl overflow-hidden relative ${scanning ? '' : 'h-0 opacity-0 pointer-events-none'}`}
+            className={`mt-4 bg-black rounded-xl overflow-hidden relative ${
+              scanning ? '' : 'h-0 opacity-0 pointer-events-none'
+            }`}
           >
             <video
               ref={videoRef}
@@ -463,23 +421,9 @@ export default function ReservationValidationForm({
               playsInline
             />
             {scanning && (
-              <>
-                <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-                  <div className="w-48 h-48 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
-                </div>
-                <div className="absolute bottom-2 right-2 flex gap-2">
-                  {torchSupported && (
-                    <button
-                      type="button"
-                      onClick={toggleTorch}
-                      className={`px-3 py-2 rounded-md text-white ${torchOn ? 'bg-yellow-600 hover:bg-yellow-700' : 'bg-gray-700 hover:bg-gray-600'}`}
-                      title="Torche"
-                    >
-                      <Flashlight className="h-5 w-5" />
-                    </button>
-                  )}
-                </div>
-              </>
+              <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+                <div className="w-48 h-48 rounded-xl border-2 border-white/80 shadow-[0_0_0_9999px_rgba(0,0,0,0.35)]" />
+              </div>
             )}
           </div>
         </div>
@@ -495,10 +439,16 @@ export default function ReservationValidationForm({
 
       {status !== 'idle' && (
         <div
-          className={`mt-4 p-3 rounded-md ${status === 'success' ? 'bg-green-50 border border-green-200' : 'bg-red-50 border border-red-200'}`}
+          className={`mt-4 p-3 rounded-md ${
+            status === 'success'
+              ? 'bg-green-50 border border-green-200'
+              : 'bg-red-50 border border-red-200'
+          }`}
         >
           <div
-            className={`flex items-center gap-2 ${status === 'success' ? 'text-green-700' : 'text-red-700'}`}
+            className={`flex items-center gap-2 ${
+              status === 'success' ? 'text-green-700' : 'text-red-700'
+            }`}
           >
             {status === 'success' ? (
               <CheckCircle className="h-5 w-5 flex-shrink-0" />

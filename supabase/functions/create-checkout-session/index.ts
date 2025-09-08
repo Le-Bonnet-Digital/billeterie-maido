@@ -1,5 +1,4 @@
-import Stripe from 'https://esm.sh/stripe@13?target=deno';
-import { serve } from 'https://deno.land/std@0.224.0/http/server.ts';
+import Stripe from 'https://esm.sh/stripe@15?target=deno&dts';
 
 function getEnv(name: string): string | undefined {
   return Deno.env.get(name);
@@ -23,7 +22,7 @@ interface Customer {
   [key: string]: unknown;
 }
 
-serve(async (req: Request) => {
+Deno.serve(async (req: Request): Promise<Response> => {
   if (req.method === 'OPTIONS') {
     return new Response('ok', {
       headers: {
@@ -36,7 +35,7 @@ serve(async (req: Request) => {
   if (req.method !== 'POST') {
     return new Response(JSON.stringify({ error: 'Method not allowed' }), {
       status: 405,
-      headers: corsHeaders,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
   }
 
@@ -50,7 +49,8 @@ serve(async (req: Request) => {
     }
 
     const stripe = new Stripe(stripeSecret, {
-      apiVersion: '2023-10-16',
+      apiVersion: '2024-04-10', // harmonisé avec le webhook (SDK v15)
+      httpClient: Stripe.createFetchHttpClient(), // Deno/Edge friendly
     });
 
     const { cartItems, customer } = (await req.json()) as {
@@ -90,7 +90,7 @@ serve(async (req: Request) => {
       status: 200,
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     });
-  } catch (err) {
+  } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'Unknown error';
     return new Response(JSON.stringify({ error: message }), {
       status: 500,

@@ -11,6 +11,37 @@ vi.mock('../auth', () => ({
 
 import { supabase } from '../supabase';
 import { getCurrentUser } from '../auth';
+import type { User } from '../auth';
+
+/* ------------------------ Helpers de test typés ------------------------ */
+
+type TableName = 'reservations' | 'reservation_validations' | 'users';
+
+/**
+ * Adapte notre implémentation typée (TableName) => unknown
+ * à la signature attendue par Vitest: (...args: unknown[]) => unknown
+ * (sans utiliser `any`)
+ */
+function setSupabaseFromMock(impl: (table: TableName) => unknown) {
+  const mocked = vi.mocked(supabase.from) as unknown as {
+    mockImplementation: (fn: (...args: unknown[]) => unknown) => unknown;
+  };
+
+  mocked.mockImplementation((...args: unknown[]) => {
+    const [table] = args;
+    return impl(table as TableName);
+  });
+}
+
+/* ---------------------------- Utilisateur factice ---------------------------- */
+
+const fakeUser: User = {
+  id: 'agent-1',
+  email: 'agent1@example.com',
+  role: 'agent' as User['role'],
+};
+
+/* ---------------------------------- Tests ---------------------------------- */
 
 describe('validateReservation', () => {
   beforeEach(() => {
@@ -18,93 +49,38 @@ describe('validateReservation', () => {
   });
 
   it('returns structured payload for invalid code format', async () => {
-    const res = await validateReservation('BAD CODE', 'poney');
-    expect(res).toEqual({
-      reservation: {
-        id: null,
-        number: null,
-        client_email: null,
-        payment_status: null,
-        created_at: null,
-        pass: null,
-        activity_expected: null,
-        time_slot: null,
-      },
-      requested_activity: 'poney',
-      history: [],
-      status: {
-        invalid: true,
-        notFound: true,
-        unpaid: false,
-        wrongActivity: false,
-        alreadyValidated: false,
-        validated: false,
-      },
-      ok: false,
-    });
-  });
-
-  it('returns success for first validation', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
-      id: string;
-    });
-
     const reservationsBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          id: 'res-1',
-          reservation_number: 'RES-2025-001-0001',
-          client_email: 'c@example.com',
-          payment_status: 'paid',
-          created_at: '2025-01-01T09:00:00.000Z',
-          pass: { id: 'pass-1', name: 'Pass Poney' },
-          event_activities: { activities: { name: 'poney' } },
-          time_slots: {
-            id: 'slot-1',
-            slot_time: '2025-01-02T10:00:00.000Z',
-          },
-        },
-        error: null,
-      }),
-    };
-
-    const validationsQuery = {
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      then: vi.fn((resolve) => resolve({ data: [], error: null })),
-    };
-
-    const insertBuilder = {
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          validated_at: '2025-01-01T10:00:00.000Z',
-          validated_by: 'agent-1',
-        },
-        error: null,
-      }),
+      single: vi.fn().mockResolvedValue({ data: null, error: null }),
     };
 
     const validationsTable = {
-      select: vi.fn().mockReturnValue(validationsQuery),
-      insert: vi.fn().mockReturnValue(insertBuilder),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
 
     const usersBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { email: 'agent1@example.com' },
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'agent-1',
+          email: 'agent1@example.com',
+          role: 'agent',
+        },
         error: null,
       }),
     };
 
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'reservations') return reservationsBuilder as never;
-      if (table === 'reservation_validations') return validationsTable as never;
-      if (table === 'users') return usersBuilder as never;
+    setSupabaseFromMock((table) => {
+      if (table === 'reservations') return reservationsBuilder;
+      if (table === 'reservation_validations') return validationsTable;
+      if (table === 'users') return usersBuilder;
       throw new Error('unknown table ' + table);
     });
 
@@ -118,134 +94,26 @@ describe('validateReservation', () => {
         created_at: '2025-01-01T09:00:00.000Z',
         pass: { id: 'pass-1', name: 'Pass Poney' },
         activity_expected: 'poney',
-        time_slot: {
-          id: 'slot-1',
-          slot_time: '2025-01-02T10:00:00.000Z',
-        },
+        time_slot: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
       },
       requested_activity: 'poney',
-      history: [
-        {
-          validated_at: '2025-01-01T10:00:00.000Z',
-          validated_by: 'agent-1',
-          validated_by_email: 'agent1@example.com',
-        },
-      ],
+      history: [],
       status: {
-        invalid: false,
-        notFound: false,
+        invalid: true,
+        notFound: true,
         unpaid: false,
         wrongActivity: false,
         alreadyValidated: false,
-        validated: true,
-      },
-      ok: true,
-    });
-    expect(validationsTable.insert).toHaveBeenCalledWith({
-      reservation_id: 'res-1',
-      activity: 'poney',
-      validated_by: 'agent-1',
-    });
-  });
-
-  it('returns alreadyValidated info without reinserting', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
-      id: string;
-    });
-
-    const reservationsBuilder = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          id: 'res-1',
-          reservation_number: 'RES-2025-001-0001',
-          client_email: 'c@example.com',
-          payment_status: 'paid',
-          created_at: '2025-01-01T09:00:00.000Z',
-          event_activities: { activities: { name: 'poney' } },
-        },
-        error: null,
-      }),
-    };
-
-    const validationsQuery = {
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      then: vi.fn((resolve) =>
-        resolve({
-          data: [
-            {
-              validated_at: '2025-01-01T10:00:00.000Z',
-              validated_by: 'agent-2',
-            },
-          ],
-          error: null,
-        }),
-      ),
-    };
-
-    const validationsTable = {
-      select: vi.fn().mockReturnValue(validationsQuery),
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
-      }),
-    };
-
-    const usersBuilder = {
-      select: vi.fn().mockReturnThis(),
-      eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { email: 'agent2@example.com' },
-        error: null,
-      }),
-    };
-
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'reservations') return reservationsBuilder as never;
-      if (table === 'reservation_validations') return validationsTable as never;
-      if (table === 'users') return usersBuilder as never;
-      throw new Error('unknown table ' + table);
-    });
-
-    const res = await validateReservation('RES-2025-001-0001', 'poney');
-    expect(res).toEqual({
-      reservation: {
-        id: 'res-1',
-        number: 'RES-2025-001-0001',
-        client_email: 'c@example.com',
-        payment_status: 'paid',
-        created_at: '2025-01-01T09:00:00.000Z',
-        pass: null,
-        activity_expected: 'poney',
-        time_slot: null,
-      },
-      requested_activity: 'poney',
-      history: [
-        {
-          validated_at: '2025-01-01T10:00:00.000Z',
-          validated_by: 'agent-2',
-          validated_by_email: 'agent2@example.com',
-        },
-      ],
-      status: {
-        invalid: false,
-        notFound: false,
-        unpaid: false,
-        wrongActivity: false,
-        alreadyValidated: true,
         validated: false,
       },
       ok: false,
+      reason: 'Code invalide',
+      meta: undefined,
     });
-    expect(validationsTable.insert).not.toHaveBeenCalled();
   });
 
-  it('allows re-validation after a revoked validation', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
-      id: string;
-    });
+  it('returns success for first validation', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(fakeUser);
 
     const reservationsBuilder = {
       select: vi.fn().mockReturnThis(),
@@ -258,74 +126,82 @@ describe('validateReservation', () => {
           payment_status: 'paid',
           created_at: '2025-01-01T09:00:00.000Z',
           pass: { id: 'pass-1', name: 'Pass Poney' },
+          event_activity_id: 'ea-1',
           event_activities: { activities: { name: 'poney' } },
-        },
-        error: null,
-      }),
-    };
-
-    const validationsQuery = {
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      then: vi.fn((resolve) => resolve({ data: [], error: null })),
-    };
-
-    const insertBuilder = {
-      select: vi.fn().mockReturnThis(),
-      single: vi.fn().mockResolvedValue({
-        data: {
-          validated_at: '2025-01-02T10:00:00.000Z',
-          validated_by: 'agent-1',
+          time_slots: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
         },
         error: null,
       }),
     };
 
     const validationsTable = {
-      select: vi.fn().mockReturnValue(validationsQuery),
-      insert: vi.fn().mockReturnValue(insertBuilder),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockResolvedValue({ data: [], error: null }),
     };
 
     const usersBuilder = {
       select: vi.fn().mockReturnThis(),
       eq: vi.fn().mockReturnThis(),
-      maybeSingle: vi.fn().mockResolvedValue({
-        data: { email: 'agent1@example.com' },
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'agent-1',
+          email: 'agent1@example.com',
+          role: 'agent',
+        },
         error: null,
       }),
     };
 
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'reservations') return reservationsBuilder as never;
-      if (table === 'reservation_validations') return validationsTable as never;
-      if (table === 'users') return usersBuilder as never;
+    setSupabaseFromMock((table) => {
+      if (table === 'reservations') return reservationsBuilder;
+      if (table === 'reservation_validations') return validationsTable;
+      if (table === 'users') return usersBuilder;
       throw new Error('unknown table ' + table);
     });
 
     const res = await validateReservation('RES-2025-001-0001', 'poney');
-    expect(validationsQuery.is).toHaveBeenCalledWith('revoked_at', null);
-    expect(res.status).toEqual({
-      invalid: false,
-      notFound: false,
-      unpaid: false,
-      wrongActivity: false,
-      alreadyValidated: false,
-      validated: true,
-    });
-    expect(res.ok).toBe(true);
-    expect(res.history).toEqual([
-      {
-        validated_at: '2025-01-02T10:00:00.000Z',
-        validated_by: 'agent-1',
-        validated_by_email: 'agent1@example.com',
+
+    expect(res).toEqual({
+      reservation: {
+        id: 'res-1',
+        number: 'RES-2025-001-0001',
+        client_email: 'c@example.com',
+        payment_status: 'paid',
+        created_at: '2025-01-01T09:00:00.000Z',
+        pass: { id: 'pass-1', name: 'Pass Poney' },
+        activity_expected: 'poney',
+        time_slot: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
       },
-    ]);
+      requested_activity: 'poney',
+      history: [],
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: true,
+      },
+      ok: true,
+      reason: undefined,
+      meta: undefined,
+    });
+
+    expect(validationsTable.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reservation_id: 'res-1',
+        agent_id: 'agent-1',
+        status: 'validated',
+      }),
+    );
   });
 
-  it('rejects reservation not matching activity', async () => {
-    vi.mocked(getCurrentUser).mockResolvedValue({ id: 'agent-1' } as {
-      id: string;
-    });
+  it('returns alreadyValidated info without reinserting', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(fakeUser);
 
     const reservationsBuilder = {
       select: vi.fn().mockReturnThis(),
@@ -337,33 +213,57 @@ describe('validateReservation', () => {
           client_email: 'c@example.com',
           payment_status: 'paid',
           created_at: '2025-01-01T09:00:00.000Z',
-          event_activities: { activities: { name: 'tir_arc' } },
+          pass: { id: 'pass-1', name: 'Pass Poney' },
+          event_activity_id: 'ea-1',
+          event_activities: { activities: { name: 'poney' } },
+          time_slots: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
         },
         error: null,
       }),
     };
 
-    const validationsQuery = {
-      eq: vi.fn().mockReturnThis(),
-      is: vi.fn().mockReturnThis(),
-      then: vi.fn((resolve) => resolve({ data: [], error: null })),
-    };
-
     const validationsTable = {
-      select: vi.fn().mockReturnValue(validationsQuery),
-      insert: vi.fn().mockReturnValue({
-        select: vi.fn().mockReturnThis(),
-        single: vi.fn().mockResolvedValue({ data: null, error: null }),
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'v1',
+            reservation_id: 'res-1',
+            agent_id: 'agent-1',
+            created_at: '2025-01-02T10:05:00.000Z',
+            status: 'validated',
+          },
+        ],
+        error: null,
       }),
     };
 
-    vi.mocked(supabase.from).mockImplementation((table: string) => {
-      if (table === 'reservations') return reservationsBuilder as never;
-      if (table === 'reservation_validations') return validationsTable as never;
+    const usersBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'agent-1',
+          email: 'agent1@example.com',
+          role: 'agent',
+        },
+        error: null,
+      }),
+    };
+
+    setSupabaseFromMock((table) => {
+      if (table === 'reservations') return reservationsBuilder;
+      if (table === 'reservation_validations') return validationsTable;
+      if (table === 'users') return usersBuilder;
       throw new Error('unknown table ' + table);
     });
 
     const res = await validateReservation('RES-2025-001-0001', 'poney');
+
     expect(res).toEqual({
       reservation: {
         id: 'res-1',
@@ -371,9 +271,206 @@ describe('validateReservation', () => {
         client_email: 'c@example.com',
         payment_status: 'paid',
         created_at: '2025-01-01T09:00:00.000Z',
-        pass: null,
+        pass: { id: 'pass-1', name: 'Pass Poney' },
+        activity_expected: 'poney',
+        time_slot: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
+      },
+      requested_activity: 'poney',
+      history: [
+        {
+          id: 'v1',
+          reservation_id: 'res-1',
+          agent_id: 'agent-1',
+          created_at: '2025-01-02T10:05:00.000Z',
+          status: 'validated',
+        },
+      ],
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: true,
+        validated: true,
+      },
+      ok: true,
+      reason: 'Réservation déjà validée',
+      meta: undefined,
+    });
+
+    expect(validationsTable.insert).not.toHaveBeenCalled();
+  });
+
+  it('allows re-validation after a revoked validation', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(fakeUser);
+
+    const reservationsBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'res-1',
+          reservation_number: 'RES-2025-001-0001',
+          client_email: 'c@example.com',
+          payment_status: 'paid',
+          created_at: '2025-01-01T09:00:00.000Z',
+          pass: { id: 'pass-1', name: 'Pass Poney' },
+          event_activity_id: 'ea-1',
+          event_activities: { activities: { name: 'poney' } },
+          time_slots: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
+        },
+        error: null,
+      }),
+    };
+
+    const validationsTable = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockResolvedValue({
+        data: [
+          {
+            id: 'v1',
+            reservation_id: 'res-1',
+            agent_id: 'agent-1',
+            created_at: '2025-01-02T10:05:00.000Z',
+            status: 'revoked',
+          },
+        ],
+        error: null,
+      }),
+    };
+
+    const usersBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'agent-1',
+          email: 'agent1@example.com',
+          role: 'agent',
+        },
+        error: null,
+      }),
+    };
+
+    setSupabaseFromMock((table) => {
+      if (table === 'reservations') return reservationsBuilder;
+      if (table === 'reservation_validations') return validationsTable;
+      if (table === 'users') return usersBuilder;
+      throw new Error('unknown table ' + table);
+    });
+
+    const res = await validateReservation('RES-2025-001-0001', 'poney');
+
+    expect(res).toEqual({
+      reservation: {
+        id: 'res-1',
+        number: 'RES-2025-001-0001',
+        client_email: 'c@example.com',
+        payment_status: 'paid',
+        created_at: '2025-01-01T09:00:00.000Z',
+        pass: { id: 'pass-1', name: 'Pass Poney' },
+        activity_expected: 'poney',
+        time_slot: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
+      },
+      requested_activity: 'poney',
+      history: [
+        {
+          id: 'v1',
+          reservation_id: 'res-1',
+          agent_id: 'agent-1',
+          created_at: '2025-01-02T10:05:00.000Z',
+          status: 'revoked',
+        },
+      ],
+      status: {
+        invalid: false,
+        notFound: false,
+        unpaid: false,
+        wrongActivity: false,
+        alreadyValidated: false,
+        validated: true,
+      },
+      ok: true,
+      reason: undefined,
+      meta: undefined,
+    });
+
+    expect(validationsTable.insert).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reservation_id: 'res-1',
+        agent_id: 'agent-1',
+        status: 'validated',
+      }),
+    );
+  });
+
+  it('rejects reservation not matching activity', async () => {
+    vi.mocked(getCurrentUser).mockResolvedValue(fakeUser);
+
+    const reservationsBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'res-1',
+          reservation_number: 'RES-2025-001-0001',
+          client_email: 'c@example.com',
+          payment_status: 'paid',
+          created_at: '2025-01-01T09:00:00.000Z',
+          pass: { id: 'pass-1', name: 'Pass Poney' },
+          event_activity_id: 'ea-1',
+          event_activities: { activities: { name: 'tir_arc' } },
+          time_slots: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
+        },
+        error: null,
+      }),
+    };
+
+    const validationsTable = {
+      insert: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      order: vi.fn().mockReturnThis(),
+      limit: vi.fn().mockReturnThis(),
+      returns: vi.fn().mockResolvedValue({ data: [], error: null }),
+    };
+
+    const usersBuilder = {
+      select: vi.fn().mockReturnThis(),
+      eq: vi.fn().mockReturnThis(),
+      single: vi.fn().mockResolvedValue({
+        data: {
+          id: 'agent-1',
+          email: 'agent1@example.com',
+          role: 'agent',
+        },
+        error: null,
+      }),
+    };
+
+    setSupabaseFromMock((table) => {
+      if (table === 'reservations') return reservationsBuilder;
+      if (table === 'reservation_validations') return validationsTable;
+      if (table === 'users') return usersBuilder;
+      throw new Error('unknown table ' + table);
+    });
+
+    const res = await validateReservation('RES-2025-001-0001', 'poney');
+
+    expect(res).toEqual({
+      reservation: {
+        id: 'res-1',
+        number: 'RES-2025-001-0001',
+        client_email: 'c@example.com',
+        payment_status: 'paid',
+        created_at: '2025-01-01T09:00:00.000Z',
+        pass: { id: 'pass-1', name: 'Pass Poney' },
         activity_expected: 'tir_arc',
-        time_slot: null,
+        time_slot: { id: 'slot-1', slot_time: '2025-01-02T10:00:00.000Z' },
       },
       requested_activity: 'poney',
       history: [],
