@@ -76,6 +76,17 @@ export default function ProviderLayout() {
         'admin',
       ],
     });
+    items.push({
+      to: '/provider/history',
+      label: 'Historique',
+      roles: [
+        'pony_provider',
+        'archery_provider',
+        'luge_provider',
+        'atlm_collaborator',
+        'admin',
+      ],
+    });
     return items.filter((n) => n.roles?.includes(user.role));
   })();
 
