@@ -130,7 +130,8 @@ export async function validateReservation(
     .from('reservation_validations')
     .select('validated_at,validated_by')
     .eq('reservation_id', data.id)
-    .eq('activity', activity);
+    .eq('activity', activity)
+    .is('revoked_at', null);
 
   if (existing && existing.length > 0) {
     payload.history = await Promise.all(
