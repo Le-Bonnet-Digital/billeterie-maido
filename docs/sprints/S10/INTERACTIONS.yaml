@@ -268,27 +268,3 @@
   context: |
     commit: fix check admin role via JWT
   status: pending
-
-- who: ChatGPT
-  when: 2025-09-08T18:00:00Z
-  topic: Revalidation after revocation
-  did: |
-    - Ignored revoked validations during scan
-    - Added partial unique index for active validations
-    - Updated tests and schema
-  ask: |
-    Vérifier la revalidation après annulation
-  context: |
-    commit: feat allow revalidation after revocation
-  status: pending
-
-- who: ChatGPT
-  when: 2025-09-08T18:05:00Z
-  topic: Migration active validation uniqueness
-  did: |
-    - Ajouté le script de migration pour l'index partiel
-  ask: |
-    Appliquer la migration sur la base
-  context: |
-    commit: chore add migration for active validation uniqueness
-  status: pending
