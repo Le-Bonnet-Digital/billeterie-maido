@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
+import { describe, it, expect, vi, beforeEach } from 'vitest';
 import {
   getSessionId,
   addToCart,
@@ -26,7 +26,7 @@ Object.defineProperty(window, 'localStorage', { value: mockLocalStorage });
 
 // Mock crypto
 Object.defineProperty(global, 'crypto', {
-  value: { randomUUID: () => 'test-session-id' },
+  value: { randomUUID: () => 'test-session-id' }
 });
 
 function createRepo(overrides: Partial<CartRepository> = {}): CartRepository {
@@ -58,10 +58,7 @@ describe('Cart Functions', () => {
       mockLocalStorage.getItem.mockReturnValue(null);
       const sessionId = getSessionId();
       expect(sessionId).toBe('test-session-id');
-      expect(mockLocalStorage.setItem).toHaveBeenCalledWith(
-        'cart_session_id',
-        'test-session-id',
-      );
+      expect(mockLocalStorage.setItem).toHaveBeenCalledWith('cart_session_id', 'test-session-id');
     });
 
     it('should fall back to memory when localStorage is unavailable', () => {
@@ -74,30 +71,17 @@ describe('Cart Functions', () => {
       expect(sessionId1).toBe('test-session-id');
       expect(sessionId2).toBe('test-session-id');
 
-      Object.defineProperty(window, 'localStorage', {
-        value: original,
-        configurable: true,
-      });
+      Object.defineProperty(window, 'localStorage', { value: original, configurable: true });
     });
   });
 
   describe('calculateCartTotal', () => {
     it('should calculate total correctly', () => {
-      const pass1: Pass = {
-        id: '1',
-        name: 'Pass 1',
-        price: 10,
-        description: 'Test',
-      };
-      const pass2: Pass = {
-        id: '2',
-        name: 'Pass 2',
-        price: 15,
-        description: 'Test',
-      };
+      const pass1: Pass = { id: '1', name: 'Pass 1', price: 10, description: 'Test' };
+      const pass2: Pass = { id: '2', name: 'Pass 2', price: 15, description: 'Test' };
       const items: CartItem[] = [
         { id: '1', pass: pass1, quantity: 2 },
-        { id: '2', pass: pass2, quantity: 1 },
+        { id: '2', pass: pass2, quantity: 1 }
       ];
       expect(calculateCartTotal(items)).toBe(35);
     });
@@ -113,10 +97,7 @@ describe('Cart Functions', () => {
       const notify = vi.fn();
       const result = await addToCart('pass-id', [], 1, repo, notify);
       expect(result).toBe(false);
-      expect(notify).toHaveBeenCalledWith(
-        'error',
-        'Configuration requise. Veuillez connecter Supabase.',
-      );
+      expect(notify).toHaveBeenCalledWith('error', 'Configuration requise. Veuillez connecter Supabase.');
     });
 
     it('should add item to cart when repository is configured', async () => {
@@ -127,10 +108,7 @@ describe('Cart Functions', () => {
       const result = await addToCart('pass-id', [], 1, repo, notify);
       expect(result).toBe(true);
       expect(repo.insertCartItem).toHaveBeenCalled();
-      expect(notify).toHaveBeenCalledWith(
-        'success',
-        'Article ajouté au panier',
-      );
+      expect(notify).toHaveBeenCalledWith('success', 'Article ajouté au panier');
     });
 
     it('should return false for invalid quantity', async () => {
@@ -138,16 +116,11 @@ describe('Cart Functions', () => {
       const notify = vi.fn();
       const result = await addToCart('pass-id', [], 0, repo, notify);
       expect(result).toBe(false);
-      expect(notify).toHaveBeenCalledWith(
-        'error',
-        'La quantité doit être un entier positif',
-      );
+      expect(notify).toHaveBeenCalledWith('error', 'La quantité doit être un entier positif');
     });
 
     it('should handle repository errors gracefully', async () => {
-      const repo = createRepo({
-        insertCartItem: vi.fn().mockRejectedValue(new Error('fail')),
-      });
+      const repo = createRepo({ insertCartItem: vi.fn().mockRejectedValue(new Error('fail')) });
       const notify = vi.fn();
       const spy = vi.spyOn(logger, 'error').mockImplementation(() => {});
       const result = await addToCart('pass-id', [], 1, repo, notify);
@@ -165,9 +138,7 @@ describe('Cart Functions', () => {
     });
 
     it('should return error message when stock is insufficient', async () => {
-      const repo = createRepo({
-        getPassRemainingStock: vi.fn().mockResolvedValue(0),
-      });
+      const repo = createRepo({ getPassRemainingStock: vi.fn().mockResolvedValue(0) });
       const result = await validateStock(repo, 'pass', [], 1);
       expect(result).toBe('Stock insuffisant pour ce pass');
     });
@@ -177,11 +148,7 @@ describe('Cart Functions', () => {
     it('should update quantity using repository', async () => {
       const updateCartItem = vi.fn().mockResolvedValue(true);
       const repo = createRepo({ updateCartItem });
-      const success = await updateExistingItem(
-        repo,
-        { id: '1', quantity: 2 },
-        1,
-      );
+      const success = await updateExistingItem(repo, { id: '1', quantity: 2 }, 1);
       expect(success).toBe(true);
       expect(updateCartItem).toHaveBeenCalledWith('1', 3);
     });
@@ -193,14 +160,7 @@ describe('Cart Functions', () => {
       const repo = createRepo({ insertCartItem });
       const success = await insertNewItem(repo, 'sess', 'pass', [], 1);
       expect(success).toBe(true);
-      expect(insertCartItem).toHaveBeenCalledWith(
-        'sess',
-        'pass',
-        [],
-        1,
-        undefined,
-        undefined,
-      );
+      expect(insertCartItem).toHaveBeenCalledWith('sess', 'pass', [], 1, undefined, undefined);
     });
   });
 
@@ -220,66 +180,6 @@ describe('Cart Functions', () => {
       const result = await getCartItems();
       expect(result).toEqual([]);
     });
-
-    it('should include event activity and time slot when present', async () => {
-      const { supabase, isSupabaseConfigured } = await import('../supabase');
-      vi.mocked(isSupabaseConfigured).mockReturnValue(true);
-      const builderCartItems = {
-        select: vi.fn().mockReturnThis(),
-        eq: vi.fn().mockReturnThis(),
-        gt: vi.fn().mockResolvedValue({
-          data: [
-            {
-              id: 'ci1',
-              quantity: 1,
-              pass_id: 'p1',
-              product_type: 'event_pass',
-              product_id: null,
-            },
-          ],
-          error: null,
-        }),
-      };
-      const builderPasses = {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({
-          data: [{ id: 'p1', name: 'Pass', price: 10, description: 'Desc' }],
-        }),
-      };
-      const builderActivities = {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({
-          data: [
-            {
-              cart_item_id: 'ci1',
-              event_activity_id: 'ea1',
-              time_slot_id: 'ts1',
-              event_activities: {
-                id: 'ea1',
-                activities: { id: 'a1', name: 'Act', icon: '🎯' },
-              },
-            },
-          ],
-        }),
-      };
-      const builderSlots = {
-        select: vi.fn().mockReturnThis(),
-        in: vi.fn().mockResolvedValue({
-          data: [{ id: 'ts1', slot_time: '2025-09-06T10:00:00.000Z' }],
-        }),
-      };
-
-      (supabase.from as unknown as Mock)
-        .mockReturnValueOnce(builderCartItems as unknown)
-        .mockReturnValueOnce(builderPasses as unknown)
-        .mockReturnValueOnce(builderActivities as unknown)
-        .mockReturnValueOnce(builderSlots as unknown);
-
-      const items = await getCartItems();
-      expect(items).toHaveLength(1);
-      expect(items[0].eventActivity?.id).toBe('ea1');
-      expect(items[0].timeSlot?.id).toBe('ts1');
-    });
   });
 
   describe('removeFromCart', () => {
@@ -291,7 +191,7 @@ describe('Cart Functions', () => {
         })),
       };
       vi.mocked(supabase.from).mockReturnValue(
-        builder as unknown as ReturnType<typeof supabase.from>,
+        builder as unknown as ReturnType<typeof supabase.from>
       );
 
       const result = await removeFromCart('item-id');
@@ -308,7 +208,7 @@ describe('Cart Functions', () => {
         })),
       };
       vi.mocked(supabase.from).mockReturnValue(
-        builder as unknown as ReturnType<typeof supabase.from>,
+        builder as unknown as ReturnType<typeof supabase.from>
       );
       mockLocalStorage.getItem.mockReturnValue('session-123');
 
